@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compile, type CompilePatch } from "./index";
+import { compile, type CompilePatch } from "./index.ts";
 
 const sineTonePatch: CompilePatch = {
   oscillators: [
