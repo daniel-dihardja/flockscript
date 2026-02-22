@@ -184,7 +184,8 @@ function findTokenIndex(tokens: string[], target: string) {
     if (!token) {
       return false;
     }
-    const normalized = KEYWORD_ALIASES[token.toLowerCase()] ?? token.toLowerCase();
+    const normalized =
+      KEYWORD_ALIASES[token.toLowerCase()] ?? token.toLowerCase();
     return normalized === target;
   });
 }
@@ -394,8 +395,8 @@ export function compile(source: string): CompileResult {
         normalizedHead === "lfo"
           ? "lfo"
           : normalizedHead === "samplehold"
-          ? "sampleHold"
-          : "chaos";
+            ? "sampleHold"
+            : "chaos";
       const id = tokens[1]!;
       if (!id) {
         diagnostics.push(
@@ -429,7 +430,11 @@ export function compile(source: string): CompileResult {
         const wave = resolveWave(tokens[2]!);
         if (!wave) {
           diagnostics.push(
-            diagnosticForLine(lines, index, `unsupported lfo wave: ${tokens[2]}`),
+            diagnosticForLine(
+              lines,
+              index,
+              `unsupported lfo wave: ${tokens[2]}`,
+            ),
           );
           return;
         }
@@ -496,7 +501,11 @@ export function compile(source: string): CompileResult {
         const stepIndex = findTokenIndex(tokens, "step");
         if (centerIndex === -1 || rangeIndex === -1 || stepIndex === -1) {
           diagnostics.push(
-            diagnosticForLine(lines, index, "chaos requires center, range, step"),
+            diagnosticForLine(
+              lines,
+              index,
+              "chaos requires center, range, step",
+            ),
           );
           return;
         }
@@ -549,7 +558,8 @@ export function compile(source: string): CompileResult {
         return;
       }
 
-      const normalizedParam = KEYWORD_ALIASES[param.toLowerCase()] ?? param.toLowerCase();
+      const normalizedParam =
+        KEYWORD_ALIASES[param.toLowerCase()] ?? param.toLowerCase();
       if (!ROUTING_PARAMS.has(normalizedParam)) {
         diagnostics.push(
           diagnosticForLine(lines, index, `unsupported route param: ${param}`),
