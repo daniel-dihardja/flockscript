@@ -1,0 +1,97 @@
+{
+  "theme": {
+    "&": {
+      "height": "100%",
+      "backgroundColor": "#1f1f1f",
+      "color": "#e5e7eb"
+    },
+    ".cm-scroller": {
+      "fontFamily": "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
+      "fontSize": "16px",
+      "lineHeight": "1.7"
+    },
+    ".cm-content": {
+      "padding": "16px",
+      "caretColor": "#f8fafc"
+    },
+    ".cm-selectionBackground": {
+      "backgroundColor": "rgba(148, 163, 184, 0.25)"
+    },
+    ".cm-activeLine": {
+      "backgroundColor": "rgba(148, 163, 184, 0.08)"
+    },
+    ".cm-gutters": {
+      "backgroundColor": "#1f1f1f",
+      "color": "#64748b",
+      "borderRight": "1px solid rgba(148, 163, 184, 0.2)"
+    },
+    ".cm-dsl-keyword": {
+      "color": "#7dd3fc",
+      "fontWeight": "600"
+    },
+    ".cm-dsl-osc": {
+      "color": "#7dd3fc",
+      "backgroundColor": "rgba(249, 115, 22, 0.3)",
+      "borderRadius": "4px",
+      "padding": "0 4px",
+      "fontWeight": "600"
+    },
+    ".cm-dsl-number": {
+      "color": "#fca5a5"
+    },
+    ".cm-dsl-block": {
+      "color": "#94a3b8",
+      "fontStyle": "italic"
+    },
+    ".cm-dsl-operator": {
+      "color": "#fbbf24",
+      "fontWeight": "600"
+    },
+    ".cm-dsl-macro": {
+      "color": "#c4b5fd"
+    }
+  },
+  "keywordList": [
+    "osc",
+    "lfo",
+    "fx",
+    "route",
+    "detune",
+    "rate",
+    "depth",
+    "offset",
+    "filter",
+    "lowpass",
+    "bandpass",
+    "highpass",
+    "dist",
+    "delay",
+    "sine",
+    "saw",
+    "square",
+    "triangle",
+    "noise"
+  ],
+  "regex": {
+    "block": {
+      "pattern": "^---.*---$",
+      "flags": "gm"
+    },
+    "osc": {
+      "pattern": "\\bosc\\b",
+      "flags": "g"
+    },
+    "number": {
+      "pattern": "(?<!\\\\w)[+-]?\\\\d+(?:\\\\.\\\\d+)?c?",
+      "flags": "g"
+    },
+    "macro": {
+      "pattern": "@macro\\([^\\)]*\\)|@\\\\d+(?:\\\\.\\\\d+)?",
+      "flags": "g"
+    },
+    "operator": {
+      "pattern": "->",
+      "flags": "g"
+    }
+  }
+}

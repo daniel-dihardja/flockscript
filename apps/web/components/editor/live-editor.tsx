@@ -10,6 +10,7 @@ import {
 import { setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { Decoration, EditorView, ViewPlugin, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
+import syntaxConfig from "./syntax-config.json";
 
 const defaultScript = `--- drone ---
 osc bass saw 55 @0.3 detune +3c
@@ -25,91 +26,34 @@ osc hiss noise @0.2
 fx bpf filter bandpass freq 1200 q 12
 `;
 
-const editorTheme = EditorView.theme(
-  {
-    "&": {
-      height: "100%",
-      backgroundColor: "#1f1f1f",
-      color: "#e5e7eb",
-    },
-    ".cm-scroller": {
-      fontFamily:
-        "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
-      fontSize: "16px",
-      lineHeight: "1.7",
-    },
-    ".cm-content": {
-      padding: "16px",
-      caretColor: "#f8fafc",
-    },
-    ".cm-selectionBackground": {
-      backgroundColor: "rgba(148, 163, 184, 0.25)",
-    },
-    ".cm-activeLine": {
-      backgroundColor: "rgba(148, 163, 184, 0.08)",
-    },
-    ".cm-gutters": {
-      backgroundColor: "#1f1f1f",
-      color: "#64748b",
-      borderRight: "1px solid rgba(148, 163, 184, 0.2)",
-    },
-    ".cm-dsl-keyword": {
-      color: "#7dd3fc",
-      fontWeight: "600",
-    },
-    ".cm-dsl-osc": {
-      color: "#7dd3fc",
-      backgroundColor: "rgba(249, 115, 22, 0.3)",
-      borderRadius: "4px",
-      padding: "0 4px",
-      fontWeight: "600",
-    },
-    ".cm-dsl-number": {
-      color: "#fca5a5",
-    },
-    ".cm-dsl-block": {
-      color: "#94a3b8",
-      fontStyle: "italic",
-    },
-    ".cm-dsl-operator": {
-      color: "#fbbf24",
-      fontWeight: "600",
-    },
-    ".cm-dsl-macro": {
-      color: "#c4b5fd",
-    },
-  },
-  { dark: true },
-);
+type RegexSpec = {
+  pattern: string;
+  flags: string;
+};
 
-const keywordList = [
-  "osc",
-  "lfo",
-  "fx",
-  "route",
-  "detune",
-  "rate",
-  "depth",
-  "offset",
-  "filter",
-  "lowpass",
-  "bandpass",
-  "highpass",
-  "dist",
-  "delay",
-  "sine",
-  "saw",
-  "square",
-  "triangle",
-  "noise",
-];
+type SyntaxStyleConfig = {
+  theme: Record<string, Record<string, string>>;
+  keywordList: string[];
+  regex: Record<
+    "block" | "osc" | "number" | "macro" | "operator",
+    RegexSpec
+  >;
+};
+
+const { theme, keywordList, regex } =
+  syntaxConfig as SyntaxStyleConfig;
+
+const makeRegex = ({ pattern, flags }: RegexSpec) =>
+  new RegExp(pattern, flags);
+
+const editorTheme = EditorView.theme(theme, { dark: true });
 
 const keywordRegex = new RegExp(`\\b(${keywordList.join("|")})\\b`, "g");
-const oscRegex = /\bosc\b/g;
-const numberRegex = /(?<!\w)[+-]?\d+(?:\.\d+)?c?/g;
-const macroRegex = /@macro\([^\)]*\)|@\d+(?:\.\d+)?/g;
-const blockRegex = /^---.*---$/gm;
-const operatorRegex = /->/g;
+const oscRegex = makeRegex(regex.osc);
+const numberRegex = makeRegex(regex.number);
+const macroRegex = makeRegex(regex.macro);
+const blockRegex = makeRegex(regex.block);
+const operatorRegex = makeRegex(regex.operator);
 
 const dslHighlight = ViewPlugin.fromClass(
   class {
