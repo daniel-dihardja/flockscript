@@ -189,7 +189,11 @@ export function compile(source: string) {
       return;
     }
 
-    const head = tokens[0].toLowerCase();
+    const headToken = tokens[0];
+    if (!headToken) {
+      return;
+    }
+    const head = headToken.toLowerCase();
 
     if (head === "osc") {
       if (tokens.length < 5) {
@@ -203,10 +207,10 @@ export function compile(source: string) {
         return;
       }
 
-      const id = tokens[1];
-      const waveRaw = tokens[2];
-      const freqToken = tokens[3];
-      const gainToken = tokens[4];
+      const id = tokens[1]!;
+      const waveRaw = tokens[2]!;
+      const freqToken = tokens[3]!;
+      const gainToken = tokens[4]!;
 
       if (!id || !waveRaw || !freqToken || !gainToken) {
         diagnostics.push(
@@ -247,7 +251,14 @@ export function compile(source: string) {
       let pan: number | undefined;
       let cursor = 5;
       while (cursor < tokens.length) {
-        const key = tokens[cursor].toLowerCase();
+        const keyToken = tokens[cursor];
+        if (!keyToken) {
+          diagnostics.push(
+            diagnosticForLine(lines, index, "missing option key"),
+          );
+          return;
+        }
+        const key = keyToken.toLowerCase();
         const valueToken = tokens[cursor + 1];
         if (!valueToken) {
           diagnostics.push(
@@ -301,8 +312,8 @@ export function compile(source: string) {
         return;
       }
 
-      const id = tokens[1];
-      const gainToken = tokens[2];
+      const id = tokens[1]!;
+      const gainToken = tokens[2]!;
       const gain = parseGainToken(gainToken);
       if (!id || gain === null) {
         diagnostics.push(
@@ -319,7 +330,14 @@ export function compile(source: string) {
 
       let cursor = 3;
       while (cursor < tokens.length) {
-        const key = tokens[cursor].toLowerCase();
+        const keyToken = tokens[cursor];
+        if (!keyToken) {
+          diagnostics.push(
+            diagnosticForLine(lines, index, "missing noise option key"),
+          );
+          return;
+        }
+        const key = keyToken.toLowerCase();
         const valueToken = tokens[cursor + 1];
         if (!valueToken) {
           diagnostics.push(
@@ -352,7 +370,7 @@ export function compile(source: string) {
     if (head === "lfo" || head === "samplehold" || head === "chaos") {
       const modType: ModulatorEntry["type"] =
         head === "lfo" ? "lfo" : head === "samplehold" ? "sampleHold" : "chaos";
-      const id = tokens[1];
+      const id = tokens[1]!;
       if (!id) {
         diagnostics.push(
           diagnosticForLine(lines, index, `${head} requires an identifier`),
@@ -367,7 +385,7 @@ export function compile(source: string) {
         );
         return;
       }
-      const rateValue = parseNumber(tokens[rateIndex + 1]);
+      const rateValue = parseNumber(tokens[rateIndex + 1]!);
       if (rateValue === null) {
         diagnostics.push(
           diagnosticForLine(lines, index, `${head} rate value is invalid`),
@@ -382,10 +400,14 @@ export function compile(source: string) {
       };
 
       if (head === "lfo") {
-        const wave = resolveWave(tokens[2]);
+        const wave = resolveWave(tokens[2]!);
         if (!wave) {
           diagnostics.push(
-            diagnosticForLine(lines, index, `unsupported lfo wave: ${tokens[2]}`),
+            diagnosticForLine(
+              lines,
+              index,
+              `unsupported lfo wave: ${tokens[2]}`,
+            ),
           );
           return;
         }
@@ -396,7 +418,7 @@ export function compile(source: string) {
           );
           return;
         }
-        const depthValue = parseNumber(tokens[depthIndex + 1]);
+        const depthValue = parseNumber(tokens[depthIndex + 1]!);
         if (depthValue === null) {
           diagnostics.push(
             diagnosticForLine(lines, index, "lfo depth value is invalid"),
@@ -407,14 +429,14 @@ export function compile(source: string) {
         entry.depth = depthValue;
         const offsetIndex = tokens.indexOf("offset");
         if (offsetIndex !== -1) {
-          const offsetToken = tokens[offsetIndex + 1];
+        const offsetToken = tokens[offsetIndex + 1]!;
           if (!offsetToken) {
             diagnostics.push(
               diagnosticForLine(lines, index, "lfo offset is invalid"),
             );
             return;
           }
-          const offset = parseNumber(offsetToken);
+        const offset = parseNumber(offsetToken);
           if (offset === null) {
             diagnostics.push(
               diagnosticForLine(lines, index, "lfo offset is invalid"),
@@ -434,8 +456,8 @@ export function compile(source: string) {
           );
           return;
         }
-        const minValue = parseNumber(tokens[minIndex + 1]);
-        const maxValue = parseNumber(tokens[maxIndex + 1]);
+        const minValue = parseNumber(tokens[minIndex + 1]!);
+        const maxValue = parseNumber(tokens[maxIndex + 1]!);
         if (minValue === null || maxValue === null) {
           diagnostics.push(
             diagnosticForLine(lines, index, "samplehold bounds are invalid"),
@@ -452,13 +474,17 @@ export function compile(source: string) {
         const stepIndex = tokens.indexOf("step");
         if (centerIndex === -1 || rangeIndex === -1 || stepIndex === -1) {
           diagnostics.push(
-            diagnosticForLine(lines, index, "chaos requires center, range, step"),
+            diagnosticForLine(
+              lines,
+              index,
+              "chaos requires center, range, step",
+            ),
           );
           return;
         }
-        const centerValue = parseNumber(tokens[centerIndex + 1]);
-        const rangeValue = parseNumber(tokens[rangeIndex + 1]);
-        const stepValue = parseNumber(tokens[stepIndex + 1]);
+        const centerValue = parseNumber(tokens[centerIndex + 1]!);
+        const rangeValue = parseNumber(tokens[rangeIndex + 1]!);
+        const stepValue = parseNumber(tokens[stepIndex + 1]!);
         if (centerValue === null || rangeValue === null || stepValue === null) {
           diagnostics.push(
             diagnosticForLine(lines, index, "chaos values are invalid"),
@@ -492,8 +518,8 @@ export function compile(source: string) {
       }
 
       const source = tokens[1];
-      const target = tokens[arrowIndex + 1];
-      const param = tokens[arrowIndex + 2];
+      const target = tokens[arrowIndex + 1]!;
+      const param = tokens[arrowIndex + 2]!;
       if (!source || !target || !param) {
         diagnostics.push(
           diagnosticForLine(
@@ -536,9 +562,10 @@ export function compile(source: string) {
         return;
       }
 
-      const params: Record<string, unknown> = { id, type };
+      const params: EffectEntry = { id, type };
       for (let cursor = 3; cursor < tokens.length; cursor += 2) {
         const key = tokens[cursor];
+        const keyToken = tokens[cursor];
         const valueToken = tokens[cursor + 1];
         if (!key || !valueToken) {
           diagnostics.push(
