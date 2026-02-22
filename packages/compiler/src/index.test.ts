@@ -29,4 +29,17 @@ describe("dsl compiler", () => {
     expect(result.ok).toBe(true);
     expect(result.patch).toEqual(panLfoPatch);
   });
+
+  it("reports diagnostics for invalid oscillator lines", () => {
+    const result = compile("osc bass xyz 440 @0.3 pan 0");
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics).toHaveLength(1);
+    expect(result.diagnostics[0].message).toMatch(/unsupported osc wave/i);
+  });
+
+  it("reports diagnostics for malformed routing", () => {
+    const result = compile("route panLfo -> panOsc");
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0].message).toMatch(/route requires source, target, and param/i);
+  });
 });
