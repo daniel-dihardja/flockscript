@@ -1,0 +1,21 @@
+{
+    "faust": {
+        "module": "gain",
+        "bypassEffects": true,
+        "params": {
+            "gain": 0.25
+        }
+    },
+    "oscillators": [
+        {
+            "id": "test",
+            "freq": 440,
+            "gain": 0.3,
+            "type": "sine",
+            "pan": 0
+        }
+    ],
+    "modulators": [],
+    "routing": [],
+    "effects": []
+}

@@ -1,0 +1,28 @@
+{
+    "oscillators": [
+        {
+            "id": "shOsc",
+            "freq": 220,
+            "gain": 0.18,
+            "type": "triangle",
+            "pan": 0
+        }
+    ],
+    "modulators": [
+        {
+            "type": "sampleHold",
+            "id": "snh",
+            "rate": 4,
+            "min": 180,
+            "max": 660
+        }
+    ],
+    "routing": [
+        {
+            "from": "snh",
+            "to": "shOsc",
+            "param": "frequency"
+        }
+    ],
+    "effects": []
+}

@@ -1,0 +1,15 @@
+{
+    "wasmGain": 0.5,
+    "oscillators": [
+        {
+            "id": "test",
+            "freq": 440,
+            "gain": 0.2,
+            "type": "sine",
+            "pan": 0
+        }
+    ],
+    "modulators": [],
+    "routing": [],
+    "effects": []
+}

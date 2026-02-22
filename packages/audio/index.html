@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Audio Coding - Noise/Glitch</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Courier New", monospace;
+        background: #1a1a1a;
+        color: #00ff00;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        overflow: hidden;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+      }
+
+      h1 {
+        margin-bottom: 20px;
+        font-size: 24px;
+      }
+
+      .controls {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      button {
+        background: #333;
+        color: #00ff00;
+        border: 2px solid #00ff00;
+        padding: 10px 20px;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      button:hover {
+        background: #00ff00;
+        color: #1a1a1a;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      #status {
+        padding: 10px;
+        border: 1px solid #333;
+        background: #0a0a0a;
+      }
+
+      .editor-container {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .editor-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: center;
+      }
+
+      .editor-controls button {
+        padding: 8px 15px;
+        font-size: 12px;
+      }
+
+      #patchSelector {
+        padding: 8px 15px;
+        background: #0a0a0a;
+        color: #00ff00;
+        border: 2px solid #00ff00;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        cursor: pointer;
+        outline: none;
+      }
+
+      #patchCategory {
+        padding: 8px 15px;
+        background: #0a0a0a;
+        color: #00ff00;
+        border: 2px solid #00ff00;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        cursor: pointer;
+        outline: none;
+      }
+
+      #patchSelector:hover {
+        background: #003300;
+      }
+
+      #patchCategory:hover {
+        background: #003300;
+      }
+
+      #patchSelector option {
+        background: #0a0a0a;
+        color: #00ff00;
+      }
+
+      #patchCategory option {
+        background: #0a0a0a;
+        color: #00ff00;
+      }
+
+      #validationStatus {
+        padding: 8px 15px;
+        border: 1px solid #333;
+        background: #0a0a0a;
+        font-size: 12px;
+        flex-grow: 1;
+      }
+
+      #validationStatus.valid {
+        color: #00ff00;
+        border-color: #00ff00;
+      }
+
+      #validationStatus.invalid {
+        color: #ff0000;
+        border-color: #ff0000;
+      }
+
+      #codeEditor {
+        width: 100%;
+        height: 400px;
+        background: #0a0a0a;
+        color: #00ff00;
+        border: 2px solid #333;
+        padding: 15px;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        resize: vertical;
+        tab-size: 2;
+      }
+
+      #codeEditor.valid-json {
+        border-color: #00ff00;
+      }
+
+      #codeEditor.invalid-json {
+        border-color: #ff0000;
+      }
+
+      #codeEditor:focus {
+        outline: none;
+        border-color: #00ff00;
+      }
+
+      #output {
+        margin-top: 20px;
+        padding: 15px;
+        border: 2px solid #ff0000;
+        background: #0a0a0a;
+        min-height: 60px;
+        color: #ff0000;
+        display: none;
+      }
+
+      #output.visible {
+        display: block;
+      }
+
+      /* CodeMirror editor styling */
+      #editorWrapper {
+        border: 2px solid #333;
+        background: #0a0a0a;
+        flex: 1;
+        overflow: auto;
+        min-height: 0;
+      }
+
+      #editorWrapper.valid-json {
+        border-color: #00ff00;
+      }
+
+      #editorWrapper.invalid-json {
+        border-color: #ff0000;
+      }
+
+      .cm-editor {
+        height: 100%;
+      }
+
+      .cm-scroller {
+        font-family: "Courier New", monospace;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+
+      /* Custom JSON Syntax Colors - Terminal Theme */
+      .cm-content {
+        color: #00ff00; /* Main green color */
+      }
+
+      /* JSON Property names/keys */
+      .cm-property {
+        color: #00ff00 !important; /* Bright green */
+        font-weight: bold;
+      }
+
+      /* JSON String values */
+      .cm-string {
+        color: #00cc00 !important; /* Slightly darker green */
+      }
+
+      /* JSON Numbers */
+      .cm-number {
+        color: #00ff88 !important; /* Cyan-green */
+        font-weight: bold;
+      }
+
+      /* JSON Boolean and null */
+      .cm-keyword {
+        color: #00ffaa !important; /* Aqua green */
+        font-weight: bold;
+      }
+
+      /* JSON Brackets, braces, colons */
+      .cm-punctuation {
+        color: #006600 !important; /* Dark green */
+      }
+
+      /* Line numbers */
+      .cm-gutters {
+        background: #0a0a0a !important;
+        border-right: 1px solid #00ff00 !important;
+      }
+
+      .cm-lineNumbers .cm-gutterElement {
+        color: #006600 !important;
+        font-size: 14px;
+      }
+
+      /* Active line highlighting */
+      .cm-activeLine {
+        background-color: #0d1a0d !important;
+      }
+
+      .cm-activeLineGutter {
+        background-color: #0d1a0d !important;
+        color: #00ff00 !important;
+      }
+
+      /* Selection */
+      .cm-selectionBackground {
+        background-color: #003300 !important;
+      }
+
+      /* Cursor */
+      .cm-cursor {
+        border-left-color: #00ff00 !important;
+        border-left-width: 2px !important;
+      }
+
+      /* Matching brackets */
+      .cm-matchingBracket {
+        background-color: #003300 !important;
+        outline: 1px solid #00ff00 !important;
+      }
+
+      /* Error squiggles */
+      .cm-lintRange-error {
+        background-image: none !important;
+        text-decoration: underline wavy #ff0000 !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔊 Live Audio Coding - Noise/Glitch Generator</h1>
+
+      <div class="controls">
+        <button id="startBtn">Start Audio</button>
+        <button id="stopBtn" disabled>Stop Audio</button>
+        <button id="runBtn" disabled>Run Code (Ctrl+Enter)</button>
+        <button id="clearBtn">Clear Code</button>
+        <label style="display: flex; align-items: center; gap: 6px">
+          <input type="checkbox" id="workletToggle" checked />
+          Worklet
+        </label>
+        <div id="status">Status: Not Started</div>
+      </div>
+
+      <div class="editor-container">
+        <div class="editor-controls">
+          <select id="patchCategory">
+            <option value="All">All categories</option>
+          </select>
+          <select id="patchSelector">
+            <option value="">Load Example Patch...</option>
+          </select>
+          <button id="silenceBtn">Silence</button>
+          <button id="stressBtn">Stress UI</button>
+          <button id="validateBtn">Validate</button>
+          <div id="validationStatus">JSON Editor</div>
+        </div>
+        <div id="editorWrapper"></div>
+      </div>
+
+      <div id="output"></div>
+
+      <div
+        id="debugInfo"
+        style="
+          margin-top: 10px;
+          padding: 10px;
+          border: 1px solid #00ff00;
+          background: #0a0a0a;
+          font-size: 12px;
+          font-family: &quot;Courier New&quot;, monospace;
+          color: #00ff00;
+          max-height: 180px;
+          overflow: auto;
+        "
+      >
+        <div>Channel A: <span id="channelAStatus">-</span></div>
+        <div>Channel B: <span id="channelBStatus">-</span></div>
+        <div>Active: <span id="activeChannelStatus">-</span></div>
+        <div>FAUST: <span id="faustStatus">-</span></div>
+        <div>FAUST Module: <span id="faustModuleStatus">-</span></div>
+        <div>FAUST Last Param: <span id="faustParamStatus">-</span></div>
+      </div>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

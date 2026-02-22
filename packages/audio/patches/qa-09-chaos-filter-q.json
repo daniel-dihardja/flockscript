@@ -1,0 +1,35 @@
+{
+    "noise": [
+        {
+            "id": "chaosNoise",
+            "gain": 0.14,
+            "pan": 0
+        }
+    ],
+    "modulators": [
+        {
+            "type": "chaos",
+            "id": "qDrift",
+            "rate": 1.2,
+            "center": 6,
+            "range": 6,
+            "step": 0.3
+        }
+    ],
+    "effects": [
+        {
+            "type": "filter",
+            "id": "chaosFilter",
+            "filterType": "bandpass",
+            "freq": 700,
+            "q": 8
+        }
+    ],
+    "routing": [
+        {
+            "from": "qDrift",
+            "to": "chaosFilter",
+            "param": "q"
+        }
+    ]
+}

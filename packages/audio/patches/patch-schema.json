@@ -1,0 +1,671 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://flockscript.audio/patch-schema.json",
+    "title": "Audio Patch",
+    "description": "JSON schema for live coding audio patches with oscillators, noise, modulators, and effects",
+    "type": "object",
+    "properties": {
+        "oscillators": {
+            "type": "array",
+            "description": "Array of oscillator sound sources",
+            "items": {
+                "type": "object",
+                "required": [
+                    "id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Unique identifier for this oscillator"
+                    },
+                    "freq": {
+                        "type": "number",
+                        "description": "Frequency in Hz",
+                        "default": 440,
+                        "minimum": 20,
+                        "maximum": 20000
+                    },
+                    "gain": {
+                        "type": "number",
+                        "description": "Volume level (0-1)",
+                        "default": 0.3,
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Oscillator waveform type",
+                        "enum": [
+                            "sine",
+                            "square",
+                            "sawtooth",
+                            "triangle"
+                        ],
+                        "default": "sine"
+                    },
+                    "detune": {
+                        "type": "number",
+                        "description": "Pitch offset in cents",
+                        "default": 0,
+                        "minimum": -1200,
+                        "maximum": 1200
+                    },
+                    "pan": {
+                        "type": "number",
+                        "description": "Stereo pan position: -1 (left) to 1 (right)",
+                        "default": 0,
+                        "minimum": -1,
+                        "maximum": 1
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "noise": {
+            "type": "array",
+            "description": "Array of white noise sources",
+            "items": {
+                "type": "object",
+                "required": [
+                    "id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Unique identifier for this noise source"
+                    },
+                    "gain": {
+                        "type": "number",
+                        "description": "Volume level (0-1)",
+                        "default": 0.3,
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "pan": {
+                        "type": "number",
+                        "description": "Stereo pan position: -1 (left) to 1 (right)",
+                        "default": 0,
+                        "minimum": -1,
+                        "maximum": 1
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "voices": {
+            "type": "array",
+            "description": "Array of sequenced/triggered voices with envelopes",
+            "items": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "source",
+                    "envelope"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Unique identifier for this voice"
+                    },
+                    "source": {
+                        "type": "object",
+                        "description": "Sound source configuration",
+                        "required": [
+                            "type"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "oscillator",
+                                    "noise"
+                                ],
+                                "description": "Source type"
+                            },
+                            "freq": {
+                                "type": "number",
+                                "description": "Frequency in Hz (for oscillator)",
+                                "minimum": 20,
+                                "maximum": 20000
+                            },
+                            "wave": {
+                                "type": "string",
+                                "enum": [
+                                    "sine",
+                                    "square",
+                                    "sawtooth",
+                                    "triangle"
+                                ],
+                                "description": "Waveform type (for oscillator)",
+                                "default": "sine"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "envelope": {
+                        "type": "object",
+                        "description": "ADSR envelope configuration",
+                        "required": [
+                            "attack",
+                            "decay",
+                            "sustain",
+                            "release"
+                        ],
+                        "properties": {
+                            "attack": {
+                                "type": "number",
+                                "description": "Attack time in seconds",
+                                "minimum": 0.001,
+                                "maximum": 5
+                            },
+                            "decay": {
+                                "type": "number",
+                                "description": "Decay time in seconds",
+                                "minimum": 0.001,
+                                "maximum": 5
+                            },
+                            "sustain": {
+                                "type": "number",
+                                "description": "Sustain level (0-1)",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "release": {
+                                "type": "number",
+                                "description": "Release time in seconds",
+                                "minimum": 0.001,
+                                "maximum": 5
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "sequence": {
+                        "type": "object",
+                        "description": "Pattern sequencer configuration",
+                        "required": [
+                            "pattern",
+                            "rate"
+                        ],
+                        "properties": {
+                            "pattern": {
+                                "type": "array",
+                                "description": "Step pattern (1=trigger, 0=rest)",
+                                "items": {
+                                    "type": "integer",
+                                    "enum": [
+                                        0,
+                                        1
+                                    ]
+                                },
+                                "minItems": 1
+                            },
+                            "rate": {
+                                "type": "number",
+                                "description": "Steps per second",
+                                "minimum": 0.1,
+                                "maximum": 100
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "gain": {
+                        "type": "number",
+                        "description": "Voice volume level (0-1)",
+                        "default": 1.0,
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "pan": {
+                        "type": "number",
+                        "description": "Stereo pan position: -1 (left) to 1 (right)",
+                        "default": 0,
+                        "minimum": -1,
+                        "maximum": 1
+                    },
+                    "filter": {
+                        "type": "object",
+                        "description": "Optional filter for the voice",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "lowpass",
+                                    "highpass",
+                                    "bandpass",
+                                    "notch"
+                                ],
+                                "default": "lowpass"
+                            },
+                            "freq": {
+                                "type": "number",
+                                "description": "Filter frequency in Hz",
+                                "minimum": 20,
+                                "maximum": 20000
+                            },
+                            "q": {
+                                "type": "number",
+                                "description": "Filter Q (resonance)",
+                                "default": 1,
+                                "minimum": 0.0001,
+                                "maximum": 100
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "modulators": {
+            "type": "array",
+            "description": "Array of modulation sources (LFO, sample & hold, chaos)",
+            "items": {
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "description": "Low Frequency Oscillator",
+                        "required": [
+                            "type",
+                            "id"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "lfo"
+                            },
+                            "id": {
+                                "type": "string",
+                                "description": "Unique identifier for this modulator"
+                            },
+                            "rate": {
+                                "type": "number",
+                                "description": "LFO speed in Hz",
+                                "default": 1,
+                                "minimum": 0.01,
+                                "maximum": 100
+                            },
+                            "depth": {
+                                "type": "number",
+                                "description": "Modulation amount",
+                                "default": 100
+                            },
+                            "wave": {
+                                "type": "string",
+                                "description": "LFO waveform",
+                                "enum": [
+                                    "sine",
+                                    "square",
+                                    "sawtooth",
+                                    "triangle"
+                                ],
+                                "default": "sine"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
+                        "description": "Sample & Hold (stepped random)",
+                        "required": [
+                            "type",
+                            "id"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "sampleHold"
+                            },
+                            "id": {
+                                "type": "string",
+                                "description": "Unique identifier for this modulator"
+                            },
+                            "rate": {
+                                "type": "number",
+                                "description": "Steps per second",
+                                "default": 8,
+                                "minimum": 0.1,
+                                "maximum": 100
+                            },
+                            "min": {
+                                "type": "number",
+                                "description": "Minimum output value",
+                                "default": 100
+                            },
+                            "max": {
+                                "type": "number",
+                                "description": "Maximum output value",
+                                "default": 2000
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
+                        "description": "Chaos modulation (random walk)",
+                        "required": [
+                            "type",
+                            "id"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "chaos"
+                            },
+                            "id": {
+                                "type": "string",
+                                "description": "Unique identifier for this modulator"
+                            },
+                            "rate": {
+                                "type": "number",
+                                "description": "Update rate in Hz",
+                                "default": 10,
+                                "minimum": 0.1,
+                                "maximum": 100
+                            },
+                            "center": {
+                                "type": "number",
+                                "description": "Center value",
+                                "default": 500
+                            },
+                            "range": {
+                                "type": "number",
+                                "description": "Maximum deviation from center",
+                                "default": 500,
+                                "minimum": 0
+                            },
+                            "step": {
+                                "type": "number",
+                                "description": "Step size (0-1)",
+                                "default": 0.2,
+                                "minimum": 0,
+                                "maximum": 1
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                ]
+            }
+        },
+        "routing": {
+            "type": "array",
+            "description": "Modulation routing connections",
+            "items": {
+                "type": "object",
+                "required": [
+                    "from",
+                    "to",
+                    "param"
+                ],
+                "properties": {
+                    "from": {
+                        "type": "string",
+                        "description": "Source modulator ID"
+                    },
+                    "to": {
+                        "type": "string",
+                        "description": "Target oscillator or effect ID"
+                    },
+                    "param": {
+                        "type": "string",
+                        "description": "Parameter to modulate",
+                        "enum": [
+                            "frequency",
+                            "detune",
+                            "gain",
+                            "freq",
+                            "q",
+                            "time",
+                            "feedback"
+                        ]
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "effects": {
+            "type": "array",
+            "description": "Audio effects chain",
+            "items": {
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "description": "Biquad filter",
+                        "required": [
+                            "type"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "filter"
+                            },
+                            "id": {
+                                "type": "string",
+                                "description": "Optional ID for modulation routing"
+                            },
+                            "filterType": {
+                                "type": "string",
+                                "description": "Filter type",
+                                "enum": [
+                                    "lowpass",
+                                    "highpass",
+                                    "bandpass",
+                                    "notch"
+                                ],
+                                "default": "lowpass"
+                            },
+                            "freq": {
+                                "type": "number",
+                                "description": "Cutoff frequency in Hz",
+                                "default": 1000,
+                                "minimum": 20,
+                                "maximum": 20000
+                            },
+                            "q": {
+                                "type": "number",
+                                "description": "Resonance/Q factor",
+                                "default": 1,
+                                "minimum": 0.0001,
+                                "maximum": 1000
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
+                        "description": "Delay effect",
+                        "required": [
+                            "type"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "delay"
+                            },
+                            "id": {
+                                "type": "string",
+                                "description": "Optional ID for modulation routing"
+                            },
+                            "time": {
+                                "type": "number",
+                                "description": "Delay time in seconds",
+                                "default": 0.5,
+                                "minimum": 0,
+                                "maximum": 5
+                            },
+                            "feedback": {
+                                "type": "number",
+                                "description": "Feedback amount (0-1)",
+                                "default": 0.5,
+                                "minimum": 0,
+                                "maximum": 1
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
+                        "description": "Waveshaper distortion",
+                        "required": [
+                            "type"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "distortion"
+                            },
+                            "amount": {
+                                "type": "number",
+                                "description": "Distortion amount",
+                                "default": 50,
+                                "minimum": 0,
+                                "maximum": 400
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
+                        "description": "Gain control",
+                        "required": [
+                            "type"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "gain"
+                            },
+                            "value": {
+                                "type": "number",
+                                "description": "Gain multiplier",
+                                "default": 1.0,
+                                "minimum": 0,
+                                "maximum": 2
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
+                        "description": "Dynamic range compressor",
+                        "required": [
+                            "type"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "compressor"
+                            },
+                            "threshold": {
+                                "type": "number",
+                                "description": "Threshold in dB (compression starts above this level)",
+                                "default": -24,
+                                "minimum": -60,
+                                "maximum": 0
+                            },
+                            "ratio": {
+                                "type": "number",
+                                "description": "Compression ratio (e.g., 4 means 4:1)",
+                                "default": 4,
+                                "minimum": 1,
+                                "maximum": 20
+                            },
+                            "attack": {
+                                "type": "number",
+                                "description": "Attack time in seconds (how fast compression engages)",
+                                "default": 0.003,
+                                "minimum": 0.0001,
+                                "maximum": 1
+                            },
+                            "release": {
+                                "type": "number",
+                                "description": "Release time in seconds (how fast compression disengages)",
+                                "default": 0.25,
+                                "minimum": 0.001,
+                                "maximum": 3
+                            },
+                            "knee": {
+                                "type": "number",
+                                "description": "Knee width in dB (0 = hard knee, >0 = soft knee)",
+                                "default": 0,
+                                "minimum": 0,
+                                "maximum": 40
+                            },
+                            "makeup": {
+                                "type": "number",
+                                "description": "Makeup gain in dB (compensates for gain reduction)",
+                                "default": 0,
+                                "minimum": -20,
+                                "maximum": 40
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                ]
+            }
+        },
+        "faust": {
+            "type": "object",
+            "description": "FAUST WebAssembly DSP module configuration",
+            "properties": {
+                "module": {
+                    "type": "string",
+                    "description": "FAUST module name (without .wasm extension) from public/faust/ directory",
+                    "examples": [
+                        "gain",
+                        "lowpass"
+                    ]
+                },
+                "params": {
+                    "type": "object",
+                    "description": "FAUST module parameters as key-value pairs. Keys must match parameter names in the FAUST UI metadata.",
+                    "additionalProperties": {
+                        "type": "number"
+                    }
+                },
+                "bypassEffects": {
+                    "type": "boolean",
+                    "description": "If true, skip JavaScript effects chain and send audio directly from synthesis to FAUST module",
+                    "default": false
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false,
+    "examples": [
+        {
+            "oscillators": [
+                {
+                    "id": "bass",
+                    "freq": 110,
+                    "gain": 0.3,
+                    "type": "sawtooth"
+                }
+            ],
+            "modulators": [
+                {
+                    "type": "lfo",
+                    "id": "wobble",
+                    "rate": 2,
+                    "depth": 50,
+                    "wave": "sine"
+                }
+            ],
+            "routing": [
+                {
+                    "from": "wobble",
+                    "to": "bass",
+                    "param": "frequency"
+                }
+            ],
+            "effects": [
+                {
+                    "type": "filter",
+                    "filterType": "lowpass",
+                    "freq": 800,
+                    "q": 3
+                }
+            ]
+        }
+    ]
+}

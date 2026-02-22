@@ -1,0 +1,19 @@
+{
+    "oscillators": [
+        {
+            "id": "distOsc",
+            "freq": 110,
+            "gain": 0.2,
+            "type": "sawtooth",
+            "pan": 0
+        }
+    ],
+    "modulators": [],
+    "routing": [],
+    "effects": [
+        {
+            "type": "distortion",
+            "amount": 45
+        }
+    ]
+}

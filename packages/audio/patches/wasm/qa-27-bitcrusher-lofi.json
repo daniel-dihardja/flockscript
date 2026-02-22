@@ -1,0 +1,16 @@
+{
+    "faust": {
+        "module": "bitcrusher",
+        "bypassEffects": true,
+        "params": {
+            "bitDepth": 1
+        }
+    },
+    "noise": [
+        {
+            "id": "whitenoise",
+            "gain": 0.3,
+            "pan": 0
+        }
+    ]
+}

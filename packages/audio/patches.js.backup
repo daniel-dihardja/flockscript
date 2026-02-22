@@ -1,0 +1,1332 @@
+/**
+ * Performance Patches for Art Installations & Live Coding
+ * Organized by intensity and texture for smooth set flow
+ */
+
+export const patches = {
+  // === AMBIENT / INTRO (Low intensity, textural) ===
+
+  "01 - Minimal Pulse": {
+    oscillators: [{ id: "osc1", freq: 55, gain: 0.25, type: "sine", pan: 0 }],
+    modulators: [
+      { type: "lfo", id: "breathe", rate: 0.2, depth: 10, wave: "sine" },
+    ],
+    routing: [{ from: "breathe", to: "osc1", param: "frequency" }],
+    effects: [{ type: "delay", time: 0.75, feedback: 0.5 }],
+  },
+
+  "02 - Resonant Noise": {
+    noise: [{ id: "static", gain: 0.18, pan: 0 }],
+    modulators: [
+      { type: "lfo", id: "sweep", rate: 0.25, depth: 700, wave: "sine" },
+    ],
+    effects: [
+      { type: "filter", id: "filt", filterType: "bandpass", freq: 900, q: 18 },
+    ],
+    routing: [{ from: "sweep", to: "filt", param: "freq" }],
+  },
+
+  "03 - Drifting Voices": {
+    oscillators: [
+      { id: "pad1", freq: 165, gain: 0.13, type: "sawtooth", pan: -0.4 },
+      { id: "pad2", freq: 247, gain: 0.13, type: "sawtooth", pan: 0.4 },
+      { id: "pad3", freq: 330, gain: 0.1, type: "triangle", pan: 0 },
+    ],
+    modulators: [
+      {
+        type: "chaos",
+        id: "drift1",
+        rate: 4,
+        center: 0,
+        range: 35,
+        step: 0.15,
+      },
+      {
+        type: "chaos",
+        id: "drift2",
+        rate: 3,
+        center: 0,
+        range: 28,
+        step: 0.12,
+      },
+    ],
+    routing: [
+      { from: "drift1", to: "pad1", param: "detune" },
+      { from: "drift2", to: "pad2", param: "detune" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 550, q: 6 },
+      { type: "delay", time: 0.5, feedback: 0.68 },
+    ],
+  },
+
+  // === RHYTHMIC / MID BUILD (Adding pulse & structure) ===
+
+  "04 - Hypnotic Gate": {
+    oscillators: [
+      { id: "pulse", freq: 110, gain: 0.28, type: "square", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "gate", rate: 3, depth: 0.25, wave: "square" },
+      { type: "lfo", id: "sweep", rate: 0.5, depth: 400, wave: "triangle" },
+    ],
+    routing: [
+      { from: "gate", to: "pulse", param: "gain" },
+      { from: "sweep", to: "pulse", param: "frequency" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 800, q: 5 },
+      { type: "delay", time: 0.375, feedback: 0.55 },
+    ],
+  },
+
+  "05 - Euclidean Machine": {
+    oscillators: [
+      { id: "pulse1", freq: 110, gain: 0.22, type: "square", pan: -0.6 },
+      { id: "pulse2", freq: 165, gain: 0.18, type: "square", pan: 0.6 },
+      { id: "bass", freq: 55, gain: 0.25, type: "sine", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "gate1", rate: 5.33, depth: 0.22, wave: "square" },
+      { type: "lfo", id: "gate2", rate: 3.75, depth: 0.18, wave: "square" },
+      { type: "lfo", id: "bassmod", rate: 2, depth: 20, wave: "sine" },
+    ],
+    routing: [
+      { from: "gate1", to: "pulse1", param: "gain" },
+      { from: "gate2", to: "pulse2", param: "gain" },
+      { from: "bassmod", to: "bass", param: "frequency" },
+    ],
+    effects: [
+      { type: "filter", filterType: "bandpass", freq: 700, q: 7 },
+      { type: "delay", time: 0.1875, feedback: 0.5 },
+      { type: "distortion", amount: 30 },
+    ],
+  },
+
+  "06 - Wobble Bass": {
+    oscillators: [
+      { id: "bass", freq: 110, gain: 0.32, type: "sawtooth", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "wobble", rate: 2.5, depth: 90, wave: "sine" },
+    ],
+    routing: [{ from: "wobble", to: "bass", param: "frequency" }],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 600, q: 8 },
+      { type: "distortion", amount: 35 },
+      { type: "delay", time: 0.25, feedback: 0.4 },
+    ],
+  },
+
+  // === GLITCH / HIGH INTENSITY (Chaos & digital artifacts) ===
+
+  "07 - Broken Transmission": {
+    oscillators: [
+      { id: "carrier", freq: 440, gain: 0.18, type: "sine", pan: -0.7 },
+      { id: "sideband", freq: 660, gain: 0.15, type: "sine", pan: 0.7 },
+    ],
+    noise: [{ id: "static", gain: 0.12, pan: 0 }],
+    modulators: [
+      { type: "sampleHold", id: "glitch1", rate: 6, min: 300, max: 1200 },
+      { type: "sampleHold", id: "glitch2", rate: 8, min: 500, max: 1500 },
+      { type: "chaos", id: "drift", rate: 2, center: 0, range: 30, step: 0.2 },
+    ],
+    routing: [
+      { from: "glitch1", to: "carrier", param: "frequency" },
+      { from: "glitch2", to: "sideband", param: "frequency" },
+      { from: "drift", to: "carrier", param: "detune" },
+    ],
+    effects: [
+      { type: "delay", time: 0.1875, feedback: 0.72 },
+      { type: "filter", filterType: "highpass", freq: 250, q: 3 },
+      { type: "distortion", amount: 40 },
+    ],
+  },
+
+  "08 - Stereo Chaos": {
+    oscillators: [
+      { id: "left", freq: 220, gain: 0.2, type: "square", pan: -1 },
+      { id: "right", freq: 330, gain: 0.2, type: "square", pan: 1 },
+      { id: "center", freq: 110, gain: 0.22, type: "sawtooth", pan: 0 },
+    ],
+    modulators: [
+      { type: "sampleHold", id: "jump1", rate: 14, min: 180, max: 2200 },
+      { type: "sampleHold", id: "jump2", rate: 18, min: 250, max: 2500 },
+      { type: "lfo", id: "centergate", rate: 8, depth: 0.2, wave: "square" },
+    ],
+    routing: [
+      { from: "jump1", to: "left", param: "frequency" },
+      { from: "jump2", to: "right", param: "frequency" },
+      { from: "centergate", to: "center", param: "gain" },
+    ],
+    effects: [
+      { type: "distortion", amount: 55 },
+      { type: "delay", time: 0.0625, feedback: 0.75 },
+    ],
+  },
+
+  "09 - Industrial Decay": {
+    oscillators: [
+      { id: "motor", freq: 55, gain: 0.24, type: "sawtooth", pan: -0.3 },
+    ],
+    noise: [
+      { id: "crackle", gain: 0.18, pan: 0.4 },
+      { id: "hiss", gain: 0.12, pan: 0 },
+    ],
+    modulators: [
+      {
+        type: "chaos",
+        id: "malfunction",
+        rate: 10,
+        center: 0,
+        range: 60,
+        step: 0.6,
+      },
+      { type: "lfo", id: "stutter", rate: 11, depth: 0.22, wave: "square" },
+      { type: "sampleHold", id: "random", rate: 5, min: 40, max: 120 },
+    ],
+    routing: [
+      { from: "malfunction", to: "motor", param: "detune" },
+      { from: "stutter", to: "motor", param: "gain" },
+      { from: "random", to: "motor", param: "frequency" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 450, q: 3 },
+      { type: "distortion", amount: 65 },
+      { type: "delay", time: 0.333, feedback: 0.6 },
+    ],
+  },
+
+  "10 - Rhythmic Storm": {
+    oscillators: [
+      { id: "kick", freq: 75, gain: 0.3, type: "sine", pan: 0 },
+      { id: "snap", freq: 880, gain: 0.16, type: "square", pan: -0.8 },
+      { id: "crunch", freq: 1760, gain: 0.13, type: "square", pan: 0.8 },
+    ],
+    modulators: [
+      { type: "lfo", id: "gate1", rate: 5, depth: 0.28, wave: "square" },
+      { type: "lfo", id: "gate2", rate: 6.67, depth: 0.16, wave: "square" },
+      { type: "sampleHold", id: "chaos", rate: 20, min: 800, max: 3500 },
+    ],
+    routing: [
+      { from: "gate1", to: "kick", param: "gain" },
+      { from: "gate2", to: "snap", param: "gain" },
+      { from: "chaos", to: "crunch", param: "frequency" },
+    ],
+    effects: [
+      { type: "distortion", amount: 48 },
+      { type: "delay", time: 0.125, feedback: 0.55 },
+      { type: "filter", filterType: "highpass", freq: 100, q: 2 },
+    ],
+  },
+
+  // === TEXTURAL / ABSTRACT (Noise sculptures & soundscapes) ===
+
+  "11 - Spectral Sweep": {
+    noise: [
+      { id: "white", gain: 0.22, pan: -0.4 },
+      { id: "pink", gain: 0.18, pan: 0.4 },
+    ],
+    modulators: [
+      { type: "lfo", id: "sweep", rate: 0.4, depth: 1200, wave: "sine" },
+      { type: "chaos", id: "qjump", rate: 4, center: 15, range: 10, step: 0.3 },
+      { type: "lfo", id: "pan", rate: 0.15, depth: 0.8, wave: "triangle" },
+    ],
+    effects: [
+      { type: "filter", id: "filt", filterType: "bandpass", freq: 1500, q: 22 },
+      { type: "delay", time: 0.5, feedback: 0.7 },
+      { type: "distortion", amount: 25 },
+    ],
+    routing: [
+      { from: "sweep", to: "filt", param: "freq" },
+      { from: "qjump", to: "filt", param: "q" },
+    ],
+  },
+
+  "12 - Quantum Fluctuation": {
+    oscillators: [
+      { id: "qubit1", freq: 110, gain: 0.15, type: "triangle", pan: -0.7 },
+      { id: "qubit2", freq: 220, gain: 0.15, type: "triangle", pan: 0.7 },
+      { id: "qubit3", freq: 330, gain: 0.12, type: "sine", pan: 0 },
+    ],
+    noise: [{ id: "quantum", gain: 0.1, pan: 0 }],
+    modulators: [
+      { type: "sampleHold", id: "collapse1", rate: 2, min: 80, max: 160 },
+      { type: "sampleHold", id: "collapse2", rate: 3, min: 180, max: 280 },
+      {
+        type: "chaos",
+        id: "uncertainty",
+        rate: 1.5,
+        center: 0,
+        range: 40,
+        step: 0.08,
+      },
+    ],
+    routing: [
+      { from: "collapse1", to: "qubit1", param: "frequency" },
+      { from: "collapse2", to: "qubit2", param: "frequency" },
+      { from: "uncertainty", to: "qubit3", param: "detune" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 1200, q: 12 },
+      { type: "delay", time: 0.666, feedback: 0.78 },
+    ],
+  },
+
+  "13 - Granular Cloud": {
+    oscillators: [
+      { id: "grain1", freq: 440, gain: 0.14, type: "sine", pan: -0.9 },
+      { id: "grain2", freq: 660, gain: 0.14, type: "sine", pan: -0.3 },
+      { id: "grain3", freq: 880, gain: 0.14, type: "sine", pan: 0.3 },
+      { id: "grain4", freq: 1100, gain: 0.14, type: "sine", pan: 0.9 },
+    ],
+    modulators: [
+      { type: "sampleHold", id: "scatter1", rate: 16, min: 300, max: 1200 },
+      { type: "sampleHold", id: "scatter2", rate: 18, min: 500, max: 1500 },
+      { type: "lfo", id: "density", rate: 0.2, depth: 0.12, wave: "sine" },
+    ],
+    routing: [
+      { from: "scatter1", to: "grain1", param: "frequency" },
+      { from: "scatter1", to: "grain2", param: "frequency" },
+      { from: "scatter2", to: "grain3", param: "frequency" },
+      { from: "scatter2", to: "grain4", param: "frequency" },
+      { from: "density", to: "grain1", param: "gain" },
+    ],
+    effects: [
+      { type: "delay", time: 0.25, feedback: 0.8 },
+      { type: "filter", filterType: "highpass", freq: 300, q: 3 },
+    ],
+  },
+
+  // === PEAK / CLIMAX (Maximum intensity) ===
+
+  "14 - Digital Shatter": {
+    oscillators: [
+      { id: "freq1", freq: 165, gain: 0.2, type: "square", pan: -1 },
+      { id: "freq2", freq: 220, gain: 0.2, type: "square", pan: 1 },
+      { id: "bass", freq: 55, gain: 0.28, type: "sawtooth", pan: 0 },
+    ],
+    noise: [{ id: "crash", gain: 0.2, pan: 0 }],
+    modulators: [
+      { type: "sampleHold", id: "shatter1", rate: 24, min: 100, max: 3000 },
+      { type: "sampleHold", id: "shatter2", rate: 28, min: 150, max: 3500 },
+      { type: "lfo", id: "bassmod", rate: 16, depth: 30, wave: "square" },
+      { type: "chaos", id: "mayhem", rate: 15, center: 0, range: 100, step: 1 },
+    ],
+    routing: [
+      { from: "shatter1", to: "freq1", param: "frequency" },
+      { from: "shatter2", to: "freq2", param: "frequency" },
+      { from: "bassmod", to: "bass", param: "frequency" },
+      { from: "mayhem", to: "bass", param: "detune" },
+    ],
+    effects: [
+      { type: "distortion", amount: 70 },
+      { type: "delay", time: 0.0625, feedback: 0.82 },
+      { type: "filter", filterType: "bandpass", freq: 800, q: 4 },
+    ],
+  },
+
+  "15 - System Overload": {
+    oscillators: [
+      { id: "osc1", freq: 110, gain: 0.25, type: "sawtooth", pan: -0.8 },
+      { id: "osc2", freq: 165, gain: 0.25, type: "sawtooth", pan: 0.8 },
+      { id: "sub", freq: 55, gain: 0.3, type: "square", pan: 0 },
+    ],
+    noise: [
+      { id: "error1", gain: 0.2, pan: -0.5 },
+      { id: "error2", gain: 0.2, pan: 0.5 },
+    ],
+    modulators: [
+      { type: "lfo", id: "pulse", rate: 8, depth: 0.25, wave: "square" },
+      { type: "sampleHold", id: "glitch", rate: 32, min: 80, max: 440 },
+      {
+        type: "chaos",
+        id: "unstable",
+        rate: 20,
+        center: 0,
+        range: 80,
+        step: 0.8,
+      },
+    ],
+    routing: [
+      { from: "pulse", to: "sub", param: "gain" },
+      { from: "glitch", to: "osc1", param: "frequency" },
+      { from: "unstable", to: "osc2", param: "detune" },
+    ],
+    effects: [
+      { type: "distortion", amount: 75 },
+      { type: "delay", time: 0.125, feedback: 0.7 },
+    ],
+  },
+
+  // === POLYRHYTHMIC PATTERNS (Minimalistic complexity) ===
+
+  "16 - Three Against Four": {
+    oscillators: [
+      { id: "voice1", freq: 220, gain: 0.2, type: "square", pan: -0.6 },
+      { id: "voice2", freq: 330, gain: 0.18, type: "square", pan: 0.6 },
+      { id: "sub", freq: 55, gain: 0.15, type: "sine", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "gate3", rate: 3, depth: 0.2, wave: "square" },
+      { type: "lfo", id: "gate4", rate: 4, depth: 0.18, wave: "square" },
+    ],
+    routing: [
+      { from: "gate3", to: "voice1", param: "gain" },
+      { from: "gate4", to: "voice2", param: "gain" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 800, q: 4 },
+      { type: "delay", time: 0.25, feedback: 0.45 },
+    ],
+  },
+
+  "17 - Five Over Eight": {
+    oscillators: [
+      { id: "pulse1", freq: 165, gain: 0.18, type: "square", pan: -0.7 },
+      { id: "pulse2", freq: 247, gain: 0.16, type: "triangle", pan: 0.7 },
+      { id: "bass", freq: 82.5, gain: 0.2, type: "sine", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "euclid5", rate: 5, depth: 0.18, wave: "square" },
+      { type: "lfo", id: "euclid8", rate: 8, depth: 0.16, wave: "square" },
+      { type: "lfo", id: "bassmove", rate: 0.5, depth: 20, wave: "sine" },
+    ],
+    routing: [
+      { from: "euclid5", to: "pulse1", param: "gain" },
+      { from: "euclid8", to: "pulse2", param: "gain" },
+      { from: "bassmove", to: "bass", param: "frequency" },
+    ],
+    effects: [
+      { type: "filter", filterType: "bandpass", freq: 600, q: 6 },
+      { type: "delay", time: 0.15, feedback: 0.5 },
+    ],
+  },
+
+  "18 - Seven Against Eleven": {
+    oscillators: [
+      { id: "layer1", freq: 110, gain: 0.15, type: "sawtooth", pan: -0.8 },
+      { id: "layer2", freq: 165, gain: 0.14, type: "sawtooth", pan: 0.8 },
+      { id: "layer3", freq: 220, gain: 0.12, type: "triangle", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "rhythm7", rate: 7, depth: 0.15, wave: "square" },
+      { type: "lfo", id: "rhythm11", rate: 11, depth: 0.14, wave: "square" },
+      { type: "chaos", id: "drift", rate: 2, center: 0, range: 15, step: 0.1 },
+    ],
+    routing: [
+      { from: "rhythm7", to: "layer1", param: "gain" },
+      { from: "rhythm11", to: "layer2", param: "gain" },
+      { from: "drift", to: "layer3", param: "detune" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 700, q: 5 },
+      { type: "delay", time: 0.1818, feedback: 0.6 },
+    ],
+  },
+
+  "19 - Triadic Pattern": {
+    oscillators: [
+      { id: "low", freq: 110, gain: 0.16, type: "square", pan: -0.5 },
+      { id: "mid", freq: 165, gain: 0.15, type: "square", pan: 0.5 },
+      { id: "high", freq: 220, gain: 0.13, type: "triangle", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "gate4", rate: 4, depth: 0.16, wave: "square" },
+      { type: "lfo", id: "gate5", rate: 5, depth: 0.15, wave: "square" },
+      { type: "lfo", id: "gate6", rate: 6, depth: 0.13, wave: "square" },
+    ],
+    routing: [
+      { from: "gate4", to: "low", param: "gain" },
+      { from: "gate5", to: "mid", param: "gain" },
+      { from: "gate6", to: "high", param: "gain" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 900, q: 4 },
+      { type: "delay", time: 0.2, feedback: 0.55 },
+    ],
+  },
+
+  "20 - Shifting Phase": {
+    oscillators: [
+      { id: "voice1", freq: 220, gain: 0.17, type: "sawtooth", pan: -0.9 },
+      { id: "voice2", freq: 220, gain: 0.17, type: "sawtooth", pan: 0.9 },
+      { id: "center", freq: 110, gain: 0.18, type: "sine", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "gate1", rate: 3, depth: 0.17, wave: "square" },
+      { type: "lfo", id: "gate2", rate: 3.015, depth: 0.17, wave: "square" },
+      { type: "lfo", id: "sweep", rate: 0.25, depth: 40, wave: "triangle" },
+    ],
+    routing: [
+      { from: "gate1", to: "voice1", param: "gain" },
+      { from: "gate2", to: "voice2", param: "gain" },
+      { from: "sweep", to: "voice1", param: "frequency" },
+    ],
+    effects: [
+      { type: "delay", time: 0.333, feedback: 0.65 },
+      { type: "filter", filterType: "lowpass", freq: 1000, q: 3 },
+    ],
+  },
+
+  "21 - Minimal Layers": {
+    oscillators: [
+      { id: "kick", freq: 55, gain: 0.22, type: "sine", pan: 0 },
+      { id: "hat", freq: 3300, gain: 0.08, type: "square", pan: -0.4 },
+      { id: "clap", freq: 880, gain: 0.1, type: "square", pan: 0.4 },
+    ],
+    modulators: [
+      { type: "lfo", id: "kick_gate", rate: 4, depth: 0.22, wave: "square" },
+      { type: "lfo", id: "hat_gate", rate: 8, depth: 0.08, wave: "square" },
+      { type: "lfo", id: "clap_gate", rate: 2.67, depth: 0.1, wave: "square" },
+    ],
+    routing: [
+      { from: "kick_gate", to: "kick", param: "gain" },
+      { from: "hat_gate", to: "hat", param: "gain" },
+      { from: "clap_gate", to: "clap", param: "gain" },
+    ],
+    effects: [
+      { type: "filter", filterType: "highpass", freq: 40, q: 1 },
+      { type: "delay", time: 0.125, feedback: 0.3 },
+    ],
+  },
+
+  "22 - Interlocking Gates": {
+    oscillators: [
+      { id: "tone1", freq: 165, gain: 0.16, type: "triangle", pan: -0.7 },
+      { id: "tone2", freq: 220, gain: 0.16, type: "triangle", pan: 0.7 },
+      { id: "tone3", freq: 330, gain: 0.14, type: "sine", pan: 0 },
+      { id: "sub", freq: 82.5, gain: 0.18, type: "sine", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "gate1", rate: 5, depth: 0.16, wave: "square" },
+      { type: "lfo", id: "gate2", rate: 7, depth: 0.16, wave: "square" },
+      { type: "lfo", id: "gate3", rate: 9, depth: 0.14, wave: "square" },
+      { type: "sampleHold", id: "pitch", rate: 2, min: 150, max: 350 },
+    ],
+    routing: [
+      { from: "gate1", to: "tone1", param: "gain" },
+      { from: "gate2", to: "tone2", param: "gain" },
+      { from: "gate3", to: "tone3", param: "gain" },
+      { from: "pitch", to: "tone1", param: "frequency" },
+    ],
+    effects: [
+      { type: "filter", filterType: "bandpass", freq: 800, q: 8 },
+      { type: "delay", time: 0.222, feedback: 0.6 },
+      { type: "distortion", amount: 20 },
+    ],
+  },
+
+  "23 - Polymetric Bass": {
+    oscillators: [
+      { id: "bass1", freq: 55, gain: 0.2, type: "sawtooth", pan: -0.3 },
+      { id: "bass2", freq: 82.5, gain: 0.18, type: "square", pan: 0.3 },
+      { id: "accent", freq: 110, gain: 0.15, type: "triangle", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "rhythm1", rate: 3, depth: 0.2, wave: "square" },
+      { type: "lfo", id: "rhythm2", rate: 5, depth: 0.18, wave: "square" },
+      {
+        type: "lfo",
+        id: "accent_gate",
+        rate: 1.33,
+        depth: 0.15,
+        wave: "square",
+      },
+      { type: "lfo", id: "filter_mod", rate: 0.5, depth: 400, wave: "sine" },
+    ],
+    routing: [
+      { from: "rhythm1", to: "bass1", param: "gain" },
+      { from: "rhythm2", to: "bass2", param: "gain" },
+      { from: "accent_gate", to: "accent", param: "gain" },
+      { from: "filter_mod", to: "bass1", param: "frequency" },
+    ],
+    effects: [
+      { type: "filter", id: "filt", filterType: "lowpass", freq: 500, q: 6 },
+      { type: "distortion", amount: 35 },
+      { type: "delay", time: 0.375, feedback: 0.5 },
+    ],
+  },
+
+  "24 - Fibonacci Cascade": {
+    oscillators: [
+      { id: "f1", freq: 110, gain: 0.14, type: "sine", pan: -0.9 },
+      { id: "f2", freq: 165, gain: 0.14, type: "sine", pan: -0.6 },
+      { id: "f3", freq: 220, gain: 0.13, type: "sine", pan: -0.3 },
+      { id: "f4", freq: 330, gain: 0.13, type: "sine", pan: 0.3 },
+      { id: "f5", freq: 440, gain: 0.12, type: "sine", pan: 0.6 },
+      { id: "f6", freq: 660, gain: 0.12, type: "sine", pan: 0.9 },
+    ],
+    modulators: [
+      { type: "lfo", id: "g1", rate: 1, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "g2", rate: 2, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "g3", rate: 3, depth: 0.13, wave: "square" },
+      { type: "lfo", id: "g5", rate: 5, depth: 0.13, wave: "square" },
+      { type: "lfo", id: "g8", rate: 8, depth: 0.12, wave: "square" },
+      { type: "lfo", id: "g13", rate: 13, depth: 0.12, wave: "square" },
+    ],
+    routing: [
+      { from: "g1", to: "f1", param: "gain" },
+      { from: "g2", to: "f2", param: "gain" },
+      { from: "g3", to: "f3", param: "gain" },
+      { from: "g5", to: "f4", param: "gain" },
+      { from: "g8", to: "f5", param: "gain" },
+      { from: "g13", to: "f6", param: "gain" },
+    ],
+    effects: [
+      { type: "delay", time: 0.618, feedback: 0.618 },
+      { type: "filter", filterType: "lowpass", freq: 1200, q: 4 },
+    ],
+  },
+
+  "25 - Asymmetric Pulse": {
+    oscillators: [
+      { id: "pulse1", freq: 220, gain: 0.18, type: "square", pan: -0.6 },
+      { id: "pulse2", freq: 330, gain: 0.16, type: "square", pan: 0.6 },
+      { id: "sub", freq: 55, gain: 0.2, type: "sine", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "gate1", rate: 7, depth: 0.18, wave: "square" },
+      { type: "lfo", id: "gate2", rate: 9, depth: 0.16, wave: "square" },
+      {
+        type: "chaos",
+        id: "variation",
+        rate: 3,
+        center: 0,
+        range: 25,
+        step: 0.15,
+      },
+    ],
+    routing: [
+      { from: "gate1", to: "pulse1", param: "gain" },
+      { from: "gate2", to: "pulse2", param: "gain" },
+      { from: "variation", to: "pulse1", param: "detune" },
+    ],
+    effects: [
+      { type: "filter", filterType: "bandpass", freq: 700, q: 7 },
+      { type: "delay", time: 0.142, feedback: 0.55 },
+      { type: "distortion", amount: 25 },
+    ],
+  },
+
+  // === DYNAMIC CONTRASTS (Breathing, swelling, fading) ===
+
+  "26 - Breathing Organism": {
+    oscillators: [
+      { id: "layer1", freq: 110, gain: 0.18, type: "sawtooth", pan: -0.5 },
+      { id: "layer2", freq: 165, gain: 0.16, type: "sawtooth", pan: 0.5 },
+      { id: "layer3", freq: 220, gain: 0.14, type: "triangle", pan: 0 },
+      { id: "layer4", freq: 330, gain: 0.12, type: "sine", pan: -0.3 },
+      { id: "layer5", freq: 440, gain: 0.1, type: "sine", pan: 0.3 },
+    ],
+    modulators: [
+      { type: "lfo", id: "breath1", rate: 0.1, depth: 0.18, wave: "sine" },
+      { type: "lfo", id: "breath2", rate: 0.13, depth: 0.16, wave: "sine" },
+      { type: "lfo", id: "breath3", rate: 0.17, depth: 0.14, wave: "sine" },
+      { type: "lfo", id: "breath4", rate: 0.21, depth: 0.12, wave: "sine" },
+      { type: "lfo", id: "breath5", rate: 0.27, depth: 0.1, wave: "sine" },
+      {
+        type: "lfo",
+        id: "filter_breath",
+        rate: 0.08,
+        depth: 600,
+        wave: "sine",
+      },
+    ],
+    routing: [
+      { from: "breath1", to: "layer1", param: "gain" },
+      { from: "breath2", to: "layer2", param: "gain" },
+      { from: "breath3", to: "layer3", param: "gain" },
+      { from: "breath4", to: "layer4", param: "gain" },
+      { from: "breath5", to: "layer5", param: "gain" },
+      { from: "filter_breath", to: "layer1", param: "frequency" },
+    ],
+    effects: [
+      { type: "filter", id: "filt", filterType: "lowpass", freq: 800, q: 6 },
+      { type: "delay", time: 0.5, feedback: 0.7 },
+    ],
+  },
+
+  "27 - Tidal Swell": {
+    oscillators: [
+      { id: "bass", freq: 55, gain: 0.25, type: "sine", pan: 0 },
+      { id: "mid1", freq: 165, gain: 0.15, type: "triangle", pan: -0.6 },
+      { id: "mid2", freq: 220, gain: 0.15, type: "triangle", pan: 0.6 },
+      { id: "high", freq: 880, gain: 0.08, type: "sine", pan: 0 },
+    ],
+    noise: [{ id: "foam", gain: 0.12, pan: 0 }],
+    modulators: [
+      { type: "lfo", id: "tide", rate: 0.06, depth: 0.22, wave: "sine" },
+      { type: "lfo", id: "wave1", rate: 0.15, depth: 0.15, wave: "sine" },
+      { type: "lfo", id: "wave2", rate: 0.18, depth: 0.15, wave: "sine" },
+      {
+        type: "lfo",
+        id: "foam_fade",
+        rate: 0.12,
+        depth: 0.12,
+        wave: "triangle",
+      },
+      {
+        type: "chaos",
+        id: "turbulence",
+        rate: 1,
+        center: 0,
+        range: 20,
+        step: 0.08,
+      },
+    ],
+    routing: [
+      { from: "tide", to: "bass", param: "gain" },
+      { from: "wave1", to: "mid1", param: "gain" },
+      { from: "wave2", to: "mid2", param: "gain" },
+      { from: "foam_fade", to: "foam", param: "gain" },
+      { from: "turbulence", to: "high", param: "detune" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 1200, q: 4 },
+      { type: "delay", time: 0.75, feedback: 0.65 },
+    ],
+  },
+
+  "28 - Emergence": {
+    oscillators: [
+      { id: "seed1", freq: 220, gain: 0.12, type: "sine", pan: -0.8 },
+      { id: "seed2", freq: 330, gain: 0.12, type: "sine", pan: -0.4 },
+      { id: "seed3", freq: 440, gain: 0.12, type: "sine", pan: 0 },
+      { id: "seed4", freq: 660, gain: 0.12, type: "sine", pan: 0.4 },
+      { id: "seed5", freq: 880, gain: 0.12, type: "sine", pan: 0.8 },
+    ],
+    modulators: [
+      { type: "lfo", id: "grow1", rate: 0.08, depth: 0.12, wave: "triangle" },
+      { type: "lfo", id: "grow2", rate: 0.11, depth: 0.12, wave: "triangle" },
+      { type: "lfo", id: "grow3", rate: 0.14, depth: 0.12, wave: "triangle" },
+      { type: "lfo", id: "grow4", rate: 0.18, depth: 0.12, wave: "triangle" },
+      { type: "lfo", id: "grow5", rate: 0.23, depth: 0.12, wave: "triangle" },
+      { type: "sampleHold", id: "sprout", rate: 0.5, min: 200, max: 1000 },
+    ],
+    routing: [
+      { from: "grow1", to: "seed1", param: "gain" },
+      { from: "grow2", to: "seed2", param: "gain" },
+      { from: "grow3", to: "seed3", param: "gain" },
+      { from: "grow4", to: "seed4", param: "gain" },
+      { from: "grow5", to: "seed5", param: "gain" },
+      { from: "sprout", to: "seed3", param: "frequency" },
+    ],
+    effects: [
+      { type: "delay", time: 0.666, feedback: 0.75 },
+      { type: "filter", filterType: "highpass", freq: 150, q: 2 },
+    ],
+  },
+
+  "29 - Pulse and Silence": {
+    oscillators: [
+      { id: "voice1", freq: 165, gain: 0.2, type: "square", pan: -0.6 },
+      { id: "voice2", freq: 220, gain: 0.18, type: "square", pan: 0.6 },
+      { id: "bass", freq: 55, gain: 0.22, type: "sine", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "pulse", rate: 4, depth: 0.2, wave: "square" },
+      { type: "lfo", id: "fade", rate: 0.25, depth: 0.18, wave: "sine" },
+      {
+        type: "lfo",
+        id: "bass_fade",
+        rate: 0.2,
+        depth: 0.22,
+        wave: "triangle",
+      },
+      {
+        type: "chaos",
+        id: "variations",
+        rate: 2,
+        center: 0,
+        range: 30,
+        step: 0.2,
+      },
+    ],
+    routing: [
+      { from: "pulse", to: "voice1", param: "gain" },
+      { from: "fade", to: "voice2", param: "gain" },
+      { from: "bass_fade", to: "bass", param: "gain" },
+      { from: "variations", to: "voice1", param: "detune" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 900, q: 5 },
+      { type: "delay", time: 0.375, feedback: 0.6 },
+    ],
+  },
+
+  "30 - Density Morph": {
+    oscillators: [
+      { id: "sparse1", freq: 110, gain: 0.16, type: "triangle", pan: -0.7 },
+      { id: "sparse2", freq: 220, gain: 0.14, type: "triangle", pan: 0.7 },
+      { id: "dense1", freq: 330, gain: 0.12, type: "sawtooth", pan: -0.5 },
+      { id: "dense2", freq: 440, gain: 0.12, type: "sawtooth", pan: 0.5 },
+      { id: "dense3", freq: 660, gain: 0.1, type: "square", pan: -0.3 },
+      { id: "dense4", freq: 880, gain: 0.1, type: "square", pan: 0.3 },
+    ],
+    modulators: [
+      { type: "lfo", id: "sparse_gate1", rate: 2, depth: 0.16, wave: "square" },
+      { type: "lfo", id: "sparse_gate2", rate: 3, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "density", rate: 0.15, depth: 0.12, wave: "triangle" },
+      { type: "lfo", id: "complexity", rate: 0.12, depth: 0.1, wave: "sine" },
+    ],
+    routing: [
+      { from: "sparse_gate1", to: "sparse1", param: "gain" },
+      { from: "sparse_gate2", to: "sparse2", param: "gain" },
+      { from: "density", to: "dense1", param: "gain" },
+      { from: "density", to: "dense2", param: "gain" },
+      { from: "complexity", to: "dense3", param: "gain" },
+      { from: "complexity", to: "dense4", param: "gain" },
+    ],
+    effects: [
+      { type: "filter", filterType: "bandpass", freq: 700, q: 6 },
+      { type: "delay", time: 0.25, feedback: 0.55 },
+      { type: "distortion", amount: 20 },
+    ],
+  },
+
+  "31 - Conversation": {
+    oscillators: [
+      { id: "voice_a", freq: 220, gain: 0.18, type: "sawtooth", pan: -0.8 },
+      { id: "voice_b", freq: 330, gain: 0.16, type: "sawtooth", pan: 0.8 },
+      { id: "silence", freq: 440, gain: 0.08, type: "sine", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "speak_a", rate: 0.4, depth: 0.18, wave: "triangle" },
+      { type: "lfo", id: "speak_b", rate: 0.37, depth: 0.16, wave: "triangle" },
+      { type: "lfo", id: "silence_fade", rate: 0.5, depth: 0.08, wave: "sine" },
+      { type: "sampleHold", id: "interruption", rate: 1.5, min: 180, max: 400 },
+    ],
+    routing: [
+      { from: "speak_a", to: "voice_a", param: "gain" },
+      { from: "speak_b", to: "voice_b", param: "gain" },
+      { from: "silence_fade", to: "silence", param: "gain" },
+      { from: "interruption", to: "voice_a", param: "frequency" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 800, q: 4 },
+      { type: "delay", time: 0.4, feedback: 0.5 },
+    ],
+  },
+
+  "32 - Accumulation": {
+    oscillators: [
+      { id: "drop1", freq: 880, gain: 0.1, type: "sine", pan: -0.9 },
+      { id: "drop2", freq: 660, gain: 0.11, type: "sine", pan: -0.6 },
+      { id: "drop3", freq: 440, gain: 0.12, type: "sine", pan: -0.3 },
+      { id: "drop4", freq: 330, gain: 0.14, type: "triangle", pan: 0 },
+      { id: "drop5", freq: 220, gain: 0.16, type: "triangle", pan: 0.3 },
+      { id: "pool", freq: 110, gain: 0.2, type: "sawtooth", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "drip1", rate: 3, depth: 0.1, wave: "square" },
+      { type: "lfo", id: "drip2", rate: 5, depth: 0.11, wave: "square" },
+      { type: "lfo", id: "drip3", rate: 7, depth: 0.12, wave: "square" },
+      { type: "lfo", id: "build", rate: 0.1, depth: 0.2, wave: "triangle" },
+      { type: "chaos", id: "splash", rate: 4, center: 0, range: 40, step: 0.3 },
+    ],
+    routing: [
+      { from: "drip1", to: "drop1", param: "gain" },
+      { from: "drip2", to: "drop2", param: "gain" },
+      { from: "drip3", to: "drop3", param: "gain" },
+      { from: "build", to: "pool", param: "gain" },
+      { from: "splash", to: "drop4", param: "detune" },
+    ],
+    effects: [
+      { type: "delay", time: 0.5, feedback: 0.7 },
+      { type: "filter", filterType: "lowpass", freq: 1000, q: 5 },
+    ],
+  },
+
+  "33 - Storm Cycle": {
+    oscillators: [
+      { id: "rumble", freq: 55, gain: 0.22, type: "sine", pan: 0 },
+      { id: "wind1", freq: 1200, gain: 0.08, type: "sawtooth", pan: -0.6 },
+      { id: "wind2", freq: 1400, gain: 0.08, type: "sawtooth", pan: 0.6 },
+    ],
+    noise: [
+      { id: "rain", gain: 0.15, pan: -0.3 },
+      { id: "static", gain: 0.1, pan: 0.3 },
+    ],
+    modulators: [
+      {
+        type: "lfo",
+        id: "storm_intensity",
+        rate: 0.05,
+        depth: 0.18,
+        wave: "sine",
+      },
+      {
+        type: "lfo",
+        id: "wind_gust",
+        rate: 0.3,
+        depth: 0.08,
+        wave: "triangle",
+      },
+      {
+        type: "chaos",
+        id: "lightning",
+        rate: 1,
+        center: 0,
+        range: 100,
+        step: 0.5,
+      },
+      { type: "lfo", id: "calm", rate: 0.08, depth: 0.2, wave: "sine" },
+    ],
+    routing: [
+      { from: "storm_intensity", to: "rain", param: "gain" },
+      { from: "storm_intensity", to: "static", param: "gain" },
+      { from: "wind_gust", to: "wind1", param: "gain" },
+      { from: "wind_gust", to: "wind2", param: "gain" },
+      { from: "lightning", to: "rumble", param: "detune" },
+    ],
+    effects: [
+      { type: "filter", id: "filt", filterType: "bandpass", freq: 600, q: 4 },
+      { type: "delay", time: 0.666, feedback: 0.68 },
+      { type: "distortion", amount: 30 },
+    ],
+  },
+
+  "34 - Whisper to Scream": {
+    oscillators: [
+      { id: "whisper1", freq: 440, gain: 0.08, type: "sine", pan: -0.5 },
+      { id: "whisper2", freq: 660, gain: 0.08, type: "sine", pan: 0.5 },
+      { id: "build1", freq: 220, gain: 0.14, type: "sawtooth", pan: -0.3 },
+      { id: "build2", freq: 330, gain: 0.14, type: "sawtooth", pan: 0.3 },
+      { id: "scream", freq: 1760, gain: 0.12, type: "square", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "whisper_fade", rate: 0.2, depth: 0.08, wave: "sine" },
+      { type: "lfo", id: "tension", rate: 0.15, depth: 0.14, wave: "triangle" },
+      { type: "lfo", id: "release", rate: 0.1, depth: 0.12, wave: "sine" },
+      { type: "sampleHold", id: "intensity", rate: 1, min: 0, max: 0.2 },
+    ],
+    routing: [
+      { from: "whisper_fade", to: "whisper1", param: "gain" },
+      { from: "whisper_fade", to: "whisper2", param: "gain" },
+      { from: "tension", to: "build1", param: "gain" },
+      { from: "tension", to: "build2", param: "gain" },
+      { from: "release", to: "scream", param: "gain" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 1200, q: 8 },
+      { type: "distortion", amount: 40 },
+      { type: "delay", time: 0.25, feedback: 0.65 },
+    ],
+  },
+
+  "35 - Lunar Phases": {
+    oscillators: [
+      { id: "new_moon", freq: 55, gain: 0.05, type: "sine", pan: 0 },
+      { id: "crescent", freq: 110, gain: 0.1, type: "triangle", pan: -0.5 },
+      { id: "quarter", freq: 165, gain: 0.15, type: "triangle", pan: 0.5 },
+      { id: "gibbous", freq: 220, gain: 0.18, type: "sawtooth", pan: -0.3 },
+      { id: "full_moon", freq: 330, gain: 0.2, type: "sawtooth", pan: 0.3 },
+    ],
+    modulators: [
+      { type: "lfo", id: "phase1", rate: 0.033, depth: 0.05, wave: "sine" },
+      { type: "lfo", id: "phase2", rate: 0.033, depth: 0.1, wave: "sine" },
+      { type: "lfo", id: "phase3", rate: 0.033, depth: 0.15, wave: "sine" },
+      { type: "lfo", id: "phase4", rate: 0.033, depth: 0.18, wave: "sine" },
+      { type: "lfo", id: "phase5", rate: 0.033, depth: 0.2, wave: "sine" },
+    ],
+    routing: [
+      { from: "phase1", to: "new_moon", param: "gain" },
+      { from: "phase2", to: "crescent", param: "gain" },
+      { from: "phase3", to: "quarter", param: "gain" },
+      { from: "phase4", to: "gibbous", param: "gain" },
+      { from: "phase5", to: "full_moon", param: "gain" },
+    ],
+    effects: [
+      { type: "delay", time: 0.909, feedback: 0.7 },
+      { type: "filter", filterType: "lowpass", freq: 900, q: 6 },
+    ],
+  },
+
+  // === RICH POLYRHYTHMIC ENSEMBLES (Complex short patterns) ===
+
+  "36 - Triplet Nexus": {
+    oscillators: [
+      { id: "voice1", freq: 220, gain: 0.15, type: "square", pan: -0.7 },
+      { id: "voice2", freq: 330, gain: 0.13, type: "square", pan: 0 },
+      { id: "voice3", freq: 440, gain: 0.12, type: "square", pan: 0.7 },
+      { id: "voice4", freq: 165, gain: 0.14, type: "sawtooth", pan: -0.3 },
+      { id: "voice5", freq: 247.5, gain: 0.11, type: "sawtooth", pan: 0.3 },
+    ],
+    modulators: [
+      { type: "lfo", id: "gate1", rate: 3, depth: 0.15, wave: "square" },
+      { type: "lfo", id: "gate2", rate: 4, depth: 0.13, wave: "square" },
+      { type: "lfo", id: "gate3", rate: 5, depth: 0.12, wave: "square" },
+      { type: "lfo", id: "gate4", rate: 7, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "gate5", rate: 9, depth: 0.11, wave: "square" },
+    ],
+    routing: [
+      { from: "gate1", to: "voice1", param: "gain" },
+      { from: "gate2", to: "voice2", param: "gain" },
+      { from: "gate3", to: "voice3", param: "gain" },
+      { from: "gate4", to: "voice4", param: "gain" },
+      { from: "gate5", to: "voice5", param: "gain" },
+    ],
+    effects: [
+      { type: "filter", filterType: "bandpass", freq: 500, q: 8 },
+      { type: "delay", time: 0.1, feedback: 0.4 },
+    ],
+  },
+
+  "37 - Prime Dance": {
+    oscillators: [
+      { id: "p2", freq: 293.66, gain: 0.16, type: "triangle", pan: -0.8 },
+      { id: "p3", freq: 329.63, gain: 0.15, type: "triangle", pan: -0.4 },
+      { id: "p5", freq: 369.99, gain: 0.14, type: "triangle", pan: 0 },
+      { id: "p7", freq: 415.3, gain: 0.13, type: "triangle", pan: 0.4 },
+      { id: "p11", freq: 466.16, gain: 0.12, type: "triangle", pan: 0.8 },
+    ],
+    modulators: [
+      { type: "lfo", id: "pulse2", rate: 2, depth: 0.16, wave: "square" },
+      { type: "lfo", id: "pulse3", rate: 3, depth: 0.15, wave: "square" },
+      { type: "lfo", id: "pulse5", rate: 5, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "pulse7", rate: 7, depth: 0.13, wave: "square" },
+      { type: "lfo", id: "pulse11", rate: 11, depth: 0.12, wave: "square" },
+      { type: "lfo", id: "sweep", rate: 0.3, depth: 400, wave: "sine" },
+    ],
+    routing: [
+      { from: "pulse2", to: "p2", param: "gain" },
+      { from: "pulse3", to: "p3", param: "gain" },
+      { from: "pulse5", to: "p5", param: "gain" },
+      { from: "pulse7", to: "p7", param: "gain" },
+      { from: "pulse11", to: "p11", param: "gain" },
+      { from: "sweep", to: "p2", param: "frequency" },
+      { from: "sweep", to: "p3", param: "frequency" },
+    ],
+    effects: [
+      { type: "filter", filterType: "highpass", freq: 200, q: 4 },
+      { type: "delay", time: 0.187, feedback: 0.5 },
+      { type: "distortion", amount: 15 },
+    ],
+  },
+
+  "38 - Hemiola Cascade": {
+    oscillators: [
+      { id: "bass", freq: 110, gain: 0.2, type: "sawtooth", pan: 0 },
+      { id: "mid1", freq: 220, gain: 0.14, type: "square", pan: -0.5 },
+      { id: "mid2", freq: 330, gain: 0.12, type: "square", pan: 0.5 },
+      { id: "high1", freq: 440, gain: 0.1, type: "triangle", pan: -0.7 },
+      { id: "high2", freq: 660, gain: 0.08, type: "triangle", pan: 0.7 },
+    ],
+    modulators: [
+      { type: "lfo", id: "bassgate", rate: 2, depth: 0.2, wave: "square" },
+      { type: "lfo", id: "midgate1", rate: 3, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "midgate2", rate: 6, depth: 0.12, wave: "square" },
+      { type: "lfo", id: "highgate1", rate: 9, depth: 0.1, wave: "square" },
+      { type: "lfo", id: "highgate2", rate: 4.5, depth: 0.08, wave: "square" },
+      { type: "lfo", id: "detune", rate: 0.4, depth: 8, wave: "sine" },
+    ],
+    routing: [
+      { from: "bassgate", to: "bass", param: "gain" },
+      { from: "midgate1", to: "mid1", param: "gain" },
+      { from: "midgate2", to: "mid2", param: "gain" },
+      { from: "highgate1", to: "high1", param: "gain" },
+      { from: "highgate2", to: "high2", param: "gain" },
+      { from: "detune", to: "mid1", param: "detune" },
+      { from: "detune", to: "mid2", param: "detune" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 1200, q: 5 },
+      { type: "delay", time: 0.125, feedback: 0.45 },
+    ],
+  },
+
+  "39 - Syncopated Web": {
+    oscillators: [
+      { id: "kick", freq: 55, gain: 0.22, type: "sine", pan: 0 },
+      { id: "snare1", freq: 200, gain: 0.15, type: "square", pan: -0.6 },
+      { id: "snare2", freq: 280, gain: 0.14, type: "square", pan: 0.6 },
+      { id: "hat1", freq: 880, gain: 0.09, type: "triangle", pan: -0.8 },
+      { id: "hat2", freq: 1320, gain: 0.08, type: "triangle", pan: 0.8 },
+      { id: "perc", freq: 550, gain: 0.1, type: "sawtooth", pan: 0.3 },
+    ],
+    noise: [{ id: "hiss", gain: 0.06, pan: 0 }],
+    modulators: [
+      { type: "lfo", id: "k_gate", rate: 4, depth: 0.22, wave: "square" },
+      { type: "lfo", id: "s1_gate", rate: 2.67, depth: 0.15, wave: "square" },
+      { type: "lfo", id: "s2_gate", rate: 5.33, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "h1_gate", rate: 8, depth: 0.09, wave: "square" },
+      { type: "lfo", id: "h2_gate", rate: 12, depth: 0.08, wave: "square" },
+      { type: "lfo", id: "p_gate", rate: 7, depth: 0.1, wave: "square" },
+      { type: "lfo", id: "hiss_gate", rate: 16, depth: 0.06, wave: "square" },
+    ],
+    routing: [
+      { from: "k_gate", to: "kick", param: "gain" },
+      { from: "s1_gate", to: "snare1", param: "gain" },
+      { from: "s2_gate", to: "snare2", param: "gain" },
+      { from: "h1_gate", to: "hat1", param: "gain" },
+      { from: "h2_gate", to: "hat2", param: "gain" },
+      { from: "p_gate", to: "perc", param: "gain" },
+      { from: "hiss_gate", to: "hiss", param: "gain" },
+    ],
+    effects: [
+      { type: "filter", filterType: "highpass", freq: 40, q: 2 },
+      { type: "delay", time: 0.0625, feedback: 0.35 },
+      { type: "distortion", amount: 20 },
+    ],
+  },
+
+  "40 - Metric Modulation": {
+    oscillators: [
+      { id: "ref", freq: 165, gain: 0.18, type: "sawtooth", pan: 0 },
+      { id: "v2", freq: 220, gain: 0.15, type: "square", pan: -0.4 },
+      { id: "v3", freq: 247.5, gain: 0.14, type: "square", pan: 0.4 },
+      { id: "v4", freq: 330, gain: 0.12, type: "triangle", pan: -0.7 },
+      { id: "v5", freq: 412.5, gain: 0.1, type: "triangle", pan: 0.7 },
+    ],
+    modulators: [
+      { type: "lfo", id: "g_ref", rate: 3, depth: 0.18, wave: "square" },
+      { type: "lfo", id: "g2", rate: 4, depth: 0.15, wave: "square" },
+      { type: "lfo", id: "g3", rate: 4.5, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "g4", rate: 6, depth: 0.12, wave: "square" },
+      { type: "lfo", id: "g5", rate: 7.5, depth: 0.1, wave: "square" },
+      { type: "lfo", id: "mod_speed", rate: 0.2, depth: 1, wave: "triangle" },
+    ],
+    routing: [
+      { from: "g_ref", to: "ref", param: "gain" },
+      { from: "g2", to: "v2", param: "gain" },
+      { from: "g3", to: "v3", param: "gain" },
+      { from: "g4", to: "v4", param: "gain" },
+      { from: "g5", to: "v5", param: "gain" },
+      { from: "mod_speed", to: "g2", param: "rate" },
+      { from: "mod_speed", to: "g3", param: "rate" },
+      { from: "mod_speed", to: "g4", param: "rate" },
+    ],
+    effects: [
+      { type: "filter", filterType: "bandpass", freq: 600, q: 7 },
+      { type: "delay", time: 0.167, feedback: 0.5 },
+    ],
+  },
+
+  "41 - Afro-Cuban Matrix": {
+    oscillators: [
+      { id: "clave", freq: 880, gain: 0.15, type: "square", pan: 0 },
+      { id: "tumbao", freq: 110, gain: 0.18, type: "sawtooth", pan: -0.5 },
+      { id: "cascara", freq: 660, gain: 0.12, type: "triangle", pan: 0.6 },
+      { id: "montuno", freq: 440, gain: 0.13, type: "square", pan: -0.3 },
+      { id: "bell", freq: 1320, gain: 0.1, type: "triangle", pan: 0.8 },
+    ],
+    noise: [{ id: "shaker", gain: 0.07, pan: -0.7 }],
+    modulators: [
+      {
+        type: "lfo",
+        id: "clave_pat",
+        rate: 2.4,
+        depth: 0.15,
+        wave: "square",
+      },
+      {
+        type: "lfo",
+        id: "tumbao_pat",
+        rate: 1.6,
+        depth: 0.18,
+        wave: "square",
+      },
+      {
+        type: "lfo",
+        id: "cascara_pat",
+        rate: 4.8,
+        depth: 0.12,
+        wave: "square",
+      },
+      {
+        type: "lfo",
+        id: "montuno_pat",
+        rate: 6.4,
+        depth: 0.13,
+        wave: "square",
+      },
+      { type: "lfo", id: "bell_pat", rate: 9.6, depth: 0.1, wave: "square" },
+      {
+        type: "lfo",
+        id: "shaker_pat",
+        rate: 19.2,
+        depth: 0.07,
+        wave: "square",
+      },
+    ],
+    routing: [
+      { from: "clave_pat", to: "clave", param: "gain" },
+      { from: "tumbao_pat", to: "tumbao", param: "gain" },
+      { from: "cascara_pat", to: "cascara", param: "gain" },
+      { from: "montuno_pat", to: "montuno", param: "gain" },
+      { from: "bell_pat", to: "bell", param: "gain" },
+      { from: "shaker_pat", to: "shaker", param: "gain" },
+    ],
+    effects: [
+      { type: "filter", filterType: "highpass", freq: 80, q: 3 },
+      { type: "delay", time: 0.208, feedback: 0.4 },
+      { type: "distortion", amount: 18 },
+    ],
+  },
+
+  "42 - Interlocking Gates": {
+    oscillators: [
+      { id: "o1", freq: 220, gain: 0.16, type: "square", pan: -0.9 },
+      { id: "o2", freq: 275, gain: 0.15, type: "square", pan: -0.6 },
+      { id: "o3", freq: 330, gain: 0.14, type: "square", pan: -0.3 },
+      { id: "o4", freq: 385, gain: 0.13, type: "square", pan: 0 },
+      { id: "o5", freq: 440, gain: 0.12, type: "square", pan: 0.3 },
+      { id: "o6", freq: 495, gain: 0.11, type: "square", pan: 0.6 },
+      { id: "o7", freq: 550, gain: 0.1, type: "square", pan: 0.9 },
+    ],
+    modulators: [
+      { type: "lfo", id: "g1", rate: 7, depth: 0.16, wave: "square" },
+      { type: "lfo", id: "g2", rate: 6, depth: 0.15, wave: "square" },
+      { type: "lfo", id: "g3", rate: 5, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "g4", rate: 4, depth: 0.13, wave: "square" },
+      { type: "lfo", id: "g5", rate: 3, depth: 0.12, wave: "square" },
+      { type: "lfo", id: "g6", rate: 2, depth: 0.11, wave: "square" },
+      { type: "lfo", id: "g7", rate: 1.5, depth: 0.1, wave: "square" },
+    ],
+    routing: [
+      { from: "g1", to: "o1", param: "gain" },
+      { from: "g2", to: "o2", param: "gain" },
+      { from: "g3", to: "o3", param: "gain" },
+      { from: "g4", to: "o4", param: "gain" },
+      { from: "g5", to: "o5", param: "gain" },
+      { from: "g6", to: "o6", param: "gain" },
+      { from: "g7", to: "o7", param: "gain" },
+    ],
+    effects: [
+      { type: "filter", filterType: "bandpass", freq: 800, q: 9 },
+      { type: "delay", time: 0.071, feedback: 0.5 },
+    ],
+  },
+
+  "43 - Phase Drift": {
+    oscillators: [
+      { id: "anchor", freq: 110, gain: 0.2, type: "sawtooth", pan: 0 },
+      { id: "drift1", freq: 220, gain: 0.15, type: "square", pan: -0.5 },
+      { id: "drift2", freq: 330, gain: 0.14, type: "square", pan: 0.5 },
+      { id: "drift3", freq: 440, gain: 0.12, type: "triangle", pan: -0.7 },
+      { id: "drift4", freq: 550, gain: 0.1, type: "triangle", pan: 0.7 },
+    ],
+    modulators: [
+      {
+        type: "lfo",
+        id: "anchor_gate",
+        rate: 4,
+        depth: 0.2,
+        wave: "square",
+      },
+      {
+        type: "lfo",
+        id: "drift1_gate",
+        rate: 4.05,
+        depth: 0.15,
+        wave: "square",
+      },
+      {
+        type: "lfo",
+        id: "drift2_gate",
+        rate: 4.1,
+        depth: 0.14,
+        wave: "square",
+      },
+      {
+        type: "lfo",
+        id: "drift3_gate",
+        rate: 4.15,
+        depth: 0.12,
+        wave: "square",
+      },
+      {
+        type: "lfo",
+        id: "drift4_gate",
+        rate: 4.2,
+        depth: 0.1,
+        wave: "square",
+      },
+      { type: "lfo", id: "phase_mod", rate: 0.1, depth: 0.15, wave: "sine" },
+    ],
+    routing: [
+      { from: "anchor_gate", to: "anchor", param: "gain" },
+      { from: "drift1_gate", to: "drift1", param: "gain" },
+      { from: "drift2_gate", to: "drift2", param: "gain" },
+      { from: "drift3_gate", to: "drift3", param: "gain" },
+      { from: "drift4_gate", to: "drift4", param: "gain" },
+      { from: "phase_mod", to: "drift1_gate", param: "rate" },
+      { from: "phase_mod", to: "drift2_gate", param: "rate" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 900, q: 6 },
+      { type: "delay", time: 0.25, feedback: 0.6 },
+    ],
+  },
+
+  "44 - Euclidean Ensemble": {
+    oscillators: [
+      { id: "e_5_8", freq: 165, gain: 0.16, type: "square", pan: -0.7 },
+      { id: "e_7_12", freq: 220, gain: 0.15, type: "square", pan: -0.3 },
+      { id: "e_9_16", freq: 275, gain: 0.14, type: "square", pan: 0.1 },
+      { id: "e_11_16", freq: 330, gain: 0.13, type: "triangle", pan: 0.5 },
+      { id: "e_13_24", freq: 385, gain: 0.12, type: "triangle", pan: 0.8 },
+    ],
+    modulators: [
+      { type: "lfo", id: "euc1", rate: 5, depth: 0.16, wave: "square" },
+      { type: "lfo", id: "euc2", rate: 7, depth: 0.15, wave: "square" },
+      { type: "lfo", id: "euc3", rate: 9, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "euc4", rate: 11, depth: 0.13, wave: "square" },
+      { type: "lfo", id: "euc5", rate: 13, depth: 0.12, wave: "square" },
+      { type: "lfo", id: "drift", rate: 0.15, depth: 10, wave: "sine" },
+    ],
+    routing: [
+      { from: "euc1", to: "e_5_8", param: "gain" },
+      { from: "euc2", to: "e_7_12", param: "gain" },
+      { from: "euc3", to: "e_9_16", param: "gain" },
+      { from: "euc4", to: "e_11_16", param: "gain" },
+      { from: "euc5", to: "e_13_24", param: "gain" },
+      { from: "drift", to: "e_5_8", param: "detune" },
+      { from: "drift", to: "e_7_12", param: "detune" },
+      { from: "drift", to: "e_9_16", param: "detune" },
+    ],
+    effects: [
+      { type: "filter", filterType: "bandpass", freq: 550, q: 8 },
+      { type: "delay", time: 0.083, feedback: 0.45 },
+      { type: "distortion", amount: 12 },
+    ],
+  },
+
+  "45 - Polymetric Lattice": {
+    oscillators: [
+      { id: "layer1", freq: 110, gain: 0.17, type: "sawtooth", pan: -0.8 },
+      { id: "layer2", freq: 146.67, gain: 0.16, type: "square", pan: -0.4 },
+      { id: "layer3", freq: 183.33, gain: 0.15, type: "square", pan: 0 },
+      { id: "layer4", freq: 220, gain: 0.14, type: "triangle", pan: 0.4 },
+      { id: "layer5", freq: 293.33, gain: 0.12, type: "triangle", pan: 0.8 },
+      { id: "accent", freq: 440, gain: 0.1, type: "sine", pan: 0 },
+    ],
+    modulators: [
+      { type: "lfo", id: "g1", rate: 2, depth: 0.17, wave: "square" },
+      { type: "lfo", id: "g2", rate: 3, depth: 0.16, wave: "square" },
+      { type: "lfo", id: "g3", rate: 4, depth: 0.15, wave: "square" },
+      { type: "lfo", id: "g4", rate: 5, depth: 0.14, wave: "square" },
+      { type: "lfo", id: "g5", rate: 7, depth: 0.12, wave: "square" },
+      { type: "lfo", id: "accent_g", rate: 13, depth: 0.1, wave: "square" },
+      { type: "lfo", id: "texture", rate: 0.25, depth: 0.1, wave: "sine" },
+    ],
+    routing: [
+      { from: "g1", to: "layer1", param: "gain" },
+      { from: "g2", to: "layer2", param: "gain" },
+      { from: "g3", to: "layer3", param: "gain" },
+      { from: "g4", to: "layer4", param: "gain" },
+      { from: "g5", to: "layer5", param: "gain" },
+      { from: "accent_g", to: "accent", param: "gain" },
+      { from: "texture", to: "layer2", param: "detune" },
+      { from: "texture", to: "layer3", param: "detune" },
+      { from: "texture", to: "layer4", param: "detune" },
+    ],
+    effects: [
+      { type: "filter", filterType: "lowpass", freq: 1000, q: 5 },
+      { type: "delay", time: 0.15, feedback: 0.5 },
+    ],
+  },
+};
+
+export const patchNames = Object.keys(patches);

@@ -8,6 +8,7 @@
       "@workspace/compiler": ["../../packages/compiler/src"],
       "@workspace/compiler/*": ["../../packages/compiler/src/*"]
     },
+    "types": ["node"],
     "plugins": [
       {
         "name": "next"

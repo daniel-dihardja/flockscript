@@ -1,0 +1,38 @@
+{
+    "oscillators": [
+        {
+            "id": "test",
+            "freq": 110,
+            "gain": 0.8,
+            "type": "sawtooth",
+            "pan": 0
+        }
+    ],
+    "modulators": [
+        {
+            "type": "lfo",
+            "id": "pulse",
+            "rate": 4,
+            "depth": 0.6,
+            "wave": "square"
+        }
+    ],
+    "routing": [
+        {
+            "from": "pulse",
+            "to": "test",
+            "param": "gain"
+        }
+    ],
+    "effects": [
+        {
+            "type": "compressor",
+            "threshold": -20,
+            "ratio": 6,
+            "attack": 0.001,
+            "release": 0.15,
+            "knee": 5,
+            "makeup": 6
+        }
+    ]
+}

@@ -1,0 +1,41 @@
+{
+    "faust": {
+        "module": "reverb",
+        "bypassEffects": true,
+        "params": {
+            "roomSize": 0.9,
+            "damping": 0.5
+        }
+    },
+    "voices": [
+        {
+            "id": "note1",
+            "source": {
+                "type": "oscillator",
+                "freq": 440,
+                "wave": "sine"
+            },
+            "envelope": {
+                "attack": 0.01,
+                "decay": 0.1,
+                "sustain": 0.5,
+                "release": 0.2
+            },
+            "sequence": {
+                "pattern": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    1,
+                    0,
+                    0,
+                    0
+                ],
+                "rate": 8
+            },
+            "gain": 0.3,
+            "pan": 0
+        }
+    ]
+}
