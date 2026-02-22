@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { compile, type CompilePatch } from "./dsl-worker";
+import { compile, type CompilePatch } from "./index";
 
-const patchesDir = join(__dirname, "../../../../..", "packages", "patches");
+const patchesDir = join(__dirname, "..", "..", "patches");
 
 const loadPatch = (filename: string) =>
   JSON.parse(readFileSync(join(patchesDir, filename), "utf-8")) as CompilePatch;
@@ -19,7 +19,7 @@ describe("dsl compiler", () => {
     expect(result.patch).toEqual(sineTonePatch);
   });
 
-  it("compiles an oscillator with pan macro routing", () => {
+  it("compiles an oscillator with alias routing", () => {
     const source = [
       "osc panOsc sin 330 @0.18 pan 0",
       "lfo panLfo sin rat 0.25 dep 0.9",
