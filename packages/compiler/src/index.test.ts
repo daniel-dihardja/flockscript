@@ -1,16 +1,49 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { compile, type CompilePatch } from "./index";
 
-const patchesDir = join(__dirname, "..", "..", "patches");
+const sineTonePatch: CompilePatch = {
+  oscillators: [
+    {
+      id: "sine",
+      freq: 440,
+      gain: 0.2,
+      type: "sine",
+      pan: 0,
+    },
+  ],
+  modulators: [],
+  effects: [],
+  routing: [],
+};
 
-const loadPatch = (filename: string) =>
-  JSON.parse(readFileSync(join(patchesDir, filename), "utf-8")) as CompilePatch;
-
-const sineTonePatch = loadPatch("qa-02-sine-tone.json");
-const panLfoPatch = loadPatch("qa-05-pan-lfo.json");
+const panLfoPatch: CompilePatch = {
+  oscillators: [
+    {
+      id: "panOsc",
+      freq: 330,
+      gain: 0.18,
+      type: "sine",
+      pan: 0,
+    },
+  ],
+  modulators: [
+    {
+      type: "lfo",
+      id: "panLfo",
+      rate: 0.25,
+      depth: 0.9,
+      wave: "sine",
+    },
+  ],
+  effects: [],
+  routing: [
+    {
+      from: "panLfo",
+      to: "panOsc",
+      param: "pan",
+    },
+  ],
+};
 
 describe("dsl compiler", () => {
   it("compiles a basic oscillator patch", () => {
@@ -40,6 +73,8 @@ describe("dsl compiler", () => {
   it("reports diagnostics for malformed routing", () => {
     const result = compile("route panLfo -> panOsc");
     expect(result.ok).toBe(false);
-    expect(result.diagnostics[0].message).toMatch(/route requires source, target, and param/i);
+    expect(result.diagnostics[0].message).toMatch(
+      /route requires source, target, and param/i,
+    );
   });
 });
