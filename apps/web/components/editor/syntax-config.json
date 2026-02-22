@@ -70,8 +70,31 @@
     "saw",
     "square",
     "triangle",
-    "noise"
+    "noise",
+    "samplehold",
+    "chaos"
   ],
+  "keywordAliases": {
+    "rte": "route",
+    "dtn": "detune",
+    "rat": "rate",
+    "dep": "depth",
+    "off": "offset",
+    "flt": "filter",
+    "lwp": "lowpass",
+    "bnp": "bandpass",
+    "hgp": "highpass",
+    "dly": "delay",
+    "sin": "sine",
+    "sqr": "square",
+    "tri": "triangle",
+    "noi": "noise",
+    "frq": "freq",
+    "sph": "samplehold",
+    "smp": "samplehold",
+    "cha": "chaos",
+    "chs": "chaos"
+  },
   "regex": {
     "block": {
       "pattern": "^---.*---$",

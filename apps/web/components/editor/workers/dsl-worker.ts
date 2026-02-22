@@ -103,6 +103,39 @@ const ROUTING_PARAMS = new Set([
   "pan",
 ]);
 
+const KEYWORD_ALIASES: Record<string, string> = {
+  rte: "route",
+  dtn: "detune",
+  rat: "rate",
+  dep: "depth",
+  dpt: "depth",
+  off: "offset",
+  flt: "filter",
+  lwp: "lowpass",
+  bnp: "bandpass",
+  hgp: "highpass",
+  dly: "delay",
+  sin: "sine",
+  sqr: "square",
+  tri: "triangle",
+  noi: "noise",
+  frq: "freq",
+  sph: "samplehold",
+  smp: "samplehold",
+  cha: "chaos",
+  chs: "chaos",
+};
+
+function findTokenIndex(tokens: string[], target: string) {
+  return tokens.findIndex((token) => {
+    if (!token) {
+      return false;
+    }
+    const normalized = KEYWORD_ALIASES[token.toLowerCase()] ?? token.toLowerCase();
+    return normalized === target;
+  });
+}
+
 function resolveWave(value: string): OscillatorType | null {
   return WAVE_ALIASES[value.toLowerCase()] ?? null;
 }
@@ -194,6 +227,7 @@ export function compile(source: string) {
       return;
     }
     const head = headToken.toLowerCase();
+    const normalizedHead = KEYWORD_ALIASES[head] ?? head;
 
     if (head === "osc") {
       if (tokens.length < 5) {
@@ -259,6 +293,7 @@ export function compile(source: string) {
           return;
         }
         const key = keyToken.toLowerCase();
+        const normalizedKey = KEYWORD_ALIASES[key] ?? key;
         const valueToken = tokens[cursor + 1];
         if (!valueToken) {
           diagnostics.push(
@@ -274,9 +309,9 @@ export function compile(source: string) {
           return;
         }
 
-        if (key === "detune") {
+        if (normalizedKey === "detune") {
           detune = clamp(literal, -1200, 1200);
-        } else if (key === "pan") {
+        } else if (normalizedKey === "pan") {
           pan = clamp(literal, -1, 1);
         } else {
           diagnostics.push(
@@ -300,7 +335,7 @@ export function compile(source: string) {
       return;
     }
 
-    if (head === "noise") {
+    if (normalizedHead === "noise") {
       if (tokens.length < 3) {
         diagnostics.push(
           diagnosticForLine(
@@ -338,6 +373,7 @@ export function compile(source: string) {
           return;
         }
         const key = keyToken.toLowerCase();
+        const normalizedKey = KEYWORD_ALIASES[key] ?? key;
         const valueToken = tokens[cursor + 1];
         if (!valueToken) {
           diagnostics.push(
@@ -352,7 +388,7 @@ export function compile(source: string) {
           );
           return;
         }
-        if (key === "pan") {
+        if (normalizedKey === "pan") {
           entry.pan = clamp(literal, -1, 1);
         } else {
           diagnostics.push(
@@ -367,9 +403,17 @@ export function compile(source: string) {
       return;
     }
 
-    if (head === "lfo" || head === "samplehold" || head === "chaos") {
+    if (
+      normalizedHead === "lfo" ||
+      normalizedHead === "samplehold" ||
+      normalizedHead === "chaos"
+    ) {
       const modType: ModulatorEntry["type"] =
-        head === "lfo" ? "lfo" : head === "samplehold" ? "sampleHold" : "chaos";
+        normalizedHead === "lfo"
+          ? "lfo"
+          : normalizedHead === "samplehold"
+          ? "sampleHold"
+          : "chaos";
       const id = tokens[1]!;
       if (!id) {
         diagnostics.push(
@@ -378,7 +422,7 @@ export function compile(source: string) {
         return;
       }
 
-      const rateIndex = tokens.indexOf("rate");
+      const rateIndex = findTokenIndex(tokens, "rate");
       if (rateIndex === -1 || !tokens[rateIndex + 1]) {
         diagnostics.push(
           diagnosticForLine(lines, index, `${head} requires rate value`),
@@ -399,7 +443,7 @@ export function compile(source: string) {
         rate: rateValue,
       };
 
-      if (head === "lfo") {
+      if (modType === "lfo") {
         const wave = resolveWave(tokens[2]!);
         if (!wave) {
           diagnostics.push(
@@ -411,7 +455,7 @@ export function compile(source: string) {
           );
           return;
         }
-        const depthIndex = tokens.indexOf("depth");
+        const depthIndex = findTokenIndex(tokens, "depth");
         if (depthIndex === -1 || !tokens[depthIndex + 1]) {
           diagnostics.push(
             diagnosticForLine(lines, index, "lfo requires depth value"),
@@ -427,16 +471,16 @@ export function compile(source: string) {
         }
         entry.wave = wave;
         entry.depth = depthValue;
-        const offsetIndex = tokens.indexOf("offset");
+        const offsetIndex = findTokenIndex(tokens, "offset");
         if (offsetIndex !== -1) {
-        const offsetToken = tokens[offsetIndex + 1]!;
+          const offsetToken = tokens[offsetIndex + 1]!;
           if (!offsetToken) {
             diagnostics.push(
               diagnosticForLine(lines, index, "lfo offset is invalid"),
             );
             return;
           }
-        const offset = parseNumber(offsetToken);
+          const offset = parseNumber(offsetToken);
           if (offset === null) {
             diagnostics.push(
               diagnosticForLine(lines, index, "lfo offset is invalid"),
@@ -448,8 +492,8 @@ export function compile(source: string) {
       }
 
       if (modType === "sampleHold") {
-        const minIndex = tokens.indexOf("min");
-        const maxIndex = tokens.indexOf("max");
+        const minIndex = findTokenIndex(tokens, "min");
+        const maxIndex = findTokenIndex(tokens, "max");
         if (minIndex === -1 || maxIndex === -1) {
           diagnostics.push(
             diagnosticForLine(lines, index, "samplehold requires min and max"),
@@ -469,9 +513,9 @@ export function compile(source: string) {
       }
 
       if (modType === "chaos") {
-        const centerIndex = tokens.indexOf("center");
-        const rangeIndex = tokens.indexOf("range");
-        const stepIndex = tokens.indexOf("step");
+        const centerIndex = findTokenIndex(tokens, "center");
+        const rangeIndex = findTokenIndex(tokens, "range");
+        const stepIndex = findTokenIndex(tokens, "step");
         if (centerIndex === -1 || rangeIndex === -1 || stepIndex === -1) {
           diagnostics.push(
             diagnosticForLine(
@@ -500,47 +544,48 @@ export function compile(source: string) {
       return;
     }
 
-    if (head === "route") {
+    if (normalizedHead === "route") {
       const arrowIndex = tokens.indexOf("->");
       if (
         arrowIndex === -1 ||
         arrowIndex === 1 ||
         arrowIndex === tokens.length - 1
       ) {
-        diagnostics.push(
-          diagnosticForLine(
-            lines,
-            index,
-            "route requires: route <source> -> <target> <param>",
-          ),
-        );
-        return;
-      }
-
-      const source = tokens[1];
-      const target = tokens[arrowIndex + 1]!;
-      const param = tokens[arrowIndex + 2]!;
-      if (!source || !target || !param) {
-        diagnostics.push(
-          diagnosticForLine(
-            lines,
-            index,
-            "route requires source, target, and param",
-          ),
-        );
-        return;
-      }
-
-      if (!ROUTING_PARAMS.has(param)) {
-        diagnostics.push(
-          diagnosticForLine(lines, index, `unsupported route param: ${param}`),
-        );
-        return;
-      }
-
-      routing.push({ from: source, to: target, param });
+      diagnostics.push(
+        diagnosticForLine(
+          lines,
+          index,
+          "route requires: route <source> -> <target> <param>",
+        ),
+      );
       return;
     }
+
+    const source = tokens[1];
+    const target = tokens[arrowIndex + 1]!;
+    const param = tokens[arrowIndex + 2]!;
+    if (!source || !target || !param) {
+      diagnostics.push(
+        diagnosticForLine(
+          lines,
+          index,
+          "route requires source, target, and param",
+        ),
+      );
+      return;
+    }
+
+    const normalizedParam = KEYWORD_ALIASES[param] ?? param;
+    if (!ROUTING_PARAMS.has(normalizedParam)) {
+      diagnostics.push(
+        diagnosticForLine(lines, index, `unsupported route param: ${param}`),
+      );
+      return;
+    }
+
+    routing.push({ from: source, to: target, param: normalizedParam });
+    return;
+  }
 
     if (head === "fx") {
       if (tokens.length < 3) {

@@ -34,13 +34,14 @@ type RegexSpec = {
 type SyntaxStyleConfig = {
   theme: Record<string, Record<string, string>>;
   keywordList: string[];
+  keywordAliases: Record<string, string>;
   regex: Record<
     "block" | "osc" | "number" | "macro" | "operator",
     RegexSpec
   >;
 };
 
-const { theme, keywordList, regex } =
+const { theme, keywordList, keywordAliases, regex } =
   syntaxConfig as SyntaxStyleConfig;
 
 const makeRegex = ({ pattern, flags }: RegexSpec) =>
@@ -48,7 +49,14 @@ const makeRegex = ({ pattern, flags }: RegexSpec) =>
 
 const editorTheme = EditorView.theme(theme, { dark: true });
 
-const keywordRegex = new RegExp(`\\b(${keywordList.join("|")})\\b`, "g");
+const completionKeywords = Array.from(
+  new Set([...keywordList, ...Object.keys(keywordAliases)]),
+);
+
+const keywordRegex = new RegExp(
+  `\\b(${completionKeywords.join("|")})\\b`,
+  "g",
+);
 const oscRegex = makeRegex(regex.osc);
 const numberRegex = makeRegex(regex.number);
 const macroRegex = makeRegex(regex.macro);
@@ -117,17 +125,21 @@ const dslHighlight = ViewPlugin.fromClass(
   },
 );
 
-const keywordCompletions: Completion[] = keywordList.map((label) => ({
+const keywordCompletions: Completion[] = completionKeywords.map((label) => ({
   label,
   type: "keyword",
 }));
 
 const waveformCompletions: Completion[] = [
   "sine",
+  "sin",
   "saw",
   "square",
+  "sqr",
   "triangle",
+  "tri",
   "noise",
+  "noi",
 ].map((label) => ({
   label,
   type: "keyword",
