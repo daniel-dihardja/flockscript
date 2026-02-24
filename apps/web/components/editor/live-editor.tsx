@@ -234,6 +234,7 @@ function LiveEditorComponent(
   const requestIdRef = React.useRef(0);
   const debounceRef = React.useRef<number | null>(null);
   const builderRef = React.useRef<any>(null);
+  const engineRef = React.useRef<any>(null);
   const [lastEval, setLastEval] = React.useState<EvalPayload | null>(null);
   const [compileState, setCompileState] = React.useState<
     "idle" | "compiling" | "ok" | "error"
@@ -415,6 +416,29 @@ function LiveEditorComponent(
       to: line.to,
     });
 
+    const normalizedCommand = text.toLowerCase();
+    if (normalizedCommand === "sil" || normalizedCommand === "silence") {
+      engineRef.current?.silence?.();
+      const silenceResult: CompileResult = {
+        ok: true,
+        diagnostics: [],
+        patch: {
+          oscillators: [],
+          modulators: [],
+          effects: [],
+          routing: [],
+        },
+      };
+      setCompileResult(silenceResult);
+      setCompileState("ok");
+      if (viewRef.current) {
+        viewRef.current.dispatch(
+          setDiagnostics(viewRef.current.state, silenceResult.diagnostics),
+        );
+      }
+      return true;
+    }
+
     const result = compile(text);
     setCompileResult(result);
     setCompileState(result.ok ? "ok" : "error");
@@ -452,6 +476,7 @@ function LiveEditorComponent(
       const { audioEngine, PatchBuilder } = await import("@workspace/audio");
       await audioEngine.init();
       builderRef.current = new PatchBuilder();
+      engineRef.current = audioEngine;
       const engineState = audioEngine.audioContext?.state ?? "unknown";
       setEngineStatus({
         label: `Audio engine ${engineState}`,

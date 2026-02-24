@@ -101,6 +101,7 @@ const KEYWORD_ALIASES: Record<string, string> = {
   smp: "samplehold",
   cha: "chaos",
   chs: "chaos",
+  sil: "silence",
 };
 
 const ROUTING_PARAMS = new Set([
@@ -657,6 +658,10 @@ export function compile(source: string): CompileResult {
         ...(Object.keys(params).length ? { params } : {}),
         ...(typeof bypass === "boolean" ? { bypassEffects: bypass } : {}),
       };
+      return;
+    }
+
+    if (normalizedHead === "silence") {
       return;
     }
 

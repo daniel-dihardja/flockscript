@@ -77,4 +77,12 @@ describe("dsl compiler", () => {
       /route requires source, target, and param/i,
     );
   });
+
+  it("treats the silence command as a valid no-op", () => {
+    const result = compile("sil");
+    expect(result.ok).toBe(true);
+    expect(result.diagnostics).toHaveLength(0);
+    expect(result.patch.oscillators).toHaveLength(0);
+    expect(result.patch.effects).toHaveLength(0);
+  });
 });

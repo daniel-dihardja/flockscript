@@ -1331,6 +1331,59 @@ class AudioEngine {
   }
 
   /**
+   * Silence the engine immediately by muting and stopping all sources
+   */
+  silence() {
+    if (!this.audioContext) {
+      return;
+    }
+    const now = this.audioContext.currentTime;
+    [this.channelAInput, this.channelBInput].forEach((input) => {
+      if (!input?.gain) {
+        return;
+      }
+      input.gain.cancelScheduledValues(now);
+      input.gain.setValueAtTime(0, now);
+    });
+    [this.channelA, this.channelB].forEach((channel) => {
+      if (!channel?.gain) {
+        return;
+      }
+      channel.gain.cancelScheduledValues(now);
+      channel.gain.setValueAtTime(0, now);
+    });
+
+    this.activeNodes.forEach((node) => {
+      try {
+        node?.stop?.();
+      } catch {
+        // ignore
+      }
+      try {
+        node?.disconnect?.();
+      } catch {
+        // ignore
+      }
+    });
+    this.activeNodes = [];
+
+    this.resetPool(this.channelA);
+    this.resetPool(this.channelB);
+
+    this.activeVoices.forEach((voice) => {
+      try {
+        voice?.stop?.();
+      } catch {
+        // ignore
+      }
+    });
+    this.activeVoices.clear();
+    this.pendingVoiceUpdates.clear();
+    this.pendingChannelSwap = false;
+    this.cleanupSequencers(false);
+  }
+
+  /**
    * Collect runtime status useful for debugging audio issues
    */
   getDebugStatus() {

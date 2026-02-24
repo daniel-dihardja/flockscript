@@ -71,7 +71,8 @@
     "triangle",
     "noise",
     "samplehold",
-    "chaos"
+    "chaos",
+    "silence"
   ],
   "keywordAliases": {
     "rte": "route",
@@ -92,7 +93,8 @@
     "sph": "samplehold",
     "smp": "samplehold",
     "cha": "chaos",
-    "chs": "chaos"
+    "chs": "chaos",
+    "sil": "silence"
   },
   "regex": {
     "block": {
