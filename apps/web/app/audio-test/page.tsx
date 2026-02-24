@@ -62,6 +62,7 @@ export default function AudioTestPage() {
   const [engineStatus, setEngineStatus] = useState<string>("Loading audio engine...");
   const [engineReady, setEngineReady] = useState<boolean>(false);
   const [debugStatus, setDebugStatus] = useState<EngineDebugStatus | null>(null);
+  const [copySuccess, setCopySuccess] = useState<string>("");
 
   const engineRef = useRef<any>(null);
   const builderRef = useRef<any>(null);
@@ -164,6 +165,39 @@ export default function AudioTestPage() {
   }, [categoryGroups, selectedCategory]);
 
   const formatGain = (value: number) => value.toFixed(2);
+  const serializeDebugStatus = (status: EngineDebugStatus | null) => {
+    if (!status) return "Engine diagnostics unavailable";
+    const entries = [
+      ["Context state", status.contextState],
+      ["Sample rate", `${status.sampleRate.toFixed(0)} Hz`],
+      ["Current time", `${status.currentTime.toFixed(2)} s`],
+      ["Active channel", status.activeChannel],
+      ["Background voices", `${status.activeVoices}`],
+      ["Pending swap", status.pendingChannelSwap ? "pending" : "none"],
+      ["Pending updates", `${status.pendingVoiceUpdates}`],
+      ["Active nodes", `${status.totalNodes}`],
+      ["Channel A gain", formatGain(status.channelA.gain)],
+      ["Channel B gain", formatGain(status.channelB.gain)],
+      ["Channel A oscillators", `${status.channelA.activeOscillators}`],
+      ["Channel B oscillators", `${status.channelB.activeOscillators}`],
+      ["Channel A noise", `${status.channelA.activeNoise}`],
+      ["Channel B noise", `${status.channelB.activeNoise}`],
+      ["Tail hold", `${status.tailHoldTime.toFixed(2)} s`],
+    ];
+    return entries.map(([label, value]) => `${label}: ${value}`).join("\n");
+  };
+
+  const handleCopyDiagnostics = async () => {
+    const text = serializeDebugStatus(debugStatus);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopySuccess("Copied");
+    } catch (error) {
+      console.error("Failed to copy diagnostics", error);
+      setCopySuccess("Copy failed");
+    }
+    setTimeout(() => setCopySuccess(""), 1600);
+  };
 
 
   return (
@@ -256,9 +290,21 @@ export default function AudioTestPage() {
           </div>
 
           <div className="grid gap-2 rounded border border-[#222] bg-[#050505] p-3 text-xs">
-            <div className="flex justify-between uppercase tracking-[0.2em] text-[#888]">
-              <span>Audio Diagnostics</span>
-              <span className="font-mono">{engineReady ? "engine running" : engineStatus}</span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="uppercase tracking-[0.2em] text-[#888]">Audio Diagnostics</span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs">{engineReady ? "engine running" : engineStatus}</span>
+                <button
+                  type="button"
+                  className="rounded border border-[#00ff00] px-2 py-1 text-[10px] uppercase tracking-[0.3em] text-[#00ff00] transition hover:bg-[#00ff00] hover:text-[#0f0f0f]"
+                  onClick={handleCopyDiagnostics}
+                >
+                  Copy
+                </button>
+                {copySuccess ? (
+                  <span className="font-mono text-[11px] text-[#8bf08b]">{copySuccess}</span>
+                ) : null}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-1">
               <div className="flex justify-between">
