@@ -18,7 +18,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Missing file parameter" }, { status: 400 });
   }
 
-  const relative = sanitizeFilePath(file);
+  let relative = sanitizeFilePath(file);
+  if (relative.startsWith("patches/")) {
+    relative = relative.slice("patches/".length);
+  }
   const resolved = path.join(PATCHES_ROOT, relative);
 
   if (!resolved.startsWith(PATCHES_ROOT)) {
