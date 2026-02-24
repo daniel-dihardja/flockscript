@@ -41,19 +41,12 @@ type EffectEntry = {
   [key: string]: unknown;
 };
 
-type FaustConfig = {
-  module: string;
-  params?: Record<string, number>;
-  bypassEffects?: boolean;
-};
-
 type CompilePatch = {
   oscillators: OscillatorEntry[];
   modulators: ModulatorEntry[];
   effects: EffectEntry[];
   routing: RoutingEntry[];
   noise?: NoiseEntry[];
-  faust?: FaustConfig;
 };
 
 type CompileDiagnostic = {
@@ -199,7 +192,6 @@ export function compile(source: string): CompileResult {
   const effects: EffectEntry[] = [];
   const routing: RoutingEntry[] = [];
   const diagnostics: CompileDiagnostic[] = [];
-  let faustConfig: FaustConfig | undefined;
 
   lines.forEach((rawLine, index) => {
     const line = rawLine.trim();
@@ -613,54 +605,6 @@ export function compile(source: string): CompileResult {
       return;
     }
 
-    if (normalizedHead === "faust") {
-      const kvPairs = tokens.slice(1);
-      const entry: Record<string, string> = {};
-      kvPairs.forEach((pair) => {
-        const [key, value] = pair.split("=");
-        if (key && value) {
-          entry[key] = value;
-        }
-      });
-
-      const moduleName = entry.module;
-      if (!moduleName) {
-        diagnostics.push(
-          diagnosticForLine(lines, index, "faust requires module=<name>"),
-        );
-        return;
-      }
-
-      const params: Record<string, number> = {};
-      Object.entries(entry).forEach(([key, value]) => {
-        if (key === "module") {
-          return;
-        }
-        if (key === "bypassEffects") {
-          return;
-        }
-        const parsed = parseNumber(value);
-        if (parsed === null) {
-          diagnostics.push(
-            diagnosticForLine(lines, index, `faust param ${key} is invalid`),
-          );
-          return;
-        }
-        params[key] = parsed;
-      });
-
-      const bypass = entry.bypassEffects
-        ? parseBooleanToken(entry.bypassEffects)
-        : undefined;
-
-      faustConfig = {
-        module: moduleName,
-        ...(Object.keys(params).length ? { params } : {}),
-        ...(typeof bypass === "boolean" ? { bypassEffects: bypass } : {}),
-      };
-      return;
-    }
-
     if (normalizedHead === "silence") {
       return;
     }
@@ -682,9 +626,6 @@ export function compile(source: string): CompileResult {
   };
   if (noise.length > 0) {
     patch.noise = noise;
-  }
-  if (faustConfig) {
-    patch.faust = faustConfig;
   }
 
   return {

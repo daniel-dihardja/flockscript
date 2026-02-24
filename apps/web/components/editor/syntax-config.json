@@ -93,7 +93,15 @@
     "samplehold",
     "chaos"
   ],
-  "waveforms": ["sine", "sin", "saw", "square", "sqr", "triangle", "tri"],
+  "waveforms": [
+    "sine",
+    "sin",
+    "saw",
+    "square",
+    "sqr",
+    "triangle",
+    "tri"
+  ],
   "gainTokenPattern": "@[+-]?\\d+(?:\\.\\d+)?",
   "keywordAliases": {
     "rte": "route",
