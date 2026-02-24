@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import manifest from "../../../../packages/audio/patches/manifest.json";
+import manifest from "@workspace/audio/patches/manifest.json";
 
 type ManifestEntry = {
   name: string;
@@ -52,16 +52,23 @@ type EngineDebugStatus = {
 };
 
 export default function AudioTestPage() {
-  const [selectedCategory, setSelectedCategory] = useState<string>("Single sounds");
-  const [selectedPatch, setSelectedPatch] = useState<string>("QA 02 - Sine Tone");
+  const [selectedCategory, setSelectedCategory] =
+    useState<string>("Single sounds");
+  const [selectedPatch, setSelectedPatch] =
+    useState<string>("QA 02 - Sine Tone");
   const [editorValue, setEditorValue] = useState<string>(
     JSON.stringify(initialPatch, null, 2),
   );
-  const [statusMessage, setStatusMessage] = useState<string>("Waiting for input");
+  const [statusMessage, setStatusMessage] =
+    useState<string>("Waiting for input");
   const [isValid, setIsValid] = useState<boolean>(true);
-  const [engineStatus, setEngineStatus] = useState<string>("Loading audio engine...");
+  const [engineStatus, setEngineStatus] = useState<string>(
+    "Loading audio engine...",
+  );
   const [engineReady, setEngineReady] = useState<boolean>(false);
-  const [debugStatus, setDebugStatus] = useState<EngineDebugStatus | null>(null);
+  const [debugStatus, setDebugStatus] = useState<EngineDebugStatus | null>(
+    null,
+  );
   const [copySuccess, setCopySuccess] = useState<string>("");
 
   const engineRef = useRef<any>(null);
@@ -74,8 +81,8 @@ export default function AudioTestPage() {
         setEngineStatus("Initializing audio engine...");
         const [{ default: audioEngine }, { default: PatchBuilder }] =
           await Promise.all([
-            import("../../../../packages/audio/audioEngine.js"),
-            import("../../../../packages/audio/patchBuilder.js"),
+            import("@workspace/audio/audio-engine.js"),
+            import("@workspace/audio/patch-builder.js"),
           ]);
         await audioEngine.init();
         if (canceled) {
@@ -117,7 +124,9 @@ export default function AudioTestPage() {
   }, [engineReady]);
 
   useEffect(() => {
-    const entry = manifest.patches.find((patch) => patch.name === selectedPatch);
+    const entry = manifest.patches.find(
+      (patch) => patch.name === selectedPatch,
+    );
     if (!entry) {
       return;
     }
@@ -125,7 +134,9 @@ export default function AudioTestPage() {
     const loadPatch = async () => {
       try {
         setStatusMessage(`Loading ${entry.name}...`);
-        const res = await fetch(`/api/patch?file=${encodeURIComponent(entry.file)}`);
+        const res = await fetch(
+          `/api/patch?file=${encodeURIComponent(entry.file)}`,
+        );
         if (!res.ok) {
           throw new Error(`Failed to load patch (${res.status})`);
         }
@@ -195,7 +206,9 @@ export default function AudioTestPage() {
   }, []);
 
   const patchesForCategory = useMemo(() => {
-    const bucket = categoryGroups.find((group) => group.category === selectedCategory);
+    const bucket = categoryGroups.find(
+      (group) => group.category === selectedCategory,
+    );
     if (bucket) {
       return bucket.entries;
     }
@@ -237,7 +250,6 @@ export default function AudioTestPage() {
     setTimeout(() => setCopySuccess(""), 1600);
   };
 
-
   return (
     <main className="min-h-screen bg-[#0f0f0f] text-[#00ff00]">
       <div className="flex h-full min-h-screen flex-col px-5 py-6">
@@ -276,16 +288,18 @@ export default function AudioTestPage() {
 
           <div className="flex w-full gap-4">
             <div className="flex flex-1 flex-col gap-2">
-              <label className="text-xs uppercase tracking-[0.2em] text-[#888]">Patch category</label>
+              <label className="text-xs uppercase tracking-[0.2em] text-[#888]">
+                Patch category
+              </label>
               <select
                 className="rounded border border-[#00ff00] bg-[#050505] px-3 py-2 text-sm focus:outline-none"
                 value={selectedCategory}
                 onChange={(event) => {
                   const nextCategory = event.target.value;
                   setSelectedCategory(nextCategory);
-                  const firstEntry = categoryGroups
-                    .find((group) => group.category === nextCategory)
-                    ?.entries[0];
+                  const firstEntry = categoryGroups.find(
+                    (group) => group.category === nextCategory,
+                  )?.entries[0];
                   if (firstEntry) {
                     setSelectedPatch(firstEntry.name);
                   }
@@ -299,7 +313,9 @@ export default function AudioTestPage() {
               </select>
             </div>
             <div className="flex flex-1 flex-col gap-2">
-              <label className="text-xs uppercase tracking-[0.2em] text-[#888]">Patch</label>
+              <label className="text-xs uppercase tracking-[0.2em] text-[#888]">
+                Patch
+              </label>
               <select
                 className="rounded border border-[#00ff00] bg-[#050505] px-3 py-2 text-sm focus:outline-none"
                 value={selectedPatch}
@@ -329,9 +345,13 @@ export default function AudioTestPage() {
 
           <div className="grid gap-2 rounded border border-[#222] bg-[#050505] p-3 text-xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="uppercase tracking-[0.2em] text-[#888]">Audio Diagnostics</span>
+              <span className="uppercase tracking-[0.2em] text-[#888]">
+                Audio Diagnostics
+              </span>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs">{engineReady ? "engine running" : engineStatus}</span>
+                <span className="font-mono text-xs">
+                  {engineReady ? "engine running" : engineStatus}
+                </span>
                 <button
                   type="button"
                   className="rounded border border-[#00ff00] px-2 py-1 text-[10px] uppercase tracking-[0.3em] text-[#00ff00] transition hover:bg-[#00ff00] hover:text-[#0f0f0f]"
@@ -340,7 +360,9 @@ export default function AudioTestPage() {
                   Copy
                 </button>
                 {copySuccess ? (
-                  <span className="font-mono text-[11px] text-[#8bf08b]">{copySuccess}</span>
+                  <span className="font-mono text-[11px] text-[#8bf08b]">
+                    {copySuccess}
+                  </span>
                 ) : null}
               </div>
             </div>
@@ -354,7 +376,9 @@ export default function AudioTestPage() {
               <div className="flex justify-between">
                 <span>Sample rate</span>
                 <span className="font-mono text-[#8bf08b]">
-                  {debugStatus ? `${debugStatus.sampleRate.toFixed(0)} Hz` : "-"}
+                  {debugStatus
+                    ? `${debugStatus.sampleRate.toFixed(0)} Hz`
+                    : "-"}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -434,7 +458,9 @@ export default function AudioTestPage() {
               <div className="flex justify-between text-[#aaa]">
                 <span>Tail hold</span>
                 <span className="font-mono text-[#8bf08b]">
-                  {debugStatus ? `${debugStatus.tailHoldTime.toFixed(2)}s` : "-"}
+                  {debugStatus
+                    ? `${debugStatus.tailHoldTime.toFixed(2)}s`
+                    : "-"}
                 </span>
               </div>
             </div>
