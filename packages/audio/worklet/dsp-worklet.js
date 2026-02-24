@@ -233,9 +233,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     this.limiterRelease = 0.9995;
 
     this.port.onmessage = (event) => {
-      console.log("[Worklet] Message received, type:", event.data?.type);
       if (event.data?.type === "test") {
-        console.log("[Worklet] TEST MESSAGE RECEIVED:", event.data.data);
       }
       if (event.data?.type === "setPatch") {
         this.applyPatch(event.data.patch || {});
@@ -311,29 +309,19 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       ...effect,
       id: effect.id || `fx_${Math.random()}`,
     }));
-    console.log(
-      "[Worklet] Effects created:",
-      this.effects.length,
-      this.effects,
-    );
-
     this.effectState = this.effects.map((effect) => {
       if (effect.type === "filter") {
-        console.log("[Worklet] Creating BiquadFilter for delay");
         return new BiquadFilter(
           effect.filterType || "lowpass",
           this.sampleRate,
         );
       }
       if (effect.type === "delay") {
-        console.log("[Worklet] Creating DelayLine");
         return new DelayLine(this.sampleRate, 2);
       }
       if (effect.type === "compressor") {
-        console.log("[Worklet] Creating Compressor");
         return new Compressor(this.sampleRate);
       }
-      console.log("[Worklet] Unknown effect type:", effect.type);
       return null;
     });
 
@@ -556,16 +544,6 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       }
 
       // DEBUG: Log first sample if we have noise
-      if (i === 0 && this.noise.length > 0) {
-        console.log(
-          "[Worklet] First frame - l:",
-          l,
-          "r:",
-          r,
-          "noise count:",
-          this.noise.length,
-        );
-      }
 
       if (this.activeNotes.length > 0) {
         const stillActive = [];

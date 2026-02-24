@@ -148,9 +148,7 @@ class AudioEngine {
         const data = event.data;
         if (!data) return;
         if (data.type === "status") {
-          console.log("[Worklet]", data.message || "status", data.counts || "");
-        } else if (data.type === "error") {
-          console.warn("[Worklet]", data.message || "error");
+    } else if (data.type === "error") {
         }
       };
       this.workletA.port.onmessage = handleWorkletMessage;
@@ -219,7 +217,6 @@ class AudioEngine {
 
       gain.gain.value = 0; // Start silent
       const startTime = this.getCurrentTime();
-      console.log("[Pool] Starting oscillator at time:", startTime);
       osc.start(startTime);
 
       const poolItem = {
@@ -231,12 +228,6 @@ class AudioEngine {
       pool.oscillators.push(poolItem);
 
       // Verify structure
-      if (i === 0) {
-        console.log("[Pool] First oscillator item structure:", poolItem);
-        console.log("[Pool] osc:", poolItem.osc);
-        console.log("[Pool] gain:", poolItem.gain);
-        console.log("[Pool] panner:", poolItem.panner);
-      }
     }
 
     // Create noise pool (BufferSources)
@@ -271,9 +262,6 @@ class AudioEngine {
       });
     }
 
-    console.log(
-      `[Pool] Initialized channel with ${this.POOL_SIZE} oscillators and ${this.NOISE_POOL_SIZE} noise sources`,
-    );
   }
 
   /**
@@ -281,10 +269,6 @@ class AudioEngine {
    */
   getPooledOscillator(channel) {
     const pool = channel === this.channelA ? this.poolA : this.poolB;
-    console.log(
-      `[Pool] Getting oscillator from pool, total available: ${pool.oscillators.length}`,
-    );
-
     if (!pool.oscillators || pool.oscillators.length === 0) {
       console.error("[Pool] Pool is empty or undefined!");
       return null;
@@ -296,14 +280,6 @@ class AudioEngine {
       return null;
     }
 
-    console.log("[Pool] Got oscillator item, structure:", {
-      hasOsc: !!item.osc,
-      hasGain: !!item.gain,
-      hasPanner: !!item.panner,
-      gainType: item.gain ? typeof item.gain : "undefined",
-      gainHasGainProp: item.gain && item.gain.gain ? "yes" : "no",
-    });
-    console.log("[Pool] Full item:", item);
 
     // Clear scheduled automation before reuse
     const now = this.audioContext.currentTime;
@@ -343,10 +319,6 @@ class AudioEngine {
    */
   getPooledNoise(channel) {
     const pool = channel === this.channelA ? this.poolA : this.poolB;
-    console.log(
-      `[Pool] Getting noise source from pool, total available: ${pool.noise.length}`,
-    );
-
     if (!pool.noise || pool.noise.length === 0) {
       console.error("[Pool] Noise pool is empty or undefined!");
       return null;
@@ -358,14 +330,6 @@ class AudioEngine {
       return null;
     }
 
-    console.log("[Pool] Got noise item, structure:", {
-      hasNoise: !!item.noise,
-      hasGain: !!item.gain,
-      hasPanner: !!item.panner,
-      gainType: item.gain ? typeof item.gain : "undefined",
-      gainHasGainProp: item.gain && item.gain.gain ? "yes" : "no",
-    });
-    console.log("[Pool] Full item:", item);
 
     // Clear scheduled automation before reuse
     const now = this.audioContext.currentTime;
@@ -429,7 +393,6 @@ class AudioEngine {
       }
     });
 
-    console.log("[Pool] Reset all sources in channel");
   }
 
   /**
@@ -932,9 +895,6 @@ class AudioEngine {
           currentStep: state.currentStep,
           lastStepTime: state.lastStepTime,
         };
-        console.log(
-          `[Rhythm Preservation] Voice ${id} at step ${preservedState.currentStep}`,
-        );
       }
     }
 
@@ -960,7 +920,6 @@ class AudioEngine {
       // Check for pending update and apply it on this beat
       const pendingUpdate = this.pendingVoiceUpdates.get(id);
       if (pendingUpdate) {
-        console.log(`[Beat Sync] Applying queued update for voice ${id}`);
         source = pendingUpdate.source;
         envConfig = pendingUpdate.envelope;
         filter = pendingUpdate.filter;
@@ -1211,7 +1170,6 @@ class AudioEngine {
     // Update the trigger function
     existingVoice.trigger = triggerVoice;
 
-    console.log(`[Hot-Swap] Updated voice ${id}`);
   }
 
   /**
@@ -1227,9 +1185,6 @@ class AudioEngine {
       gain: config.gain,
       pan: config.pan,
     });
-    console.log(
-      `[Beat Sync] Queued update for voice ${id} (applies next beat)`,
-    );
   }
 
   /**
@@ -1251,7 +1206,6 @@ class AudioEngine {
       }
     });
     this.activeVoices.clear();
-    console.log("[Replace Mode] All voice sequencers stopped and disconnected");
   }
 
   /**
@@ -1303,7 +1257,6 @@ class AudioEngine {
       fadeTime * 1000 + 50,
     );
 
-    console.log(`[Replace Mode] Fading out master gain over ${fadeTime}s`);
   }
 
   /**
@@ -1335,7 +1288,6 @@ class AudioEngine {
       }
     });
     this.activeNodes = [];
-    console.log("[Replace Mode] All audio sources stopped and disconnected");
   }
 
   /**
@@ -1469,18 +1421,12 @@ class AudioEngine {
    * Send a JSON patch to the worklet for a specific channel
    */
   sendPatchToWorklet(channel, patch) {
-    console.log("[sendPatchToWorklet] Called", {
-      hasWorklet: this.useWorklet,
-      ready: this.workletReady,
-    });
     if (!this.useWorklet || !this.workletReady) {
-      console.log("[sendPatchToWorklet] Worklet not ready or disabled");
       return;
     }
     const target = channel === this.channelA ? this.workletA : this.workletB;
     if (target && target.port) {
       target.port.postMessage({ type: "setPatch", patch });
-      console.log("[sendPatchToWorklet] setPatch sent");
     }
 
   }
@@ -1490,15 +1436,10 @@ class AudioEngine {
   queueChannelSwap() {
     // If a swap is already pending, perform it immediately before queuing a new one
     if (this.pendingChannelSwap) {
-      console.log(
-        "[Channel Swap] Swap already pending, performing immediately before queuing new one",
-      );
       this.performChannelSwap(0.05);
     }
 
     this.pendingChannelSwap = true;
-    console.log("[Channel Swap] Queued for next beat");
-    console.log(`[Channel Swap] Active voices: ${this.activeVoices.size}`);
 
     // If no voices are playing, schedule the swap immediately for next beat
     // (normally voices trigger the swap on their beat)
@@ -1506,17 +1447,10 @@ class AudioEngine {
       // Schedule swap ~250ms for a reasonable beat time
       const self = this;
       setTimeout(() => {
-        console.log(
-          `[Channel Swap] Timeout fired! pendingChannelSwap=${self.pendingChannelSwap}`,
-        );
         if (self.pendingChannelSwap) {
-          console.log("[Channel Swap] Calling performChannelSwap...");
           self.performChannelSwap(0.05);
         }
       }, 250);
-      console.log(
-        "[Channel Swap] Scheduled immediate swap (no voices running)",
-      );
     }
   }
 
@@ -1525,11 +1459,7 @@ class AudioEngine {
    * @param {number} fadeTime - Crossfade duration in seconds
    */
   performChannelSwap(fadeTime = 0.1) {
-    console.log(
-      `[performChannelSwap] Called! pendingChannelSwap=${this.pendingChannelSwap}, fadeTime=${fadeTime}`,
-    );
     if (!this.pendingChannelSwap) {
-      console.log("[performChannelSwap] Swap not pending, returning");
       return;
     }
 
@@ -1539,12 +1469,6 @@ class AudioEngine {
     const previousActiveChannel = this.getActiveChannel();
     const newActiveChannel = this.getStandbyChannel();
 
-    console.log(
-      `[performChannelSwap] Previous active: ${previousActiveChannel === this.channelA ? "A" : "B"}`,
-    );
-    console.log(
-      `[performChannelSwap] New active: ${newActiveChannel === this.channelA ? "A" : "B"}`,
-    );
 
     // Crossfade: equal-power curve
     const steps = 128;
@@ -1574,14 +1498,7 @@ class AudioEngine {
     const releaseDelayMs = Math.max(0, (fadeTime + this.tailHoldTime) * 1000);
     setTimeout(() => {
       this.resetPool(previousActiveChannel);
-      console.log(
-        `[Channel Swap] Released pooled sources on ${previousActiveChannel === this.channelA ? "A" : "B"}`,
-      );
     }, releaseDelayMs);
-
-    console.log(
-      `[Channel Swap] Swapped from ${previousActiveChannel === this.channelA ? "A" : "B"} to ${this.activeChannel} with ${fadeTime}s fade`,
-    );
   }
 
   /**
