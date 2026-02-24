@@ -23,23 +23,44 @@ type RegexSpec = {
 
 type SyntaxStyleConfig = {
   theme: Record<string, Record<string, string>>;
+  mainKeywords: string[];
   keywordList: string[];
   keywordAliases: Record<string, string>;
   regex: Record<"block" | "osc" | "number" | "macro" | "operator", RegexSpec>;
 };
 
-const { theme, keywordList, keywordAliases, regex } =
+const { theme, mainKeywords = [], keywordList, keywordAliases, regex } =
   syntaxConfig as SyntaxStyleConfig;
 
 const makeRegex = ({ pattern, flags }: RegexSpec) => new RegExp(pattern, flags);
+const escapeForRegex = (value: string) =>
+  value.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
 
 const editorTheme = EditorView.theme(theme, { dark: true });
 
 const completionKeywords = Array.from(
-  new Set([...keywordList, ...Object.keys(keywordAliases)]),
+  new Set([
+    ...mainKeywords,
+    ...keywordList,
+    ...Object.keys(keywordAliases),
+  ]),
 );
 
-const keywordRegex = new RegExp(`\\b(${completionKeywords.join("|")})\\b`, "g");
+const mainKeywordPattern =
+  mainKeywords.length > 0
+    ? `\\b(${mainKeywords.map(escapeForRegex).join("|")})\\b`
+    : "";
+const subKeywordPattern =
+  keywordList.length > 0
+    ? `\\b(${keywordList.map(escapeForRegex).join("|")})\\b`
+    : "";
+const mainKeywordRegex = mainKeywordPattern
+  ? new RegExp(mainKeywordPattern, "g")
+  : null;
+const subKeywordRegex = subKeywordPattern
+  ? new RegExp(subKeywordPattern, "g")
+  : null;
+
 const oscRegex = makeRegex(regex.osc);
 const numberRegex = makeRegex(regex.number);
 const macroRegex = makeRegex(regex.macro);
@@ -85,7 +106,12 @@ const dslHighlight = ViewPlugin.fromClass(
 
         collectMatches(blockRegex, "cm-dsl-block");
         collectMatches(oscRegex, "cm-dsl-osc");
-        collectMatches(keywordRegex, "cm-dsl-keyword");
+        if (mainKeywordRegex) {
+          collectMatches(mainKeywordRegex, "cm-dsl-main-keyword");
+        }
+        if (subKeywordRegex) {
+          collectMatches(subKeywordRegex, "cm-dsl-sub-keyword");
+        }
         collectMatches(numberRegex, "cm-dsl-number");
         collectMatches(macroRegex, "cm-dsl-macro");
         collectMatches(operatorRegex, "cm-dsl-operator");

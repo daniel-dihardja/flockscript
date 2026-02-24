@@ -25,7 +25,11 @@
       "color": "#64748b",
       "borderRight": "1px solid rgba(148, 163, 184, 0.2)"
     },
-    ".cm-dsl-keyword": {
+    ".cm-dsl-main-keyword": {
+      "color": "#fb923c",
+      "fontWeight": "600"
+    },
+    ".cm-dsl-sub-keyword": {
       "color": "#7dd3fc",
       "fontWeight": "600"
     },
@@ -50,11 +54,8 @@
       "color": "#c4b5fd"
     }
   },
+  "mainKeywords": ["osc", "lfo", "fx", "route", "silence"],
   "keywordList": [
-    "osc",
-    "lfo",
-    "fx",
-    "route",
     "detune",
     "rate",
     "depth",
@@ -71,8 +72,7 @@
     "triangle",
     "noise",
     "samplehold",
-    "chaos",
-    "silence"
+    "chaos"
   ],
   "keywordAliases": {
     "rte": "route",
