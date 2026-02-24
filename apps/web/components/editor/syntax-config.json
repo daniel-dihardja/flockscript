@@ -23,6 +23,7 @@
     ".cm-selection": {
       "color": "#ffffff",
       "fontWeight": "600"
+    },
     ".cm-activeLine": {
       "backgroundColor": "rgba(148, 163, 184, 0.08)"
     },
