@@ -10,6 +10,8 @@
       "@workspace/audio": ["../../packages/audio/index.js"],
       "@workspace/audio/*": ["../../packages/audio/*"]
     },
+    "allowImportingTsExtensions": true,
+    "noImplicitAny": false,
     "types": ["node"],
     "plugins": [
       {

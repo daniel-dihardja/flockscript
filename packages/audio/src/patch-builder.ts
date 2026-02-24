@@ -2,12 +2,22 @@
  * Patch Builder - Interprets JSON patches and builds audio graphs
  */
 
-import audioEngine from "./audio-engine.js";
+import audioEngine from "./audio-engine.ts";
 
 class PatchBuilder {
+  [key: string]: any;
+  nodes: Map<string, any>;
+  modulators: any[];
+  masterTempo: number | null;
+  stepsPerBeat: number | null;
+  targetChannel: any;
+
   constructor() {
-    this.nodes = new Map(); // Store created nodes by ID
+    this.nodes = new Map<string, any>(); // Store created nodes by ID
     this.modulators = [];
+    this.masterTempo = null;
+    this.stepsPerBeat = null;
+    this.targetChannel = null;
   }
 
   /**
@@ -314,7 +324,7 @@ class PatchBuilder {
   buildVoice(config) {
     // Apply master tempo if sequence uses it
     let voiceConfig = { ...config };
-    if (voiceConfig.sequence && this.masterTempo) {
+    if (voiceConfig.sequence && this.masterTempo && this.stepsPerBeat) {
       // Calculate rate from master tempo
       // rate = (BPM / 60) * stepsPerBeat
       voiceConfig.sequence = {
@@ -349,11 +359,11 @@ class PatchBuilder {
   /**
    * Build effects chain
    */
-  buildEffectsChain(effects) {
-    const chain = [];
+  buildEffectsChain(effects: any[]) {
+    const chain: any[] = [];
 
-    effects.forEach((effect) => {
-      let node;
+    effects.forEach((effect: any) => {
+      let node: any;
 
       switch (effect.type) {
         case "filter":

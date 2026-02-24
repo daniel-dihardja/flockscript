@@ -3,7 +3,14 @@
  * Handles Web Audio API context and node management
  */
 
+declare global {
+  interface Window {
+    webkitAudioContext?: typeof AudioContext;
+  }
+}
+
 class AudioEngine {
+  [key: string]: any;
   constructor() {
     this.audioContext = null;
     this.masterGain = null;
@@ -882,7 +889,8 @@ class AudioEngine {
 
     // Check for existing voice to preserve rhythm
     const existingVoice = this.activeVoices.get(id);
-    let preservedState = null;
+    let preservedState: { currentStep: number; lastStepTime: number } | null =
+      null;
 
     if (existingVoice && existingVoice.sequenceState && sequence) {
       const state = existingVoice.sequenceState;
@@ -999,7 +1007,7 @@ class AudioEngine {
     };
 
     // Sequencer - use mutable state object for proper tracking
-    let sequencerInterval = null;
+    let sequencerInterval: ReturnType<typeof setInterval> | null = null;
     const sequenceState = {
       currentStep: 0,
       lastStepTime: 0,
@@ -1015,8 +1023,8 @@ class AudioEngine {
       outputNode: panner,
       isRunning: false,
       // These will be set below
-      startSequence: null,
-      stopSequence: null,
+      startSequence: null as (() => void) | null,
+      stopSequence: null as (() => void) | null,
       trigger: triggerVoice,
       sequenceState,
     };
