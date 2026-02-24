@@ -127,7 +127,7 @@ export default function AudioTestPage() {
     }
   };
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!engineReady || !builderRef.current) {
       setStatusMessage("Wait for the engine to initialize");
       return;
@@ -135,6 +135,13 @@ export default function AudioTestPage() {
     try {
       const patch = JSON.parse(editorValue);
       builderRef.current.build(patch);
+      if (engineRef.current?.resume) {
+        try {
+          await engineRef.current.resume();
+        } catch (resumeError) {
+          console.warn("Audio context resume blocked", resumeError);
+        }
+      }
       setStatusMessage("Patch applied — smooth crossfade scheduled");
     } catch (error) {
       console.error(error);
