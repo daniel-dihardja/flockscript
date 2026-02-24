@@ -129,4 +129,17 @@ describe("dsl compiler", () => {
       makeup: 3,
     });
   });
+
+  it("accepts wave keyword + offset on LFO", () => {
+    const result = compile(
+      "lfo wobble wave square rate 1 depth 120 offset 50",
+    );
+    expect(result.ok).toBe(true);
+    expect(result.patch.modulators).toHaveLength(1);
+    const mod = result.patch.modulators[0];
+    expect(mod.wave).toBe("square");
+    expect(mod.rate).toBe(1);
+    expect(mod.depth).toBe(120);
+    expect(mod.offset).toBe(50);
+  });
 });

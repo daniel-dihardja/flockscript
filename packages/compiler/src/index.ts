@@ -130,7 +130,8 @@ const KEYWORD_ALIASES: Record<string, string> = {
   cha: "chaos",
   chs: "chaos",
   sil: "silence",
-  voi: "voice"
+  voi: "voice",
+  wav: "wave"
 };
 
 const ROUTING_PARAMS = new Set([
@@ -261,7 +262,9 @@ export function compile(source: string): CompileResult {
       }
 
       const id = tokens[1]!;
-      const waveRaw = tokens[2]!;
+      const waveIndex = findTokenIndex(tokens, "wave");
+      const waveRaw =
+        waveIndex !== -1 ? tokens[waveIndex + 1]! : tokens[2]!;
       const freqToken = tokens[3]!;
       const gainToken = tokens[4]!;
 
@@ -457,7 +460,10 @@ export function compile(source: string): CompileResult {
       };
 
       if (modType === "lfo") {
-        const wave = resolveWave(tokens[2]!);
+        const waveIndex = findTokenIndex(tokens, "wave");
+        const waveRaw =
+          waveIndex !== -1 ? tokens[waveIndex + 1]! : tokens[2]!;
+        const wave = resolveWave(waveRaw);
         if (!wave) {
           diagnostics.push(
             diagnosticForLine(
