@@ -16,8 +16,6 @@ class AudioEngine {
     this.workletA = null;
     this.workletB = null;
     this.workletReady = false;
-    this.workletWasmActive = false;
-    this.workletWasmStatus = "uninitialized";
 
     // Track active nodes for cleanup
     this.activeNodes = [];
@@ -150,10 +148,6 @@ class AudioEngine {
         const data = event.data;
         if (!data) return;
         if (data.type === "status") {
-          if (data.message && data.message.startsWith("wasm-")) {
-            this.workletWasmActive = data.message === "wasm-loaded";
-            this.workletWasmStatus = data.message;
-          }
           console.log("[Worklet]", data.message || "status", data.counts || "");
         } else if (data.type === "error") {
           console.warn("[Worklet]", data.message || "error");
@@ -499,8 +493,6 @@ class AudioEngine {
     this.workletA = null;
     this.workletB = null;
     this.workletReady = false;
-    this.workletWasmActive = false;
-    this.workletWasmStatus = "uninitialized";
     this.isRunning = false;
     this.pendingChannelSwap = false;
     this.activeNodes = [];

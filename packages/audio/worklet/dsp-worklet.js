@@ -227,15 +227,6 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     this.voiceState = new Map();
     this.activeNotes = [];
 
-    // WASM DSP (spike)
-    this.wasmModule = null;
-    this.wasmInstance = null;
-    this.wasmProcess = null;
-    this.wasmMemory = null;
-    this.wasmF32 = null;
-    this.wasmGain = 1.0;
-    this.wasmName = null;
-
     // Output safety limiter
     this.limiterThreshold = 0.95;
     this.limiterGain = 1.0;
@@ -252,86 +243,11 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       if (event.data?.type === "ping") {
         this.port.postMessage({ type: "status", message: "worklet-ready" });
       }
-      if (event.data?.type === "setWasm") {
-        console.log("[Worklet] setWasm message handler triggered");
-        this.wasmModule = event.data.module || null;
-        this.wasmName = event.data.name || null;
-        this.port.postMessage({
-          type: "status",
-          message: "wasm-received",
-          module: this.wasmName || "unknown",
-        });
-        if (!this.wasmModule) {
-          return;
-        }
-        const imports = {
-          env: {
-            _powf: Math.pow,
-            _logf: Math.log,
-            _expf: Math.exp,
-            _sqrtf: Math.sqrt,
-            _sinf: Math.sin,
-            _cosf: Math.cos,
-            _tanf: Math.tan,
-            _asinf: Math.asin,
-            _acosf: Math.acos,
-            _atanf: Math.atan,
-            _atan2f: Math.atan2,
-            _floorf: Math.floor,
-            _ceilf: Math.ceil,
-            _roundf: Math.round,
-            _fmodf: (a, b) => a % b,
-            _fabs: Math.abs,
-          },
-        };
-        WebAssembly.instantiate(this.wasmModule, imports)
-          .then((result) => {
-            const instance = result.instance;
-            console.log("[Worklet] WebAssembly.instance exports:", Object.keys(instance.exports || {}));
-            this.port.postMessage({
-              type: "status",
-              message: "wasm-instantiate-attempt",
-              module: this.wasmName,
-            });
-            this.wasmInstance = instance;
-            this.wasmProcess = instance.exports?.processBlock || null;
-            this.wasmMemory = instance.exports?.memory || null;
-            this.wasmF32 = this.wasmMemory
-              ? new Float32Array(this.wasmMemory.buffer)
-              : null;
-            if (this.wasmProcess && this.wasmF32) {
-              this.port.postMessage({
-                type: "status",
-                message: "wasm-loaded",
-                module: this.wasmName,
-              });
-            } else {
-              this.port.postMessage({
-                type: "status",
-                message: "wasm-unsupported-exports",
-                hasProcess: !!this.wasmProcess,
-                hasF32: !!this.wasmF32,
-              });
-            }
-          })
-          .catch((error) => {
-            this.port.postMessage({
-              type: "error",
-              message: `wasm-instantiate-failed: ${error.message}`,
-            });
-          });
-      }
     };
   }
 
   applyPatch(patch) {
     this.patch = patch;
-
-    if (typeof patch.wasmGain === "number") {
-      this.wasmGain = patch.wasmGain;
-    } else {
-      this.wasmGain = 1.0;
-    }
 
     this.oscillators = (patch.oscillators || []).map((osc) => {
       const freq = typeof osc.freq === "number" ? osc.freq : 440;
@@ -750,41 +666,6 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
 
       left[i] = l;
       right[i] = r;
-    }
-
-    let wasmApplied = false;
-    if (this.wasmProcess && this.wasmF32) {
-      try {
-        const len = left.length;
-        const leftOffset = 0;
-        const rightOffset = len;
-
-        for (let i = 0; i < len; i++) {
-          this.wasmF32[leftOffset + i] = left[i];
-          this.wasmF32[rightOffset + i] = right[i];
-        }
-
-        this.wasmProcess(leftOffset * 4, len, this.wasmGain);
-        this.wasmProcess(rightOffset * 4, len, this.wasmGain);
-
-        for (let i = 0; i < len; i++) {
-          left[i] = this.wasmF32[leftOffset + i];
-          right[i] = this.wasmF32[rightOffset + i];
-        }
-        wasmApplied = true;
-      } catch (e) {
-        // Keep audio thread safe if wasm fails
-      }
-    }
-
-    if (!wasmApplied) {
-      const gain = Number.isFinite(this.wasmGain) ? this.wasmGain : 1.0;
-      if (gain !== 1.0) {
-        for (let i = 0; i < left.length; i++) {
-          left[i] *= gain;
-          right[i] *= gain;
-        }
-      }
     }
 
     for (let i = 0; i < left.length; i++) {

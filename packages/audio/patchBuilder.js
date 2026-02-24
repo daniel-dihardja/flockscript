@@ -54,9 +54,6 @@ class PatchBuilder {
     audioEngine.queueChannelSwap();
     console.log("[Replace Mode] Building on standby channel, swap queued");
 
-    const wasmGainValue =
-      typeof patchData.wasmGain === "number" ? patchData.wasmGain : null;
-
     if (!this.targetChannel) {
       throw new Error("[PatchBuilder] Could not determine target channel!");
     }
@@ -66,11 +63,7 @@ class PatchBuilder {
     );
 
     if (audioEngine.useWorklet && audioEngine.workletReady) {
-      if (wasmGainValue !== null && !audioEngine.workletWasmActive) {
-        audioEngine.setChannelInputGain(this.targetChannel, wasmGainValue);
-      } else {
-        audioEngine.setChannelInputGain(this.targetChannel, 1.0);
-      }
+      audioEngine.setChannelInputGain(this.targetChannel, 1.0);
       audioEngine.sendPatchToWorklet(this.targetChannel, patchData);
       // Ensure direct routing when using worklet (effects are handled internally)
       audioEngine.routeChannelThroughEffects(this.targetChannel, []);
@@ -78,11 +71,7 @@ class PatchBuilder {
       return;
     }
 
-    if (wasmGainValue !== null) {
-      audioEngine.setChannelInputGain(this.targetChannel, wasmGainValue);
-    } else {
-      audioEngine.setChannelInputGain(this.targetChannel, 1.0);
-    }
+    audioEngine.setChannelInputGain(this.targetChannel, 1.0);
 
     this.nodes.clear();
     this.modulators = [];
