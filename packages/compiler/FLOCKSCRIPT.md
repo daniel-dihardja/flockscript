@@ -53,7 +53,17 @@ fx bass-filter filter lowpass freq 600 q 4
 
 Creates a filter effect `bass-filter` (type `filter`) with cutoff 600 Hz and resonance 4. Combine with oscillators/modulators in the same block to let the PatchBuilder route sources through the effect chain.
 
-### Example 5 – silence quick mute
+The `fx` command currently supports the Web Audio nodes `filter`, `delay`, `distortion`, `gain`, `reverb`, and `compressor`, so you can chain the same native effects from FlockScript.
+
+### Example 5 – reverb tail
+
+```
+fx hall reverb duration 3 decay 2 reverse false
+```
+
+The `reverb` effect uses the Web Audio convolution chain to add spacey tails. The compiler emits a `reverb` entry with `duration`, `decay`, and `reverse` flags alongside the other built-in effects (filter, delay, distortion, gain).
+
+### Example 6 – silence quick mute
 
 ```
 sil

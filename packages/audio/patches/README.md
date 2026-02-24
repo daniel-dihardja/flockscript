@@ -630,6 +630,7 @@ The DSL compiler (`packages/compiler/README.md`) turns live-coded commands into 
 - **Main Keywords:** `osc`, `noise`, `lfo`, `samplehold`, `chaos`, `fx`, `route`, and `silence` (plus aliases such as `sin`, `sqr`, `noi`, `sil`).
 - **Voice (`voi`)**: defines sequenced sources with envelopes, filters, and step patterns (`seq ... rate ...`). See `packages/compiler/FLOCKSCRIPT.md` for the exact syntax.
 - **Parameter normalization:** Frequencies, gains, detune/pan, envelope stages, and effect settings are clamped and routed through `CompilePatch` before the patch reaches the engine.
+- **Effects coverage:** Web Audio effects—`filter`, `delay`, `distortion`, `gain`, `reverb`, and `compressor`—are emitted from `fx` lines so the PatchBuilder can rebuild those native nodes with the matching schema parameters.
 - **Effects coverage:** `filter`, `delay`, `distortion`, `gain`, and `compressor` obey their schema-defined fields.
 - **Silence mode:** `sil`/`silence` is a no-op patch that keeps diagnostics green yet forces silence on the engine.
 

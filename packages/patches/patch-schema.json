@@ -525,6 +525,39 @@
                     },
                     {
                         "type": "object",
+                        "description": "Convolver reverb",
+                        "required": [
+                            "type"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "reverb"
+                            },
+                            "duration": {
+                                "type": "number",
+                                "description": "Reverb duration (seconds)",
+                                "default": 2,
+                                "minimum": 0,
+                                "maximum": 10
+                            },
+                            "decay": {
+                                "type": "number",
+                                "description": "Decay time (seconds)",
+                                "default": 2,
+                                "minimum": 0,
+                                "maximum": 10
+                            },
+                            "reverse": {
+                                "type": "boolean",
+                                "description": "Play impulse in reverse",
+                                "default": false
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
                         "description": "Gain control",
                         "required": [
                             "type"

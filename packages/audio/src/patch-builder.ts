@@ -402,6 +402,22 @@ class PatchBuilder {
           chain.push({ type: "reverb", node, output: node });
           break;
 
+        case "compressor":
+          const compressor = audioEngine.createCompressor({
+            threshold: effect.threshold ?? -24,
+            ratio: effect.ratio ?? 4,
+            attack: effect.attack ?? 0.003,
+            release: effect.release ?? 0.25,
+            knee: effect.knee ?? 0,
+            makeup: effect.makeup ?? 0,
+          });
+          chain.push({
+            type: "compressor",
+            node: compressor.node,
+            output: compressor.output,
+          });
+          break;
+
         case "gain":
           node = audioEngine.createGain(effect.value || 1.0);
           chain.push({ type: "gain", node, output: node });

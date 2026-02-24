@@ -101,4 +101,22 @@ describe("dsl compiler", () => {
     expect(voice.filter?.freq).toBe(150);
     expect(voice.pan).toBeCloseTo(-0.2);
   });
+
+  it("parses compressor fx settings", () => {
+    const result = compile(
+      "fx sidechain compressor threshold -30 ratio 6 attack 0.005 release 0.2 knee 4 makeup 3",
+    );
+    expect(result.ok).toBe(true);
+    expect(result.patch.effects).toHaveLength(1);
+    expect(result.patch.effects[0]).toEqual({
+      id: "sidechain",
+      type: "compressor",
+      threshold: -30,
+      ratio: 6,
+      attack: 0.005,
+      release: 0.2,
+      knee: 4,
+      makeup: 3,
+    });
+  });
 });

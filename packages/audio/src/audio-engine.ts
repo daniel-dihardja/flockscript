@@ -712,6 +712,33 @@ class AudioEngine {
   }
 
   /**
+   * Create a compressor node for the effects chain
+   */
+  createCompressor({
+    threshold = -24,
+    ratio = 4,
+    attack = 0.003,
+    release = 0.25,
+    knee = 0,
+    makeup = 0,
+  } = {}) {
+    const compressor = this.audioContext.createDynamicsCompressor();
+    compressor.threshold.value = threshold;
+    compressor.ratio.value = ratio;
+    compressor.attack.value = attack;
+    compressor.release.value = release;
+    compressor.knee.value = knee;
+
+    const makeupGain = this.audioContext.createGain();
+    makeupGain.gain.value = Math.pow(10, makeup / 20);
+
+    compressor.connect(makeupGain);
+    this.activeNodes.push(compressor, makeupGain);
+
+    return { node: compressor, output: makeupGain };
+  }
+
+  /**
    * Generate distortion curve
    */
   makeDistortionCurve(amount) {
