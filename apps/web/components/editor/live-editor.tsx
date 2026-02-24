@@ -276,6 +276,35 @@ function getBlockRange(state: EditorState, pos: number) {
   return { from: start, to: end };
 }
 
+function selectNextWord(view: EditorView) {
+  const doc = view.state.doc;
+  let pos = view.state.selection.main.to;
+  const currentWord = view.state.wordAt(view.state.selection.main.head);
+  if (currentWord && currentWord.to > pos) {
+    pos = currentWord.to;
+  }
+  const isWhitespace = (char: string) => /\s/.test(char);
+  while (pos < doc.length && isWhitespace(doc.sliceString(pos, pos + 1))) {
+    pos += 1;
+  }
+  if (pos >= doc.length) {
+    return false;
+  }
+  if (!isWhitespace(doc.sliceString(pos, pos + 1))) {
+    const start = pos;
+    let end = pos;
+    while (end < doc.length && !isWhitespace(doc.sliceString(end, end + 1))) {
+      end += 1;
+    }
+    view.dispatch({
+      selection: { anchor: start, head: end },
+      scrollIntoView: true,
+    });
+    return true;
+  }
+  return false;
+}
+
 type LiveEditorHandle = {
   runLine: () => void;
 };
@@ -391,6 +420,7 @@ function LiveEditorComponent(
         editorTheme,
         dslHighlight,
         keymap.of([
+          { key: "Tab", run: selectNextWord },
           {
             key: "Mod-Enter",
             run: executeLine,
