@@ -31,7 +31,6 @@
     },
     ".cm-dsl-osc": {
       "color": "#7dd3fc",
-      "backgroundColor": "rgba(249, 115, 22, 0.3)",
       "borderRadius": "4px",
       "padding": "0 4px",
       "fontWeight": "600"

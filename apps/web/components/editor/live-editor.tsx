@@ -10,21 +10,11 @@ import {
 import { setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { Decoration, EditorView, ViewPlugin, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
+import { compile, type CompileResult } from "@workspace/compiler";
+import { Button } from "@workspace/ui/components/button";
 import syntaxConfig from "./syntax-config.json";
 
-const defaultScript = `--- drone ---
-osc bass saw 55 @0.3 detune +3c
-osc air sine 110 @0.05
-lfo slow sine rate 0.02 depth 200
-route slow -> bass.freq
-
-fx lpf filter lowpass freq 800 q 6
-fx dist drive 2.2
-
---- noise ---
-osc hiss noise @0.2
-fx bpf filter bandpass freq 1200 q 12
-`;
+const defaultScript = `osc bass sine 110 @0.25`;
 
 type RegexSpec = {
   pattern: string;
@@ -35,17 +25,13 @@ type SyntaxStyleConfig = {
   theme: Record<string, Record<string, string>>;
   keywordList: string[];
   keywordAliases: Record<string, string>;
-  regex: Record<
-    "block" | "osc" | "number" | "macro" | "operator",
-    RegexSpec
-  >;
+  regex: Record<"block" | "osc" | "number" | "macro" | "operator", RegexSpec>;
 };
 
 const { theme, keywordList, keywordAliases, regex } =
   syntaxConfig as SyntaxStyleConfig;
 
-const makeRegex = ({ pattern, flags }: RegexSpec) =>
-  new RegExp(pattern, flags);
+const makeRegex = ({ pattern, flags }: RegexSpec) => new RegExp(pattern, flags);
 
 const editorTheme = EditorView.theme(theme, { dark: true });
 
@@ -53,10 +39,7 @@ const completionKeywords = Array.from(
   new Set([...keywordList, ...Object.keys(keywordAliases)]),
 );
 
-const keywordRegex = new RegExp(
-  `\\b(${completionKeywords.join("|")})\\b`,
-  "g",
-);
+const keywordRegex = new RegExp(`\\b(${completionKeywords.join("|")})\\b`, "g");
 const oscRegex = makeRegex(regex.osc);
 const numberRegex = makeRegex(regex.number);
 const macroRegex = makeRegex(regex.macro);
@@ -204,6 +187,8 @@ function isBoundaryLine(text: string) {
   return trimmed.length === 0 || trimmed.startsWith("---");
 }
 
+export const LiveEditor = React.forwardRef(LiveEditorComponent);
+
 function getBlockRange(state: EditorState, pos: number) {
   const doc = state.doc;
   const line = doc.lineAt(pos);
@@ -235,18 +220,30 @@ function getBlockRange(state: EditorState, pos: number) {
   return { from: start, to: end };
 }
 
-export function LiveEditor({ initialDoc = defaultScript }: LiveEditorProps) {
+type LiveEditorHandle = {
+  runLine: () => void;
+};
+
+function LiveEditorComponent(
+  { initialDoc = defaultScript }: LiveEditorProps,
+  ref: React.ForwardedRef<LiveEditorHandle>,
+) {
   const hostRef = React.useRef<HTMLDivElement | null>(null);
   const viewRef = React.useRef<EditorView | null>(null);
   const workerRef = React.useRef<Worker | null>(null);
   const requestIdRef = React.useRef(0);
   const debounceRef = React.useRef<number | null>(null);
+  const builderRef = React.useRef<any>(null);
   const [lastEval, setLastEval] = React.useState<EvalPayload | null>(null);
   const [compileState, setCompileState] = React.useState<
     "idle" | "compiling" | "ok" | "error"
   >("idle");
   const [compileResult, setCompileResult] =
     React.useState<CompileResult | null>(null);
+  const [engineStatus, setEngineStatus] = React.useState<{
+    label: string;
+    state: "idle" | "initializing" | "running" | "error";
+  }>({ label: "Audio engine idle", state: "idle" });
 
   React.useEffect(() => {
     if (!hostRef.current || viewRef.current) {
@@ -297,17 +294,6 @@ export function LiveEditor({ initialDoc = defaultScript }: LiveEditorProps) {
       return true;
     };
 
-    const evalLine = (view: EditorView) => {
-      const line = view.state.doc.lineAt(view.state.selection.main.head);
-      setLastEval({
-        type: "line",
-        text: line.text,
-        from: line.from,
-        to: line.to,
-      });
-      return true;
-    };
-
     const evalBlock = (view: EditorView) => {
       const range = getBlockRange(view.state, view.state.selection.main.head);
       const text = view.state.doc.sliceString(range.from, range.to);
@@ -350,11 +336,11 @@ export function LiveEditor({ initialDoc = defaultScript }: LiveEditorProps) {
         keymap.of([
           {
             key: "Mod-Enter",
-            run: evalBlock,
+            run: executeLine,
           },
           {
             key: "Shift-Enter",
-            run: evalLine,
+            run: evalBlock,
           },
           {
             key: "Alt-Enter",
@@ -390,15 +376,125 @@ export function LiveEditor({ initialDoc = defaultScript }: LiveEditorProps) {
     };
   }, [initialDoc]);
 
+  const applyPatchToEngine = (patch: CompileResult["patch"]) => {
+    if (!patch || !builderRef.current) {
+      return;
+    }
+    try {
+      builderRef.current.build(patch);
+    } catch (error) {
+      console.error("Failed to apply patch", error);
+    }
+  };
+
+  const executeLine = (view: EditorView) => {
+    const line = view.state.doc.lineAt(view.state.selection.main.head);
+    const text = line.text.trim();
+    if (!text) {
+      return false;
+    }
+    setLastEval({
+      type: "line",
+      text,
+      from: line.from,
+      to: line.to,
+    });
+
+    const result = compile(text);
+    setCompileResult(result);
+    setCompileState(result.ok ? "ok" : "error");
+    if (viewRef.current) {
+      viewRef.current.dispatch(
+        setDiagnostics(viewRef.current.state, result.diagnostics),
+      );
+    }
+    if (result.ok) {
+      applyPatchToEngine(result.patch);
+    }
+    return true;
+  };
+
+  const runLine = () => {
+    if (!viewRef.current) {
+      return;
+    }
+    executeLine(viewRef.current);
+  };
+
+  React.useImperativeHandle(ref, () => ({
+    runLine,
+  }));
+
+  const initAudioEngine = async () => {
+    if (engineStatus.state === "initializing") {
+      return;
+    }
+    setEngineStatus({
+      label: "Initializing audio engine…",
+      state: "initializing",
+    });
+    try {
+      const { audioEngine, PatchBuilder } = await import("@workspace/audio");
+      await audioEngine.init();
+      builderRef.current = new PatchBuilder();
+      const engineState = audioEngine.audioContext?.state ?? "unknown";
+      setEngineStatus({
+        label: `Audio engine ${engineState}`,
+        state: "running",
+      });
+    } catch (error) {
+      console.error("Audio engine failed to initialize", error);
+      setEngineStatus({
+        label: "Audio engine failed",
+        state: "error",
+      });
+    }
+  };
+
   return (
     <div className="flex h-full flex-col overflow-hidden border border-neutral-800 bg-background shadow-sm">
-      <div className="flex items-center justify-between border-b border-neutral-700 bg-neutral-900 px-4 py-2 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-700 bg-neutral-900 px-4 py-2 text-sm">
         <div className="flex items-center gap-2 font-medium">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
           Live Editor
         </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="font-semibold"
+            onClick={initAudioEngine}
+            disabled={engineStatus.state === "initializing"}
+          >
+            {engineStatus.state === "running"
+              ? "Engine running"
+              : "Init audio engine"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="font-semibold"
+            onClick={runLine}
+            disabled={engineStatus.state !== "running"}
+          >
+            Run line (Cmd+Enter)
+          </Button>
+          <span
+            className={
+              engineStatus.state === "running"
+                ? "text-emerald-300"
+                : engineStatus.state === "error"
+                  ? "text-rose-400"
+                  : "text-muted-foreground"
+            }
+          >
+            {engineStatus.label}
+          </span>
+        </div>
         <div className="text-xs text-muted-foreground">
-          Mod+Enter block · Shift+Enter line · Alt+Enter selection
+          Cmd+Enter line · Shift+Enter block · Alt+Enter selection
         </div>
       </div>
       <div className="min-h-0 flex-1" ref={hostRef} />
