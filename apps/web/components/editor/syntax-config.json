@@ -17,10 +17,12 @@
     ".cm-selectionBackground": {
       "backgroundColor": "rgba(251, 113, 133, 0.45)"
     },
+    ".cm-selectionLayer .cm-selectionBackground": {
+      "backgroundColor": "rgba(251, 113, 133, 0.45)"
+    },
     ".cm-selection": {
       "color": "#ffffff",
       "fontWeight": "600"
-    },
     ".cm-activeLine": {
       "backgroundColor": "rgba(148, 163, 184, 0.08)"
     },
