@@ -27,6 +27,15 @@ const validationStatus = document.getElementById("validationStatus");
 const channelAStatus = document.getElementById("channelAStatus");
 const channelBStatus = document.getElementById("channelBStatus");
 const activeChannelStatus = document.getElementById("activeChannelStatus");
+const audioContextStatus = document.getElementById("audioContextStatus");
+const sampleRateStatus = document.getElementById("sampleRateStatus");
+const audioTimeStatus = document.getElementById("audioTimeStatus");
+const workletReadyStatus = document.getElementById("workletReadyStatus");
+const activeVoiceStatus = document.getElementById("activeVoiceStatus");
+const pendingSwapStatus = document.getElementById("pendingSwapStatus");
+const pendingUpdatesStatus = document.getElementById("pendingUpdatesStatus");
+const totalNodesStatus = document.getElementById("totalNodesStatus");
+const tailHoldStatus = document.getElementById("tailHoldStatus");
 const modeStatus = null;
 
 // CodeMirror editor instance
@@ -41,6 +50,21 @@ let stressTimer = null;
 let stressEndTime = 0;
 
 /**
+ * Helper to set diagnostic text nodes without duplicating null checks
+ */
+function setStatusText(element, value, fallback = "-") {
+  if (!element) return;
+  element.textContent = value ?? fallback;
+}
+
+function formatNumberValue(value, digits = 2) {
+  if (typeof value === "number") {
+    return value.toFixed(digits);
+  }
+  return "-";
+}
+
+/**
  * Update audio readiness hint in the editor status
  */
 function updateAudioHint(isReady) {
@@ -51,6 +75,33 @@ function updateAudioHint(isReady) {
   validationStatus.textContent = `${audioLabel} | ${baseLabel}`;
 }
 
+function renderAudioStatus(status) {
+  if (!status) {
+    setStatusText(audioContextStatus, "inactive");
+    setStatusText(sampleRateStatus, "0");
+    setStatusText(audioTimeStatus, "0.00");
+    setStatusText(workletReadyStatus, "waiting");
+    setStatusText(activeVoiceStatus, "0");
+    setStatusText(pendingSwapStatus, "none");
+    setStatusText(pendingUpdatesStatus, "0");
+    setStatusText(totalNodesStatus, "0");
+    setStatusText(tailHoldStatus, "0.00s");
+    return;
+  }
+  setStatusText(audioContextStatus, status.contextState);
+  setStatusText(sampleRateStatus, formatNumberValue(status.sampleRate, 0));
+  setStatusText(audioTimeStatus, formatNumberValue(status.currentTime, 2));
+  setStatusText(workletReadyStatus, status.workletReady ? "ready" : "waiting");
+  setStatusText(activeVoiceStatus, status.activeVoices);
+  setStatusText(
+    pendingSwapStatus,
+    status.pendingChannelSwap ? "pending" : "none",
+  );
+  setStatusText(pendingUpdatesStatus, status.pendingVoiceUpdates);
+  setStatusText(totalNodesStatus, status.totalNodes);
+  setStatusText(tailHoldStatus, `${status.tailHoldTime.toFixed(2)}s`);
+}
+
 /**
  * Update debug info display
  */
@@ -58,6 +109,7 @@ function updateDebugInfo() {
   const channelA = audioEngine.channelA;
   const channelB = audioEngine.channelB;
   const activeCh = audioEngine.activeChannel;
+  const status = audioEngine.getDebugStatus ? audioEngine.getDebugStatus() : null;
 
   // If audio engine not initialized yet, show placeholder
   if (!channelA || !channelB) {
@@ -67,6 +119,7 @@ function updateDebugInfo() {
     if (modeStatus) {
       modeStatus.textContent = "Replace (swap)";
     }
+    renderAudioStatus(status);
     return;
   }
 
@@ -89,6 +142,7 @@ function updateDebugInfo() {
   if (modeStatus) {
     modeStatus.textContent = "Replace (swap)";
   }
+  renderAudioStatus(status);
 }
 
 /**

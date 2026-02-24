@@ -1371,6 +1371,39 @@ class AudioEngine {
   }
 
   /**
+   * Collect runtime status useful for debugging audio issues
+   */
+  getDebugStatus() {
+    const ctx = this.audioContext;
+    const countActive = (list) =>
+      Array.isArray(list)
+        ? list.reduce((sum, item) => sum + (item?.active ? 1 : 0), 0)
+        : 0;
+    const channelStats = (channel, pool) => ({
+      gain: channel?.gain?.value ?? 0,
+      activeOscillators: countActive(pool?.oscillators),
+      activeNoise: countActive(pool?.noise),
+    });
+    return {
+      contextState: ctx ? ctx.state : "inactive",
+      sampleRate: ctx ? ctx.sampleRate : 0,
+      currentTime: ctx ? ctx.currentTime : 0,
+      isRunning: this.isRunning,
+      useWorklet: this.useWorklet,
+      workletReady: this.workletReady,
+      masterGain: this.masterGain?.gain?.value ?? 0,
+      channelA: channelStats(this.channelA, this.poolA),
+      channelB: channelStats(this.channelB, this.poolB),
+      activeChannel: this.activeChannel,
+      activeVoices: this.activeVoices.size,
+      pendingVoiceUpdates: this.pendingVoiceUpdates.size,
+      pendingChannelSwap: this.pendingChannelSwap,
+      tailHoldTime: this.tailHoldTime,
+      totalNodes: this.activeNodes.length,
+    };
+  }
+
+  /**
    * Route a channel input through an effects chain (or direct)
    */
   routeChannelThroughEffects(channel, effectsChain) {
