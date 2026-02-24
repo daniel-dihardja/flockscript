@@ -39,6 +39,14 @@
       "padding": "0 4px",
       "fontWeight": "600"
     },
+    ".cm-dsl-waveform": {
+      "color": "#a5b4fc",
+      "fontWeight": "600"
+    },
+    ".cm-dsl-gain": {
+      "color": "#f472b6",
+      "fontWeight": "600"
+    },
     ".cm-dsl-number": {
       "color": "#fca5a5"
     },
@@ -54,7 +62,13 @@
       "color": "#c4b5fd"
     }
   },
-  "mainKeywords": ["osc", "lfo", "fx", "route", "silence"],
+  "mainKeywords": [
+    "osc",
+    "lfo",
+    "fx",
+    "route",
+    "silence"
+  ],
   "keywordList": [
     "detune",
     "rate",
@@ -66,14 +80,11 @@
     "highpass",
     "dist",
     "delay",
-    "sine",
-    "saw",
-    "square",
-    "triangle",
-    "noise",
     "samplehold",
     "chaos"
   ],
+  "waveforms": ["sine", "sin", "saw", "square", "sqr", "triangle", "tri", "noise", "noi"],
+  "gainTokenPattern": "@[+-]?\\d+(?:\\.\\d+)?",
   "keywordAliases": {
     "rte": "route",
     "dtn": "detune",

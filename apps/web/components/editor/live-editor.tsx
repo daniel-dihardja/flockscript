@@ -26,11 +26,20 @@ type SyntaxStyleConfig = {
   mainKeywords: string[];
   keywordList: string[];
   keywordAliases: Record<string, string>;
+  waveforms?: string[];
+  gainTokenPattern?: string;
   regex: Record<"block" | "osc" | "number" | "macro" | "operator", RegexSpec>;
 };
 
-const { theme, mainKeywords = [], keywordList, keywordAliases, regex } =
-  syntaxConfig as SyntaxStyleConfig;
+const {
+  theme,
+  mainKeywords = [],
+  keywordList,
+  keywordAliases,
+  waveforms = [],
+  gainTokenPattern,
+  regex,
+} = syntaxConfig as SyntaxStyleConfig;
 
 const makeRegex = ({ pattern, flags }: RegexSpec) => new RegExp(pattern, flags);
 const escapeForRegex = (value: string) =>
@@ -42,6 +51,7 @@ const completionKeywords = Array.from(
   new Set([
     ...mainKeywords,
     ...keywordList,
+    ...waveforms,
     ...Object.keys(keywordAliases),
   ]),
 );
@@ -59,6 +69,16 @@ const mainKeywordRegex = mainKeywordPattern
   : null;
 const subKeywordRegex = subKeywordPattern
   ? new RegExp(subKeywordPattern, "g")
+  : null;
+const waveformPattern =
+  waveforms.length > 0
+    ? `\\b(${waveforms.map(escapeForRegex).join("|")})\\b`
+    : "";
+const waveformRegex = waveformPattern
+  ? new RegExp(waveformPattern, "gi")
+  : null;
+const gainRegex = gainTokenPattern
+  ? new RegExp(gainTokenPattern, "gi")
   : null;
 
 const oscRegex = makeRegex(regex.osc);
@@ -87,7 +107,11 @@ const dslHighlight = ViewPlugin.fromClass(
 
     buildDecorations(view: EditorView) {
       const builder = new RangeSetBuilder<Decoration>();
-      for (const { from, to } of view.visibleRanges) {
+      const rangesToScan =
+        view.visibleRanges.length > 0
+          ? view.visibleRanges
+          : [{ from: 0, to: view.state.doc.length }];
+      for (const { from, to } of rangesToScan) {
         const text = view.state.doc.sliceString(from, to);
         const offset = from;
         const ranges: Array<{ from: number; to: number; className: string }> =
@@ -111,6 +135,12 @@ const dslHighlight = ViewPlugin.fromClass(
         }
         if (subKeywordRegex) {
           collectMatches(subKeywordRegex, "cm-dsl-sub-keyword");
+        }
+        if (waveformRegex) {
+          collectMatches(waveformRegex, "cm-dsl-waveform");
+        }
+        if (gainRegex) {
+          collectMatches(gainRegex, "cm-dsl-gain");
         }
         collectMatches(numberRegex, "cm-dsl-number");
         collectMatches(macroRegex, "cm-dsl-macro");
