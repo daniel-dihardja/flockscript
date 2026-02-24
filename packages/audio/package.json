@@ -1,5 +1,5 @@
 {
-    "name": "audio-live-coding",
+    "name": "@workpace/audio",
     "version": "1.0.0",
     "type": "module",
     "description": "Live coding environment for experimental noise/glitch music with Web Audio API",
