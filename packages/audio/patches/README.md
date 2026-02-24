@@ -623,6 +623,17 @@ The JSON schema provides autocomplete and validation in editors like VS Code.
 - **Schema:** [patch-schema.json](../../patches/patch-schema.json)
 - **Examples:** All patches in `patches/` subdirectories
 
+## FlockScript Reference
+
+The DSL compiler (`packages/compiler/README.md`) turns live-coded commands into JSON patches that satisfy this schema:
+
+- **Main Keywords:** `osc`, `noise`, `lfo`, `samplehold`, `chaos`, `fx`, `route`, and `silence` (plus aliases such as `sin`, `sqr`, `noi`, `sil`).
+- **Parameter normalization:** Frequencies, gains, detune/pan, envelope stages, and effect settings are clamped and routed through `CompilePatch` before the patch reaches the engine.
+- **Effects coverage:** `filter`, `delay`, `distortion`, `gain`, and `compressor` obey their schema-defined fields.
+- **Silence mode:** `sil`/`silence` is a no-op patch that keeps diagnostics green yet forces silence on the engine.
+
+Combine this reference with the schema when extending the DSL so every new command feeds the audio engine with valid JSON.
+
 ---
 
 **Version:** 1.0  
