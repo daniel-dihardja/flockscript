@@ -50,6 +50,9 @@ importers:
       '@lezer/lr':
         specifier: ^1.4.8
         version: 1.4.8
+      '@workspace/audio':
+        specifier: workspace:*
+        version: link:../../packages/audio
       '@workspace/ui':
         specifier: workspace:*
         version: link:../../packages/ui
