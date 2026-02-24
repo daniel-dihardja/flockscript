@@ -345,7 +345,10 @@ class PatchBuilder {
       });
     } else {
       // Create new voice
-      const voice = audioEngine.createVoice(voiceConfig);
+      const voice = audioEngine.createVoice({
+        ...voiceConfig,
+        channel: this.targetChannel,
+      });
       this.nodes.set(config.id, {
         type: "voice",
         voice,
@@ -519,7 +522,7 @@ class PatchBuilder {
     const parts = paramPath.split(".");
 
     // Oscillator parameters
-    if (parts[0] === "frequency" && node.osc) {
+    if ((parts[0] === "frequency" || parts[0] === "freq" || parts[0] === "frq") && node.osc) {
       return node.osc.frequency;
     }
     if (parts[0] === "detune" && node.osc) {

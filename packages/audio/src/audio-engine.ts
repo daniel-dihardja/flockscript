@@ -912,6 +912,7 @@ class AudioEngine {
       gain = 1.0,
       pan = 0,
       filter,
+      channel,
     } = voiceConfig;
 
     // Check for existing voice to preserve rhythm
@@ -933,6 +934,10 @@ class AudioEngine {
       }
     }
 
+    if (existingVoice?.stopSequence) {
+      existingVoice.stopSequence();
+    }
+
     // Create gain for overall voice level
     const voiceGain = this.audioContext.createGain();
     voiceGain.gain.value = gain;
@@ -942,6 +947,15 @@ class AudioEngine {
 
     // Build output chain
     voiceGain.connect(panner);
+    const targetChannel = channel ?? this.getStandbyChannel();
+    const channelInput = this.getChannelInput(targetChannel);
+    if (channelInput) {
+      panner.connect(channelInput);
+    } else if (this.channelAInput) {
+      panner.connect(this.channelAInput);
+    } else if (this.channelBInput) {
+      panner.connect(this.channelBInput);
+    }
 
     // For oscillator sources, create a new one on each trigger
     const triggerVoice = (triggerTime) => {
@@ -1054,6 +1068,7 @@ class AudioEngine {
       stopSequence: null as (() => void) | null,
       trigger: triggerVoice,
       sequenceState,
+      channel: targetChannel,
     };
 
     // Restore preserved state if available
@@ -1357,6 +1372,16 @@ class AudioEngine {
     input.gain.setValueAtTime(value, now);
   }
 
+  stopChannelVoices(channel) {
+    const entries = Array.from(this.activeVoices.entries());
+    entries.forEach(([id, voice]) => {
+      if (voice.channel === channel) {
+        voice.stopSequence?.();
+        this.activeVoices.delete(id);
+      }
+    });
+  }
+
   /**
    * Silence the engine immediately by muting and stopping all sources
    */
@@ -1586,6 +1611,7 @@ class AudioEngine {
     const releaseDelayMs = Math.max(0, (fadeTime + this.tailHoldTime) * 1000);
     setTimeout(() => {
       this.resetPool(previousActiveChannel);
+      this.stopChannelVoices(previousActiveChannel);
     }, releaseDelayMs);
   }
 

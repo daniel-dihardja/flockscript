@@ -295,15 +295,22 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       };
     });
 
-    this.routing = patch.routing || [];
+    const normalizeParam = (param) => {
+      if (!param) return param;
+      const lower = param.toLowerCase();
+      if (lower === "freq" || lower === "frq") {
+        return "frequency";
+      }
+      return lower;
+    };
+    this.routing = (patch.routing || []).map((route) => ({
+      ...route,
+      param: normalizeParam(route.param),
+    }));
     this.routingMap = new Map();
     this.routing.forEach((route) => {
       if (!route?.from || !route?.to || !route?.param) return;
       const key = `${route.to}:${route.param}`;
-      const list = this.routingMap.get(key) || [];
-      list.push(route.from);
-      this.routingMap.set(key, list);
-    });
 
     this.effects = (patch.effects || []).map((effect) => ({
       ...effect,

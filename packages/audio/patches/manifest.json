@@ -94,6 +94,6 @@
             "name": "QA 18 - Fast Pulse",
             "category": "Pulse",
             "file": "pulse/qa-18-fast-pulse.json"
-        },
+        }
     ]
 }

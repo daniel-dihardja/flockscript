@@ -16,6 +16,40 @@ import syntaxConfig from "./syntax-config.json";
 
 const defaultScript = `osc bass sine 110 @0.25`;
 
+type Sample = {
+  label: string;
+  code: string;
+};
+
+type SampleCategory = {
+  name: string;
+  samples: Sample[];
+};
+
+const SAMPLE_CATEGORIES: SampleCategory[] = [
+  {
+    name: "Basic",
+    samples: [
+      {
+        label: "Sine tone",
+        code: "osc sine1 sine 220 @0.25",
+      },
+      {
+        label: "Square tone",
+        code: "osc square1 square 220 @0.22",
+      },
+      {
+        label: "Saw tone",
+        code: "osc saw1 saw 220 @0.2",
+      },
+      {
+        label: "Triangle tone",
+        code: "osc triangle1 tri 220 @0.18",
+      },
+    ],
+  },
+];
+
 type RegexSpec = {
   pattern: string;
   flags: string;
@@ -330,6 +364,10 @@ function LiveEditorComponent(
     label: string;
     state: "idle" | "initializing" | "running" | "error";
   }>({ label: "Audio engine idle", state: "idle" });
+  const [selectedCategory, setSelectedCategory] = React.useState(
+    SAMPLE_CATEGORIES[0].name,
+  );
+  const [selectedSampleIndex, setSelectedSampleIndex] = React.useState(0);
 
   React.useEffect(() => {
     if (!hostRef.current || viewRef.current) {
@@ -478,6 +516,30 @@ function LiveEditorComponent(
     };
   }, [initialDoc]);
 
+  const currentCategory =
+    SAMPLE_CATEGORIES.find((cat) => cat.name === selectedCategory) ??
+    SAMPLE_CATEGORIES[0];
+  const currentSample =
+    currentCategory.samples[selectedSampleIndex] ?? currentCategory.samples[0];
+
+  React.useEffect(() => {
+    if (!currentSample || !viewRef.current) {
+      return;
+    }
+
+    viewRef.current.dispatch({
+      changes: {
+        from: 0,
+        to: viewRef.current.state.doc.length,
+        insert: currentSample.code,
+      },
+    });
+  }, [currentSample]);
+
+  React.useEffect(() => {
+    setSelectedSampleIndex(0);
+  }, [selectedCategory]);
+
   const applyPatchToEngine = (patch: CompileResult["patch"]) => {
     if (!patch || !builderRef.current) {
       return;
@@ -618,6 +680,38 @@ function LiveEditorComponent(
           >
             {engineStatus.label}
           </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+          <label className="flex flex-col text-[10px] uppercase tracking-widest text-muted-foreground">
+            Category
+            <select
+              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
+              value={selectedCategory}
+              onChange={(event) => setSelectedCategory(event.target.value)}
+            >
+              {SAMPLE_CATEGORIES.map((cat) => (
+                <option key={cat.name} value={cat.name}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col text-[10px] uppercase tracking-widest text-muted-foreground">
+            Sample
+            <select
+              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
+              value={selectedSampleIndex}
+              onChange={(event) =>
+                setSelectedSampleIndex(Number(event.target.value))
+              }
+            >
+              {currentCategory.samples.map((sample, index) => (
+                <option key={sample.label} value={index}>
+                  {sample.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="text-xs text-muted-foreground">
           Cmd+Enter line · Shift+Enter block · Alt+Enter selection
