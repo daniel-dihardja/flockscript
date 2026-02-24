@@ -1,0 +1,35 @@
+{
+    "tempo": 120,
+    "stepsPerBeat": 4,
+    "voices": [
+        {
+            "id": "pulse",
+            "source": {
+                "type": "oscillator",
+                "freq": 440,
+                "wave": "triangle"
+            },
+            "envelope": {
+                "attack": 0.001,
+                "decay": 0.06,
+                "sustain": 0.08,
+                "release": 0.02
+            },
+            "sequence": {
+                "pattern": [
+                    1,
+                    0,
+                    1,
+                    0,
+                    1,
+                    0,
+                    1,
+                    0
+                ],
+                "rate": 8
+            },
+            "gain": 0.4,
+            "pan": 0
+        }
+    ]
+}

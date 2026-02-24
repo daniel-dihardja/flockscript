@@ -1,0 +1,12 @@
+{
+    "noise": [
+        {
+            "id": "noise",
+            "gain": 0.18,
+            "pan": 0
+        }
+    ],
+    "modulators": [],
+    "routing": [],
+    "effects": []
+}

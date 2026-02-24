@@ -1,0 +1,14 @@
+{
+    "oscillators": [
+        {
+            "id": "square",
+            "freq": 220,
+            "gain": 0.18,
+            "type": "square",
+            "pan": 0
+        }
+    ],
+    "modulators": [],
+    "routing": [],
+    "effects": []
+}

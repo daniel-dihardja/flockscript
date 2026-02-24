@@ -1,0 +1,20 @@
+{
+    "faust": {
+        "module": "ringmod",
+        "bypassEffects": true,
+        "params": {
+            "carrierFreq": 200,
+            "waveform": 0,
+            "wetDry": 0.8
+        }
+    },
+    "oscillators": [
+        {
+            "id": "base",
+            "freq": 330,
+            "gain": 0.25,
+            "type": "triangle",
+            "pan": 0
+        }
+    ]
+}

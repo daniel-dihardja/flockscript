@@ -1,0 +1,42 @@
+{
+    "voices": [
+        {
+            "id": "tap",
+            "source": {
+                "type": "noise"
+            },
+            "envelope": {
+                "attack": 0.001,
+                "decay": 0.02,
+                "sustain": 0,
+                "release": 0.05
+            },
+            "sequence": {
+                "pattern": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    1,
+                    0,
+                    0,
+                    0
+                ],
+                "rate": 8
+            },
+            "gain": 0.4,
+            "filter": {
+                "type": "bandpass",
+                "freq": 2000,
+                "q": 3
+            }
+        }
+    ],
+    "effects": [
+        {
+            "type": "delay",
+            "time": 0.375,
+            "feedback": 0.55
+        }
+    ]
+}
