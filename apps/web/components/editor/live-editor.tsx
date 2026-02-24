@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { EditorState, RangeSetBuilder } from "@codemirror/state";
+import {
+  EditorState,
+  RangeSetBuilder,
+  StateEffect,
+  StateField,
+} from "@codemirror/state";
 import {
   autocompletion,
   type Completion,
@@ -13,42 +18,9 @@ import { basicSetup } from "codemirror";
 import { compile, type CompileResult } from "@workspace/compiler";
 import { Button } from "@workspace/ui/components/button";
 import syntaxConfig from "./syntax-config.json";
+import { SAMPLE_CATEGORIES } from "./examples";
 
-const defaultScript = `osc bass sine 110 @0.25`;
-
-type Sample = {
-  label: string;
-  code: string;
-};
-
-type SampleCategory = {
-  name: string;
-  samples: Sample[];
-};
-
-const SAMPLE_CATEGORIES: SampleCategory[] = [
-  {
-    name: "Basic",
-    samples: [
-      {
-        label: "Sine tone",
-        code: "osc sine1 sine 220 @0.25",
-      },
-      {
-        label: "Square tone",
-        code: "osc square1 square 220 @0.22",
-      },
-      {
-        label: "Saw tone",
-        code: "osc saw1 saw 220 @0.2",
-      },
-      {
-        label: "Triangle tone",
-        code: "osc triangle1 tri 220 @0.18",
-      },
-    ],
-  },
-];
+const defaultScript = SAMPLE_CATEGORIES[0].samples[0].code;
 
 type RegexSpec = {
   pattern: string;
@@ -62,7 +34,17 @@ type SyntaxStyleConfig = {
   keywordAliases: Record<string, string>;
   waveforms?: string[];
   gainTokenPattern?: string;
-  regex: Record<"block" | "osc" | "number" | "macro" | "operator", RegexSpec>;
+  regex: Record<
+    | "block"
+    | "osc"
+    | "number"
+    | "macro"
+    | "operator"
+    | "name"
+    | "routeSource"
+    | "routeTarget",
+    RegexSpec
+  >;
 };
 
 const {
@@ -90,13 +72,16 @@ const completionKeywords = Array.from(
   ]),
 );
 
+const wrapKeyword = (value: string) =>
+  `(?<![#A-Za-z0-9_-])${value}(?![A-Za-z0-9_-])`;
+
 const mainKeywordPattern =
   mainKeywords.length > 0
-    ? `\\b(${mainKeywords.map(escapeForRegex).join("|")})\\b`
+    ? `(${mainKeywords.map((keyword) => wrapKeyword(escapeForRegex(keyword))).join("|")})`
     : "";
 const subKeywordPattern =
   keywordList.length > 0
-    ? `\\b(${keywordList.map(escapeForRegex).join("|")})\\b`
+    ? `(${keywordList.map((keyword) => wrapKeyword(escapeForRegex(keyword))).join("|")})`
     : "";
 const mainKeywordRegex = mainKeywordPattern
   ? new RegExp(mainKeywordPattern, "g")
@@ -120,6 +105,27 @@ const numberRegex = makeRegex(regex.number);
 const macroRegex = makeRegex(regex.macro);
 const blockRegex = makeRegex(regex.block);
 const operatorRegex = makeRegex(regex.operator);
+const nameRegex = makeRegex(regex.name);
+const routeSourceRegex = makeRegex(regex.routeSource);
+const routeTargetRegex = makeRegex(regex.routeTarget);
+const highlightEffect = StateEffect.define<{ from: number; to: number } | null>();
+const highlightField = StateField.define<{ from: number; to: number } | null>({
+  create: () => null,
+  update(value, tr) {
+    let next = value;
+    for (const effect of tr.effects) {
+      if (effect.spec === highlightEffect) {
+        next = effect.value;
+      }
+    }
+    if (next && tr.docChanged) {
+      const mappedFrom = tr.changes.mapPos(next.from, -1);
+      const mappedTo = tr.changes.mapPos(next.to, 1);
+      next = { from: mappedFrom, to: mappedTo };
+    }
+    return next;
+  },
+});
 
 const dslHighlight = ViewPlugin.fromClass(
   class {
@@ -167,6 +173,7 @@ const dslHighlight = ViewPlugin.fromClass(
         if (mainKeywordRegex) {
           collectMatches(mainKeywordRegex, "cm-dsl-main-keyword");
         }
+        collectMatches(nameRegex, "cm-dsl-name");
         if (subKeywordRegex) {
           collectMatches(subKeywordRegex, "cm-dsl-sub-keyword");
         }
@@ -179,6 +186,8 @@ const dslHighlight = ViewPlugin.fromClass(
         collectMatches(numberRegex, "cm-dsl-number");
         collectMatches(macroRegex, "cm-dsl-macro");
         collectMatches(operatorRegex, "cm-dsl-operator");
+        collectMatches(routeSourceRegex, "cm-dsl-route-source");
+        collectMatches(routeTargetRegex, "cm-dsl-route-target");
 
         ranges
           .sort((a, b) => a.from - b.from || a.to - b.to)
@@ -190,6 +199,50 @@ const dslHighlight = ViewPlugin.fromClass(
             );
           });
       }
+      return builder.finish();
+    }
+  },
+  {
+    decorations: (value) => value.decorations,
+  },
+);
+
+const lastLineHighlight = ViewPlugin.fromClass(
+  class {
+    decorations: ReturnType<typeof Decoration.set>;
+
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+
+    update(update: {
+      docChanged: boolean;
+      viewportChanged: boolean;
+      view: EditorView;
+      transactions: any[];
+    }) {
+      const shouldRebuild =
+        update.docChanged ||
+        update.viewportChanged ||
+        update.transactions.some((tr) =>
+          tr.effects.some((effect: any) => effect.spec === highlightEffect),
+        );
+      if (shouldRebuild) {
+        this.decorations = this.build(update.view);
+      }
+    }
+
+    build(view: EditorView) {
+      const range = view.state.field(highlightField);
+      if (!range) {
+        return Decoration.none;
+      }
+      const builder = new RangeSetBuilder<Decoration>();
+      builder.add(
+        range.from,
+        range.to,
+        Decoration.mark({ class: "cm-dsl-last-executed" }),
+      );
       return builder.finish();
     }
   },
@@ -364,6 +417,9 @@ function LiveEditorComponent(
     label: string;
     state: "idle" | "initializing" | "running" | "error";
   }>({ label: "Audio engine idle", state: "idle" });
+  const [debugPatch, setDebugPatch] = React.useState<
+    CompileResult["patch"] | null
+  >(null);
   const [selectedCategory, setSelectedCategory] = React.useState(
     SAMPLE_CATEGORIES[0].name,
   );
@@ -418,18 +474,6 @@ function LiveEditorComponent(
       return true;
     };
 
-    const evalBlock = (view: EditorView) => {
-      const range = getBlockRange(view.state, view.state.selection.main.head);
-      const text = view.state.doc.sliceString(range.from, range.to);
-      setLastEval({
-        type: "block",
-        text,
-        from: range.from,
-        to: range.to,
-      });
-      return true;
-    };
-
     const compileNow = (source: string) => {
       if (!workerRef.current) {
         return;
@@ -456,16 +500,18 @@ function LiveEditorComponent(
       extensions: [
         basicSetup,
         editorTheme,
+        highlightField,
         dslHighlight,
+        lastLineHighlight,
         keymap.of([
           { key: "Tab", run: selectNextWord },
           {
             key: "Mod-Enter",
-            run: executeLine,
+            run: executeBlock,
           },
           {
             key: "Shift-Enter",
-            run: evalBlock,
+            run: executeBlock,
           },
           {
             key: "Alt-Enter",
@@ -474,14 +520,21 @@ function LiveEditorComponent(
         ]),
         EditorView.domEventHandlers({
           keydown(event, view) {
-            if (
-              event.key === "Enter" &&
-              (event.metaKey || (event.ctrlKey && !event.metaKey))
-            ) {
-              const handled = executeLine(view);
-              if (handled) {
-                event.preventDefault();
-                return true;
+            if (event.key === "Enter") {
+              if (event.shiftKey && !event.metaKey && !event.ctrlKey) {
+                const handled = executeBlock(view);
+                if (handled) {
+                  event.preventDefault();
+                  return true;
+                }
+                return false;
+              }
+              if (event.metaKey || (event.ctrlKey && !event.metaKey)) {
+                const handled = executeBlock(view);
+                if (handled) {
+                  event.preventDefault();
+                  return true;
+                }
               }
             }
             return false;
@@ -540,6 +593,17 @@ function LiveEditorComponent(
     setSelectedSampleIndex(0);
   }, [selectedCategory]);
 
+  const clearLineHighlight = () => {
+    if (!viewRef.current) {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      viewRef.current?.dispatch({
+        effects: highlightEffect.of(null),
+      });
+    });
+  };
+
   const applyPatchToEngine = (patch: CompileResult["patch"]) => {
     if (!patch || !builderRef.current) {
       return;
@@ -551,17 +615,24 @@ function LiveEditorComponent(
     }
   };
 
-  function executeLine(view: EditorView) {
-    const line = view.state.doc.lineAt(view.state.selection.main.head);
-    const text = line.text.trim();
+  function executeRange(
+    view: EditorView,
+    range: { from: number; to: number },
+    kind: EvalPayload["type"],
+  ) {
+    const raw = view.state.doc.sliceString(range.from, range.to);
+    const text = raw.trim();
     if (!text) {
       return false;
     }
     setLastEval({
-      type: "line",
+      type: kind,
       text,
-      from: line.from,
-      to: line.to,
+      from: range.from,
+      to: range.to,
+    });
+    view.dispatch({
+      effects: highlightEffect.of(range),
     });
 
     const normalizedCommand = text.toLowerCase();
@@ -584,6 +655,7 @@ function LiveEditorComponent(
           setDiagnostics(viewRef.current.state, silenceResult.diagnostics),
         );
       }
+      clearLineHighlight();
       return true;
     }
 
@@ -597,15 +669,33 @@ function LiveEditorComponent(
     }
     if (result.ok) {
       applyPatchToEngine(result.patch);
+      setDebugPatch(result.patch ?? null);
+      clearLineHighlight();
+    } else {
+      setDebugPatch(null);
     }
     return true;
+  };
+
+  function executeLine(view: EditorView) {
+    const line = view.state.doc.lineAt(view.state.selection.main.head);
+    return executeRange(
+      view,
+      { from: line.from, to: line.to },
+      "line",
+    );
+  };
+
+  function executeBlock(view: EditorView) {
+    const range = getBlockRange(view.state, view.state.selection.main.head);
+    return executeRange(view, range, "block");
   };
 
   const runLine = () => {
     if (!viewRef.current) {
       return;
     }
-    executeLine(viewRef.current);
+    executeBlock(viewRef.current);
   };
 
   React.useImperativeHandle(ref, () => ({
@@ -741,8 +831,19 @@ function LiveEditorComponent(
               ? `${lastEval.type}: ${lastEval.text}`
               : "No evaluation yet"}
           </span>
-        </div>
       </div>
     </div>
-  );
+    <div className="border-t border-neutral-700 bg-[#070b1a] px-4 py-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between text-[11px] text-foreground uppercase tracking-[0.35em]">
+        <span>Compiled patch</span>
+        <span className="text-[10px] text-muted-foreground">
+          {debugPatch ? "latest block" : "no patch yet"}
+        </span>
+      </div>
+      <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded border border-neutral-800 bg-[#0c111c] p-3 text-[11px] font-mono text-[#f8fafc]">
+        {debugPatch ? JSON.stringify(debugPatch, null, 2) : "No compiled patch available"}
+      </pre>
+    </div>
+  </div>
+);
 }

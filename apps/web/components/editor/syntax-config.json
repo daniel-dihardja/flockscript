@@ -2,42 +2,46 @@
   "theme": {
     "&": {
       "height": "100%",
-      "backgroundColor": "#1f1f1f",
-      "color": "#e5e7eb"
+      "backgroundImage": "linear-gradient(160deg, #0f172a, #1e1b4b 40%, #111827)",
+      "color": "#f8fafc",
+      "transition": "background 0.6s ease"
     },
     ".cm-scroller": {
-      "fontFamily": "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
-      "fontSize": "16px",
-      "lineHeight": "1.7"
+      "fontFamily": "'SF Mono' 'Space Grotesk', 'JetBrains Mono', 'Fira Code', monospace",
+      "fontSize": "18px",
+      "lineHeight": "1.65",
+      "letterSpacing": "0.015em"
     },
     ".cm-content": {
-      "padding": "16px",
-      "caretColor": "#f8fafc"
+      "padding": "18px",
+      "caretColor": "#f8fafc",
+      "fontWeight": "500"
     },
     ".cm-selectionBackground": {
-      "backgroundColor": "rgba(251, 113, 133, 0.45)"
+      "backgroundColor": "rgba(249, 115, 22, 0.4)",
+      "boxShadow": "0 0 14px rgba(249, 115, 22, 0.35)"
     },
     ".cm-selectionLayer .cm-selectionBackground": {
-      "backgroundColor": "rgba(251, 113, 133, 0.45)"
+      "backgroundColor": "rgba(249, 115, 22, 0.4)"
     },
     ".cm-selection": {
       "color": "#ffffff",
       "fontWeight": "600"
     },
     ".cm-activeLine": {
-      "backgroundColor": "rgba(148, 163, 184, 0.08)"
+      "backgroundColor": "rgba(168, 85, 247, 0.1)"
     },
     ".cm-gutters": {
-      "backgroundColor": "#1f1f1f",
-      "color": "#64748b",
-      "borderRight": "1px solid rgba(148, 163, 184, 0.2)"
+      "backgroundColor": "rgba(15, 23, 42, 0.75)",
+      "color": "#94a3b8",
+      "borderRight": "1px solid rgba(168, 85, 247, 0.3)"
     },
     ".cm-dsl-main-keyword": {
       "color": "#fb923c",
-      "fontWeight": "600"
+      "fontWeight": "700"
     },
     ".cm-dsl-sub-keyword": {
-      "color": "#7dd3fc",
+      "color": "#a5b4fc",
       "fontWeight": "600"
     },
     ".cm-dsl-osc": {
@@ -47,7 +51,7 @@
       "fontWeight": "600"
     },
     ".cm-dsl-waveform": {
-      "color": "#a5b4fc",
+      "color": "#7dd3fc",
       "fontWeight": "600"
     },
     ".cm-dsl-gain": {
@@ -61,12 +65,24 @@
       "color": "#94a3b8",
       "fontStyle": "italic"
     },
+    ".cm-dsl-name, .cm-dsl-route-source, .cm-dsl-route-target": {
+      "backgroundColor": "#000000",
+      "borderRadius": "0px",
+      "padding": "2px 4px",
+      "color": "#ffffff",
+      "fontWeight": "700"
+    },
     ".cm-dsl-operator": {
       "color": "#fbbf24",
       "fontWeight": "600"
     },
     ".cm-dsl-macro": {
       "color": "#c4b5fd"
+    },
+    ".cm-dsl-last-executed": {
+      "backgroundColor": "rgba(251, 146, 60, 0.3)",
+      "borderRadius": "3px",
+      "boxShadow": "0 0 10px rgba(251, 146, 60, 0.45)"
     }
   },
   "mainKeywords": [
@@ -77,7 +93,10 @@
     "silence",
     "sil",
     "noise",
-    "noi"
+    "noi",
+    "env",
+    "seq",
+    "filter"
   ],
   "keywordList": [
     "detune",
@@ -85,7 +104,6 @@
     "depth",
     "offset",
     "filter",
-    "lowpass",
     "bandpass",
     "highpass",
     "dist",
@@ -100,7 +118,11 @@
     "square",
     "sqr",
     "triangle",
-    "tri"
+    "tri",
+    "lowpass",
+    "highpass",
+    "bandpass",
+    "notch"
   ],
   "gainTokenPattern": "@[+-]?\\d+(?:\\.\\d+)?",
   "keywordAliases": {
@@ -123,7 +145,8 @@
     "smp": "samplehold",
     "cha": "chaos",
     "chs": "chaos",
-    "sil": "silence"
+    "sil": "silence",
+    "voi": "voice"
   },
   "regex": {
     "block": {
@@ -145,6 +168,18 @@
     "operator": {
       "pattern": "->",
       "flags": "g"
+    },
+    "name": {
+    "pattern": "(?<=\\b(?:osc|lfo|noi|noise|fx|voice|voi|env|filter)(?:\\s+|<))(?!(?:sin|sine|saw|sawtooth|square|sqr|triangle|tri|lowpass|lps|lp|highpass|hps|hp|bandpass|bnp|bnd|notch|ntc|nct)\\b)(?![0-9\\.])#?[A-Za-z0-9_-]+(?=(?:>|\\s|\\.|$))",
+      "flags": "gi"
+    },
+    "routeSource": {
+      "pattern": "(?<=\\broute\\s+)[A-Za-z0-9_-]+",
+      "flags": "gi"
+    },
+    "routeTarget": {
+      "pattern": "(?<=->\\s+)[A-Za-z0-9_-]+(?=\\.|\\s|$)",
+      "flags": "gi"
     }
   }
 }
