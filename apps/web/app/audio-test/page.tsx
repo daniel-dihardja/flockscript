@@ -116,6 +116,37 @@ export default function AudioTestPage() {
     return () => clearInterval(interval);
   }, [engineReady]);
 
+  useEffect(() => {
+    const entry = manifest.patches.find((patch) => patch.name === selectedPatch);
+    if (!entry) {
+      return;
+    }
+    let canceled = false;
+    const loadPatch = async () => {
+      try {
+        setStatusMessage(`Loading ${entry.name}...`);
+        const res = await fetch(`/api/patch?file=${encodeURIComponent(entry.file)}`);
+        if (!res.ok) {
+          throw new Error(`Failed to load patch (${res.status})`);
+        }
+        const patch = await res.json();
+        if (canceled) return;
+        setEditorValue(JSON.stringify(patch, null, 2));
+        setIsValid(true);
+        setStatusMessage(`${entry.name} loaded`);
+      } catch (error) {
+        console.error("Unable to load patch", error);
+        if (!canceled) {
+          setStatusMessage("Failed to load patch");
+        }
+      }
+    };
+    loadPatch();
+    return () => {
+      canceled = true;
+    };
+  }, [selectedPatch]);
+
   const handleValidate = () => {
     try {
       JSON.parse(editorValue);
