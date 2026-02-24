@@ -7,7 +7,7 @@
       "@workspace/ui/*": ["../../packages/ui/src/*"],
       "@workspace/compiler": ["../../packages/compiler/src"],
       "@workspace/compiler/*": ["../../packages/compiler/src/*"],
-      "@workspace/audio": ["../../packages/audio/index.js"],
+      "@workspace/audio": ["../../packages/audio/src/index.ts"],
       "@workspace/audio/*": ["../../packages/audio/*"]
     },
     "allowImportingTsExtensions": true,
