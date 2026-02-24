@@ -15,7 +15,7 @@
       "caretColor": "#f8fafc"
     },
     ".cm-selectionBackground": {
-      "backgroundColor": "rgba(148, 163, 184, 0.25)"
+      "backgroundColor": "rgba(34, 197, 94, 0.35)"
     },
     ".cm-activeLine": {
       "backgroundColor": "rgba(148, 163, 184, 0.08)"
