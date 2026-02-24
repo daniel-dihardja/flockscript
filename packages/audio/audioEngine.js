@@ -169,9 +169,6 @@ class AudioEngine {
       this.workletA.port.postMessage({ type: "ping" });
       this.workletB.port.postMessage({ type: "ping" });
 
-      // WASM DSP: load default FAUST module (optional)
-      this.ensureFaustModuleForChannel(this.channelA, "gain");
-      this.ensureFaustModuleForChannel(this.channelB, "gain");
     } else {
       this.workletReady = false;
     }
