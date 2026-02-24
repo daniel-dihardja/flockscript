@@ -25,6 +25,32 @@ const initialPatch = {
   effects: [],
 };
 
+type EngineDebugStatus = {
+  contextState: string;
+  sampleRate: number;
+  currentTime: number;
+  isRunning: boolean;
+  useWorklet: boolean;
+  workletReady: boolean;
+  masterGain: number;
+  channelA: {
+    gain: number;
+    activeOscillators: number;
+    activeNoise: number;
+  };
+  channelB: {
+    gain: number;
+    activeOscillators: number;
+    activeNoise: number;
+  };
+  activeChannel: string;
+  activeVoices: number;
+  pendingVoiceUpdates: number;
+  pendingChannelSwap: boolean;
+  tailHoldTime: number;
+  totalNodes: number;
+};
+
 export default function AudioTestPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("Single sounds");
   const [selectedPatch, setSelectedPatch] = useState<string>("QA 02 - Sine Tone");
@@ -35,6 +61,7 @@ export default function AudioTestPage() {
   const [isValid, setIsValid] = useState<boolean>(true);
   const [engineStatus, setEngineStatus] = useState<string>("Loading audio engine...");
   const [engineReady, setEngineReady] = useState<boolean>(false);
+  const [debugStatus, setDebugStatus] = useState<EngineDebugStatus | null>(null);
 
   const engineRef = useRef<any>(null);
   const builderRef = useRef<any>(null);
@@ -71,6 +98,22 @@ export default function AudioTestPage() {
       canceled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!engineReady) {
+      return undefined;
+    }
+    const tick = () => {
+      const status: EngineDebugStatus | undefined =
+        engineRef.current?.getDebugStatus?.();
+      if (status) {
+        setDebugStatus(status);
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 500);
+    return () => clearInterval(interval);
+  }, [engineReady]);
 
   const handleValidate = () => {
     try {
@@ -119,6 +162,9 @@ export default function AudioTestPage() {
     }
     return [];
   }, [categoryGroups, selectedCategory]);
+
+  const formatGain = (value: number) => value.toFixed(2);
+
 
   return (
     <main className="min-h-screen bg-[#0f0f0f] text-[#00ff00]">
@@ -207,6 +253,107 @@ export default function AudioTestPage() {
               value={editorValue}
               onChange={(event) => setEditorValue(event.target.value)}
             />
+          </div>
+
+          <div className="grid gap-2 rounded border border-[#222] bg-[#050505] p-3 text-xs">
+            <div className="flex justify-between uppercase tracking-[0.2em] text-[#888]">
+              <span>Audio Diagnostics</span>
+              <span className="font-mono">{engineReady ? "engine running" : engineStatus}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              <div className="flex justify-between">
+                <span>Context</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus?.contextState ?? "loading"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Sample rate</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus ? `${debugStatus.sampleRate.toFixed(0)} Hz` : "-"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Time</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus ? `${debugStatus.currentTime.toFixed(2)}s` : "-"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Active channel</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus?.activeChannel ?? "-"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Active voices</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus?.activeVoices ?? "-"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Pending swap</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus?.pendingChannelSwap ? "pending" : "-"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Pending updates</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus?.pendingVoiceUpdates ?? "-"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total nodes</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus?.totalNodes ?? "-"}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-1 pt-1 text-[11px]">
+              <div className="flex justify-between text-[#aaa]">
+                <span>Channel A gain</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus ? formatGain(debugStatus.channelA.gain) : "-"}
+                </span>
+              </div>
+              <div className="flex justify-between text-[#aaa]">
+                <span>Channel B gain</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus ? formatGain(debugStatus.channelB.gain) : "-"}
+                </span>
+              </div>
+              <div className="flex justify-between text-[#aaa]">
+                <span>A active osc</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus?.channelA.activeOscillators ?? "-"}
+                </span>
+              </div>
+              <div className="flex justify-between text-[#aaa]">
+                <span>B active osc</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus?.channelB.activeOscillators ?? "-"}
+                </span>
+              </div>
+              <div className="flex justify-between text-[#aaa]">
+                <span>A noise</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus?.channelA.activeNoise ?? "-"}
+                </span>
+              </div>
+              <div className="flex justify-between text-[#aaa]">
+                <span>B noise</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus?.channelB.activeNoise ?? "-"}
+                </span>
+              </div>
+              <div className="flex justify-between text-[#aaa]">
+                <span>Tail hold</span>
+                <span className="font-mono text-[#8bf08b]">
+                  {debugStatus ? `${debugStatus.tailHoldTime.toFixed(2)}s` : "-"}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-xs">
