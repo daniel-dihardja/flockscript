@@ -390,7 +390,7 @@ pnpm add ajv
 
 Use for:
 
-- validating compiled JSON against patch-schema.json
+- validating compiled JSON against packages/patches/patch-schema.json
 - preventing runtime errors
 - ensuring routing references exist
 

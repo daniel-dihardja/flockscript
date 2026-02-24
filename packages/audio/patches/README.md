@@ -4,7 +4,7 @@
 
 FlockScript uses a JSON-based patch format for defining live-codable audio compositions. Each patch describes oscillators, noise sources, voices, modulators, effects, and routing in a declarative, real-time editable format.
 
-**Schema Location:** [patch-schema.json](./patch-schema.json)
+**Schema Location:** [patch-schema.json](../../patches/patch-schema.json)
 
 ---
 
@@ -16,9 +16,11 @@ FlockScript uses a JSON-based patch format for defining live-codable audio compo
 4. [Modulators](#modulators)
 5. [Routing](#routing)
 6. [Effects](#effects)
-7. [FAUST Integration](#faust-integration)
-8. [Examples](#examples)
-9. [Best Practices](#best-practices)
+7. [Examples](#examples)
+8. [Best Practices](#best-practices)
+9. [Organization](#organization)
+10. [Schema Validation](#schema-validation)
+11. [Reference](#reference)
 
 ---
 
@@ -31,7 +33,7 @@ Patches are designed for **real-time manipulation** during performance. Changes 
 ### Audio Architecture
 
 ```
-Sound Sources → Modulators → Voices (ADSR) → JS Effects → FAUST DSP → Limiter → Output
+Sound Sources → Modulators → Voices (ADSR) → JS Effects → Limiter → Output
 ```
 
 ### Dual Channel System
@@ -53,8 +55,7 @@ A patch is a JSON object with these top-level properties:
   "voices": [...],           // Sequenced/triggered sounds with envelopes
   "modulators": [...],       // LFOs, sample & hold, chaos
   "routing": [...],          // Modulation connections
-  "effects": [...],          // JS-based audio effects
-  "faust": {...}            // FAUST WASM DSP module config
+  "effects": [...]          // JS-based audio effects
 }
 ```
 
@@ -384,77 +385,6 @@ Dynamic range compressor for controlling volume dynamics.
 
 ---
 
-## FAUST Integration
-
-FAUST (Functional Audio Stream) modules provide high-performance DSP compiled to WebAssembly.
-
-### Configuration
-
-```json
-{
-  "faust": {
-    "module": "lowpass", // FAUST module name (no extension)
-    "params": {
-      "gain": 0.8, // Parameter name → value
-      "cutoff": 1200
-    },
-    "bypassEffects": true // Optional: skip JS effects
-  }
-}
-```
-
-### Available Modules
-
-Current modules in `faust/`:
-
-- **gain.dsp**: Simple stereo gain control
-  - Parameters: `gain` (0-1)
-- **lowpass.dsp**: 2-pole lowpass filter
-  - Parameters: `cutoff` (100-5000 Hz)
-
-### Parameter Mapping
-
-FAUST parameters are automatically mapped from the module's JSON metadata. Use the exact parameter names from the FAUST UI description.
-
-```json
-{
-  "faust": {
-    "module": "gain",
-    "params": {
-      "gain": 0.5 // Maps to hslider("gain", ...)
-    }
-  }
-}
-```
-
-### Effects Bypass
-
-When `bypassEffects: true`, the JS effects chain (filter/delay/distortion) is skipped, sending audio directly from synthesis to FAUST.
-
-**Use Case:** Maximum performance when using complex FAUST DSP that includes filtering/effects internally.
-
-### Module Swapping
-
-Modules load asynchronously with a cache. You can change `faust.module` between patches for different DSP:
-
-```json
-// Patch A
-{"faust": {"module": "gain", "params": {"gain": 0.8}}}
-
-// Patch B (swap to lowpass)
-{"faust": {"module": "lowpass", "params": {"cutoff": 800}}}
-```
-
-### Building FAUST Modules
-
-```bash
-npm run faust:build
-```
-
-Compiles `faust/*.dsp` to `public/faust/*.wasm` + `*.json`.
-
----
-
 ## Examples
 
 ### Example 1: Wobble Bass
@@ -536,7 +466,7 @@ Low-frequency kick with pitch envelope.
 
 ### Example 3: Ambient Texture
 
-Layered noise with delay and FAUST lowpass.
+Layered noise with delay and a gentle filter.
 
 ```json
 {
@@ -552,14 +482,14 @@ Layered noise with delay and FAUST lowpass.
       "type": "delay",
       "time": 0.75,
       "feedback": 0.4
+    },
+    {
+      "type": "filter",
+      "filterType": "lowpass",
+      "freq": 600,
+      "q": 2
     }
-  ],
-  "faust": {
-    "module": "lowpass",
-    "params": {
-      "cutoff": 600
-    }
-  }
+  ]
 }
 ```
 
@@ -604,7 +534,6 @@ Sample & hold modulating oscillator pitch.
 
 - **Oscillator Pooling:** Worklet reuses oscillators (max 16), enable/disable based on patch
 - **Voice Pooling:** Voices reuse envelope generators (max 8)
-- **FAUST Cache:** Modules load once, cached across patches
 - **Limiter Safety:** Automatic hard limiting at ±0.95 prevents clipping
 
 ### Live Coding
@@ -635,7 +564,7 @@ Sample & hold modulating oscillator pitch.
 
 ### Debugging
 
-- **Debug Panel:** Real-time status shows active channel, FAUST module, parameter changes
+- **Debug Panel:** Real-time status shows active channel, channel gains, and pending swaps
 - **QA Patches:** Use `patches/single-sounds/` for testing individual features
 - **Incremental Changes:** Modify one parameter at a time during debugging
 
@@ -650,7 +579,7 @@ Sample & hold modulating oscillator pitch.
   ├── effects/          # Effect chain demos
   ├── percussion/       # Drum voices
   ├── composition/      # Full pieces
-  └── wasm/            # FAUST/WASM tests
+  └── pulse/            # Pulsed and rhythmic examples
   ```
 
 - **Naming Convention:** `qa-##-description.json` for test patches, `descriptive-name.json` for compositions
@@ -672,7 +601,7 @@ The JSON schema provides autocomplete and validation in editors like VS Code.
   "json.schemas": [
     {
       "fileMatch": ["patches/**/*.json"],
-      "url": "./patches/patch-schema.json"
+      "url": "../../patches/patch-schema.json"
     }
   ]
 }
@@ -682,7 +611,7 @@ The JSON schema provides autocomplete and validation in editors like VS Code.
 
 ```json
 {
-  "$schema": "./patch-schema.json",
+  "$schema": "../../patches/patch-schema.json",
   "oscillators": [...]
 }
 ```
@@ -691,9 +620,8 @@ The JSON schema provides autocomplete and validation in editors like VS Code.
 
 ## Reference
 
-- **Schema:** [patch-schema.json](./patch-schema.json)
+- **Schema:** [patch-schema.json](../../patches/patch-schema.json)
 - **Examples:** All patches in `patches/` subdirectories
-- **FAUST DSP:** [faust/README.md](../faust/README.md)
 
 ---
 
