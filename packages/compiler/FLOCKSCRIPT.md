@@ -37,6 +37,8 @@ route wobble -> lead freq
 
 `lfo` defines a slow oscillator (`rate 2` Hz) that modulates `lead` frequency by ±800 cents (`depth`). `route` wires `wobble` to `lead`’s `freq` parameter. The compiler produces `modulators` and `routing` objects matching the schema.
 
+`route` can also target `pan`, so commands like `route wobble -> lead pan` modulate stereo position directly from FlockScript.
+
 ### Example 3 – sequenced voice
 
 ```

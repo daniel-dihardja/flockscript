@@ -7,7 +7,7 @@ This package compiles FlockScript lines into the JSON patch format the audio eng
 - **Oscillators (`osc`)** – requires `id`, `wave` name, frequency and gain tokens. The compiler clamps frequencies to 20‑20 kHz, gain to 0‑1, and understands optional `detune` and `pan` values expressed in cents or stereo units.
 - **Noise sources (`noise`)** – accepts `id`, gain, and `pan`. Gain tokens must begin with `@`, the same parser that produces oscillator gains.
 - **Modulators** – supports `lfo`, `sampleHold`, and `chaos` sections. LFOs require `rate`, `depth`, and a recognized waveform (`sine`, `square`, `sawtooth`, `triangle`). Sample & Hold needs `min`/`max`; ``chaos`` needs `center`, `range`, and `step`. All values are validated for numeric ranges.
-- **Routing (`route`)** – accepts `source -> target param` entries where `param` must be one of: `frequency`, `freq`, `detune`, `gain`, `q`, `time`, `feedback`, or `pan`.
+- **Routing (`route`)** – accepts `source -> target param` entries where `param` must be one of: `frequency`, `freq`, `detune`, `gain`, `q`, `time`, `feedback`, or `pan`. The new `pan` option lets modulators directly sweep stereo position.
 - **Effects (`fx`)** – supports `filter`, `delay`, `distortion`, `gain`, `reverb`, and `compressor`. Each `fx` line emits the schema-defined parameters so the PatchBuilder can recreate the corresponding Web Audio nodes.
 - **Silence (`sil` / `silence`)** – reserved no-op command. It produces an empty patch result and bypasses the engine builder while still reporting `ok: true`.
 - **Aliases / shorthand** – numerous keyword aliases (`sin`, `sqr`, `tri`, `noi`, `frq`, etc.) map to canonical forms so you get consistent diagnostics.

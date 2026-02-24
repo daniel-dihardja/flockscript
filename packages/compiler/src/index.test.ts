@@ -102,6 +102,16 @@ describe("dsl compiler", () => {
     expect(voice.pan).toBeCloseTo(-0.2);
   });
 
+  it("supports pan routing", () => {
+    const result = compile("route wobble -> bass pan");
+    expect(result.ok).toBe(true);
+    expect(result.patch.routing[0]).toEqual({
+      from: "wobble",
+      to: "bass",
+      param: "pan",
+    });
+  });
+
   it("parses compressor fx settings", () => {
     const result = compile(
       "fx sidechain compressor threshold -30 ratio 6 attack 0.005 release 0.2 knee 4 makeup 3",

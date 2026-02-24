@@ -405,19 +405,20 @@
                         "type": "string",
                         "description": "Target oscillator or effect ID"
                     },
-                    "param": {
-                        "type": "string",
-                        "description": "Parameter to modulate",
-                        "enum": [
-                            "frequency",
-                            "detune",
-                            "gain",
-                            "freq",
-                            "q",
-                            "time",
-                            "feedback"
-                        ]
-                    }
+                            "param": {
+                                "type": "string",
+                                "description": "Parameter to modulate",
+                                "enum": [
+                                    "frequency",
+                                    "detune",
+                                    "gain",
+                                    "freq",
+                                    "q",
+                                    "time",
+                                    "feedback",
+                                    "pan"
+                                ]
+                            }
                 },
                 "additionalProperties": false
             }
