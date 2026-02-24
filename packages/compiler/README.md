@@ -1,6 +1,6 @@
 # FlockScript DSL Compiler Guide
 
-This package compiles FlockScript lines into the JSON patch format the audio engine consumes. The schema lives under `packages/patches/patch-schema.json`, so keep that file open as the ground truth while you extend or debug the compiler.
+This package compiles FlockScript lines into the JSON patch format the audio engine consumes. The schema lives under `packages/patches/patch-schema.json`, so keep that file open as the ground truth while you extend or debug the compiler. For a hands-on reference with working samples, see `packages/compiler/FLOCKSCRIPT.md`, which walks through simple lines like `osc bass sin 110 @0.2` and shows the emitted JSON.
 
 ## Implemented schema coverage
 

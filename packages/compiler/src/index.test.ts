@@ -85,4 +85,20 @@ describe("dsl compiler", () => {
     expect(result.patch.oscillators).toHaveLength(0);
     expect(result.patch.effects).toHaveLength(0);
   });
+
+  it("compiles a voice sequence", () => {
+    const source = [
+      "voi kick osc sin 60 @0.5 pan -0.2 env 0.001 0.02 0.6 0.1",
+      "seq 1 0 1 0 rate 4 filter lowpass freq 150 q 2",
+    ].join(" ");
+    const result = compile(source);
+    expect(result.ok).toBe(true);
+    expect(result.patch.voices).toHaveLength(1);
+    const voice = result.patch.voices![0];
+    expect(voice.envelope.attack).toBeCloseTo(0.001);
+    expect(voice.sequence).toEqual({ pattern: [1, 0, 1, 0], rate: 4 });
+    expect(voice.filter?.type).toBe("lowpass");
+    expect(voice.filter?.freq).toBe(150);
+    expect(voice.pan).toBeCloseTo(-0.2);
+  });
 });

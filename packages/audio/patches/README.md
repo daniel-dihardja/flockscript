@@ -628,6 +628,7 @@ The JSON schema provides autocomplete and validation in editors like VS Code.
 The DSL compiler (`packages/compiler/README.md`) turns live-coded commands into JSON patches that satisfy this schema:
 
 - **Main Keywords:** `osc`, `noise`, `lfo`, `samplehold`, `chaos`, `fx`, `route`, and `silence` (plus aliases such as `sin`, `sqr`, `noi`, `sil`).
+- **Voice (`voi`)**: defines sequenced sources with envelopes, filters, and step patterns (`seq ... rate ...`). See `packages/compiler/FLOCKSCRIPT.md` for the exact syntax.
 - **Parameter normalization:** Frequencies, gains, detune/pan, envelope stages, and effect settings are clamped and routed through `CompilePatch` before the patch reaches the engine.
 - **Effects coverage:** `filter`, `delay`, `distortion`, `gain`, and `compressor` obey their schema-defined fields.
 - **Silence mode:** `sil`/`silence` is a no-op patch that keeps diagnostics green yet forces silence on the engine.

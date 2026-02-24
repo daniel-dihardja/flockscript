@@ -603,33 +603,6 @@
                 ]
             }
         },
-        "faust": {
-            "type": "object",
-            "description": "FAUST WebAssembly DSP module configuration",
-            "properties": {
-                "module": {
-                    "type": "string",
-                    "description": "FAUST module name (without .wasm extension) from public/faust/ directory",
-                    "examples": [
-                        "gain",
-                        "lowpass"
-                    ]
-                },
-                "params": {
-                    "type": "object",
-                    "description": "FAUST module parameters as key-value pairs. Keys must match parameter names in the FAUST UI metadata.",
-                    "additionalProperties": {
-                        "type": "number"
-                    }
-                },
-                "bypassEffects": {
-                    "type": "boolean",
-                    "description": "If true, skip JavaScript effects chain and send audio directly from synthesis to FAUST module",
-                    "default": false
-                }
-            },
-            "additionalProperties": false
-        }
     },
     "additionalProperties": false,
     "examples": [

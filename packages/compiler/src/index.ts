@@ -41,12 +41,47 @@ type EffectEntry = {
   [key: string]: unknown;
 };
 
+type VoiceSource = {
+  type: "oscillator";
+  wave: OscillatorType | null;
+  freq: number;
+};
+
+type Envelope = {
+  attack: number;
+  decay: number;
+  sustain: number;
+  release: number;
+};
+
+type Sequence = {
+  pattern: number[];
+  rate: number;
+};
+
+type FilterConfig = {
+  type?: string;
+  freq?: number;
+  q?: number;
+};
+
+type VoiceEntry = {
+  id: string;
+  source: VoiceSource;
+  envelope: Envelope;
+  sequence?: Sequence;
+  gain?: number;
+  pan?: number;
+  filter?: FilterConfig;
+};
+
 type CompilePatch = {
   oscillators: OscillatorEntry[];
   modulators: ModulatorEntry[];
   effects: EffectEntry[];
   routing: RoutingEntry[];
   noise?: NoiseEntry[];
+  voices?: VoiceEntry[];
 };
 
 type CompileDiagnostic = {
@@ -95,6 +130,7 @@ const KEYWORD_ALIASES: Record<string, string> = {
   cha: "chaos",
   chs: "chaos",
   sil: "silence",
+  voi: "voice"
 };
 
 const ROUTING_PARAMS = new Set([
@@ -191,6 +227,7 @@ export function compile(source: string): CompileResult {
   const modulators: ModulatorEntry[] = [];
   const effects: EffectEntry[] = [];
   const routing: RoutingEntry[] = [];
+  const voices: VoiceEntry[] = [];
   const diagnostics: CompileDiagnostic[] = [];
 
   lines.forEach((rawLine, index) => {
@@ -605,6 +642,269 @@ export function compile(source: string): CompileResult {
       return;
     }
 
+    if (normalizedHead === "voice") {
+      const id = tokens[1]!;
+      const sourceTypeToken = tokens[2]!;
+      const waveToken = tokens[3]!;
+      const freqToken = tokens[4]!;
+      const gainToken = tokens[5]!;
+      if (
+        !id ||
+        !sourceTypeToken ||
+        !waveToken ||
+        !freqToken ||
+        !gainToken
+      ) {
+        diagnostics.push(
+          diagnosticForLine(
+            lines,
+            index,
+            "voice requires: voice <id> osc <wave> <freq> @<gain> [options]",
+          ),
+        );
+        return;
+      }
+
+      const sourceType = sourceTypeToken.toLowerCase();
+      if (sourceType !== "oscillator" && sourceType !== "osc") {
+        diagnostics.push(
+          diagnosticForLine(lines, index, "voice source must be osc/oscillator"),
+        );
+        return;
+      }
+
+      const wave = resolveWave(waveToken);
+      const freq = parseNumber(freqToken);
+      const gain = parseGainToken(gainToken);
+      if (!wave) {
+        diagnostics.push(
+          diagnosticForLine(lines, index, `unsupported voice wave: ${waveToken}`),
+        );
+        return;
+      }
+      if (freq === null || gain === null) {
+        diagnostics.push(
+          diagnosticForLine(
+            lines,
+            index,
+            "voice frequency or gain is invalid",
+          ),
+        );
+        return;
+      }
+
+      let pan = 0;
+      let filter: FilterConfig | undefined;
+      const envelope: Envelope = {
+        attack: 0.01,
+        decay: 0.1,
+        sustain: 1,
+        release: 0.1,
+      };
+      let sequence: Sequence | undefined;
+
+      let cursor = 6;
+      while (cursor < tokens.length) {
+        const keyToken = tokens[cursor]!;
+        const key = keyToken.toLowerCase();
+        cursor += 1;
+
+        if (key === "pan") {
+          const valueToken = tokens[cursor++];
+          if (!valueToken) {
+            diagnostics.push(
+              diagnosticForLine(lines, index, "voice pan requires a value"),
+            );
+            return;
+          }
+          const value = parseNumber(valueToken);
+          if (value === null) {
+            diagnostics.push(
+              diagnosticForLine(lines, index, "voice pan value is invalid"),
+            );
+            return;
+          }
+          pan = clamp(value, -1, 1);
+          continue;
+        }
+
+        if (key === "env") {
+          const attackToken = tokens[cursor++];
+          const decayToken = tokens[cursor++];
+          const sustainToken = tokens[cursor++];
+          const releaseToken = tokens[cursor++];
+          if (!attackToken || !decayToken || !sustainToken || !releaseToken) {
+            diagnostics.push(
+              diagnosticForLine(lines, index, "voice env requires 4 values"),
+            );
+            return;
+          }
+          const attack = parseNumber(attackToken);
+          const decay = parseNumber(decayToken);
+          const sustain = parseNumber(sustainToken);
+          const release = parseNumber(releaseToken);
+          if (
+            attack === null ||
+            decay === null ||
+            sustain === null ||
+            release === null
+          ) {
+            diagnostics.push(
+              diagnosticForLine(lines, index, "voice env values are invalid"),
+            );
+            return;
+          }
+          envelope.attack = Math.max(0.001, attack);
+          envelope.decay = Math.max(0.001, decay);
+          envelope.sustain = clamp(sustain, 0, 1);
+          envelope.release = Math.max(0.001, release);
+          continue;
+        }
+
+        if (key === "seq") {
+          const pattern: number[] = [];
+          while (cursor < tokens.length) {
+            const token = tokens[cursor]!;
+            const lower = token.toLowerCase();
+            if (lower === "rate") {
+              break;
+            }
+            if (token !== "0" && token !== "1") {
+              diagnostics.push(
+                diagnosticForLine(
+                  lines,
+                  index,
+                  "voice seq pattern accepts only 0 or 1 values",
+                ),
+              );
+              return;
+            }
+            pattern.push(Number(token));
+            cursor += 1;
+          }
+          if (pattern.length === 0) {
+            diagnostics.push(
+              diagnosticForLine(lines, index, "voice seq requires a pattern"),
+            );
+            return;
+          }
+          if (
+            cursor >= tokens.length ||
+            tokens[cursor]!.toLowerCase() !== "rate"
+          ) {
+            diagnostics.push(
+              diagnosticForLine(
+                lines,
+                index,
+                "voice seq requires rate <value>",
+              ),
+            );
+            return;
+          }
+          cursor += 1;
+          const rateToken = tokens[cursor++];
+          if (!rateToken) {
+            diagnostics.push(
+              diagnosticForLine(lines, index, "voice rate value missing"),
+            );
+            return;
+          }
+          const rate = parseNumber(rateToken);
+          if (rate === null || rate <= 0) {
+            diagnostics.push(
+              diagnosticForLine(lines, index, "voice rate value is invalid"),
+            );
+            return;
+          }
+          sequence = { pattern, rate };
+          continue;
+        }
+
+        if (key === "filter") {
+          const filterTypeToken = tokens[cursor++] ?? "lowpass";
+          if (!filterTypeToken) {
+            diagnostics.push(
+              diagnosticForLine(lines, index, "voice filter requires a type"),
+            );
+            return;
+          }
+          const filterConfig: FilterConfig = { type: filterTypeToken };
+          while (cursor < tokens.length) {
+            const option = tokens[cursor]!.toLowerCase();
+            if (option === "freq") {
+              cursor += 1;
+              const freqValue = tokens[cursor++];
+              if (!freqValue) {
+                diagnostics.push(
+                  diagnosticForLine(
+                    lines,
+                    index,
+                    "voice filter freq missing",
+                  ),
+                );
+                return;
+              }
+              const freqNum = parseNumber(freqValue);
+              if (freqNum === null) {
+                diagnostics.push(
+                  diagnosticForLine(
+                    lines,
+                    index,
+                    "voice filter freq is invalid",
+                  ),
+                );
+                return;
+              }
+              filterConfig.freq = clamp(freqNum, 20, 20000);
+              continue;
+            }
+            if (option === "q") {
+              cursor += 1;
+              const qValue = tokens[cursor++];
+              if (!qValue) {
+                diagnostics.push(
+                  diagnosticForLine(lines, index, "voice filter q missing"),
+                );
+                return;
+              }
+              const qNum = parseNumber(qValue);
+              if (qNum === null) {
+                diagnostics.push(
+                  diagnosticForLine(lines, index, "voice filter q invalid"),
+                );
+                return;
+              }
+              filterConfig.q = clamp(qNum, 0.0001, 100);
+              continue;
+            }
+            break;
+          }
+          filter = filterConfig;
+          continue;
+        }
+
+        diagnostics.push(
+          diagnosticForLine(lines, index, `unknown voice option: ${keyToken}`),
+        );
+        return;
+      }
+
+      voices.push({
+        id,
+        source: {
+          type: "oscillator",
+          wave,
+          freq,
+        },
+        envelope,
+        sequence,
+        gain: clamp(gain, 0, 1),
+        pan,
+        filter,
+      });
+      return;
+    }
+
     if (normalizedHead === "silence") {
       return;
     }
@@ -626,6 +926,9 @@ export function compile(source: string): CompileResult {
   };
   if (noise.length > 0) {
     patch.noise = noise;
+  }
+  if (voices.length > 0) {
+    patch.voices = voices;
   }
 
   return {
