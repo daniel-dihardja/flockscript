@@ -347,6 +347,21 @@ function LiveEditorComponent(
             run: evalSelection,
           },
         ]),
+        EditorView.domEventHandlers({
+          keydown(event, view) {
+            if (
+              event.key === "Enter" &&
+              (event.metaKey || (event.ctrlKey && !event.metaKey))
+            ) {
+              const handled = executeLine(view);
+              if (handled) {
+                event.preventDefault();
+                return true;
+              }
+            }
+            return false;
+          },
+        }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             scheduleCompile(update.state.doc.toString());
@@ -387,7 +402,7 @@ function LiveEditorComponent(
     }
   };
 
-  const executeLine = (view: EditorView) => {
+  function executeLine(view: EditorView) {
     const line = view.state.doc.lineAt(view.state.selection.main.head);
     const text = line.text.trim();
     if (!text) {
