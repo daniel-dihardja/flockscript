@@ -79,11 +79,7 @@ export default function AudioTestPage() {
     const loadEngine = async () => {
       try {
         setEngineStatus("Initializing audio engine...");
-        const [{ default: audioEngine }, { default: PatchBuilder }] =
-          await Promise.all([
-            import("@workspace/audio/audio-engine.js"),
-            import("@workspace/audio/patch-builder.js"),
-          ]);
+        const { audioEngine, PatchBuilder } = await import("@workspace/audio");
         await audioEngine.init();
         if (canceled) {
           return;

@@ -166,39 +166,40 @@ Sound Sources → Modulators → Voices (ADSR) → JS Effects → FAUST DSP → 
 
 ### Files
 
-- **audio-engine.js** - AudioContext management, worklet node creation, FAUST module integration
+- **src/audio-engine.js** - AudioContext management, worklet node creation, FAUST module integration
 - **worklet/dsp-worklert.js** - AudioWorklet processor (synthesis, effects, FAUST integration)
 - **editor.js** - CodeMirror editor setup and patch validation
 - **main.js** - UI controls and debug panel
-- **patch-builder.js** - Patch library loading and management
+- **src/patch-builder.js** - Patch library loading and management
 
 ## Integration Guide
 
 To integrate FlockScript Audio Engine into your live coding environment:
 
-1. **Import the audio engine:**
+1. **Import the audio engine instance:**
 
 ```javascript
-import { AudioEngine } from "./audio-engine.js";
+import { audioEngine } from "./src/audio-engine.js";
 ```
 
-2. **Initialize:**
+2. **Initialize the engine:**
 
 ```javascript
-const engine = new AudioEngine();
-await engine.init();
+await audioEngine.init();
 ```
 
-3. **Apply patches:**
+3. **Apply patches (via the patch builder):**
 
 ```javascript
-await engine.applyPatch(patchJSON);
+import { PatchBuilder } from "./src/patch-builder.js";
+const builder = new PatchBuilder();
+await builder.build(patchJSON);
 ```
 
 4. **Control master volume:**
 
 ```javascript
-engine.setMasterGain(0.8); // 0-1
+audioEngine.setMasterGain(0.8); // 0-1
 ```
 
 The engine handles all crossfading, module loading, and worklet communication automatically.
