@@ -1,6 +1,6 @@
-import audioEngine from "./audio-engine.js";
-import PatchBuilder from "./patch-builder.js";
-import { patches, patchNames } from "./patches.js";
+import audioEngine from "./audio-engine";
+import PatchBuilder from "./patch-builder";
+import { patches, patchNames } from "./patches";
 
 export { audioEngine, PatchBuilder, patches, patchNames };
 export default { audioEngine, PatchBuilder };

@@ -6,9 +6,10 @@
     "allowJs": false,
     "checkJs": false,
     "noEmit": true,
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
+    "allowImportingTsExtensions": false,
     "noImplicitAny": false,
     "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
