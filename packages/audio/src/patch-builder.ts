@@ -2,7 +2,7 @@
  * Patch Builder - Interprets JSON patches and builds audio graphs
  */
 
-import audioEngine from "./audio-engine";
+import audioEngine from "./audio-engine.js";
 
 class PatchBuilder {
   [key: string]: any;
