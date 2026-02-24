@@ -4,10 +4,20 @@
   "type": "module",
   "description": "Live coding environment for experimental noise/glitch music with Web Audio API",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean",
     "prepare": "pnpm build"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "tsup": "^7.0.0"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "patches",
+    "worklet"
+  ],
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/theme-one-dark": "^6.1.3",
