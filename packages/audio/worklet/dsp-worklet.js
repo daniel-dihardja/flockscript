@@ -234,40 +234,12 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     this.wasmMemory = null;
     this.wasmF32 = null;
     this.wasmGain = 1.0;
-    this.wasmMode = null;
-    this.wasmCompute = null;
-    this.wasmSetParam = null;
-    this.wasmDspPtr = 0;
-    this.wasmNumInputs = 0;
-    this.wasmNumOutputs = 0;
-    this.wasmInputPtrBase = 0;
-    this.wasmOutputPtrBase = 0;
-    this.wasmInputDataBase = 0;
-    this.wasmOutputDataBase = 0;
-    this.wasmBlockSize = 0;
-    this.wasmU32 = null;
-    this.wasmParamIndex = null;
-    this.wasmParamMap = new Map();
     this.wasmName = null;
-    this.faustBypassEffects = false;
-
-    // FAUST module cache - pre-loaded modules
-    this.faustModuleCache = new Map(); // name -> { module, instance, ui }
-    this.faustModuleNames = [
-      "gain",
-      "lowpass",
-      "reverb",
-      "bitcrusher",
-      "ringmod",
-    ];
 
     // Output safety limiter
     this.limiterThreshold = 0.95;
     this.limiterGain = 1.0;
     this.limiterRelease = 0.9995;
-
-    // Pre-load all FAUST modules
-    this.initializeFaustModules();
 
     this.port.onmessage = (event) => {
       console.log("[Worklet] Message received, type:", event.data?.type);
@@ -282,141 +254,72 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       }
       if (event.data?.type === "setWasm") {
         console.log("[Worklet] setWasm message handler triggered");
-        try {
-          this.wasmModule = event.data.module || null;
-          this.wasmName = event.data.name || null;
-          console.log("[Worklet] Module name:", this.wasmName);
-          this.port.postMessage({
-            type: "status",
-            message: "wasm-received",
-            module: this.wasmName || "unknown",
-          });
-          if (this.wasmModule) {
-            console.log(
-              "[Worklet] wasmModule type:",
-              typeof this.wasmModule,
-              "is ArrayBuffer:",
-              this.wasmModule instanceof ArrayBuffer,
-            );
-            const imports = {
-              env: {
-                _powf: Math.pow,
-                _logf: Math.log,
-                _expf: Math.exp,
-                _sqrtf: Math.sqrt,
-                _sinf: Math.sin,
-                _cosf: Math.cos,
-                _tanf: Math.tan,
-                _asinf: Math.asin,
-                _acosf: Math.acos,
-                _atanf: Math.atan,
-                _atan2f: Math.atan2,
-                _floorf: Math.floor,
-                _ceilf: Math.ceil,
-                _roundf: Math.round,
-                _fmodf: (a, b) => a % b,
-                _fabs: Math.abs,
-              },
-            };
-            WebAssembly.instantiate(this.wasmModule, imports)
-              .then((result) => {
-                console.log("[Worklet] WebAssembly.instantiate succeeded");
-                const instance = result.instance;
-                console.log(
-                  "[Worklet] Instance exports keys:",
-                  Object.keys(instance.exports || {}),
-                );
-                this.port.postMessage({
-                  type: "status",
-                  message: "wasm-instantiate-attempt",
-                  module: this.wasmName,
-                });
-                this.wasmInstance = instance;
-                this.wasmProcess = instance.exports?.processBlock || null;
-                this.wasmMemory = instance.exports?.memory || null;
-                this.wasmF32 = this.wasmMemory
-                  ? new Float32Array(this.wasmMemory.buffer)
-                  : null;
-                this.wasmU32 = this.wasmMemory
-                  ? new Uint32Array(this.wasmMemory.buffer)
-                  : null;
-
-                // FAUST exports
-                this.wasmCompute = instance.exports?.compute || null;
-                this.wasmSetParam = instance.exports?.setParamValue || null;
-                this.wasmNumInputs = instance.exports?.getNumInputs
-                  ? instance.exports.getNumInputs()
-                  : 0;
-                this.wasmNumOutputs = instance.exports?.getNumOutputs
-                  ? instance.exports.getNumOutputs()
-                  : 0;
-
-                console.log("[Worklet] FAUST check:", {
-                  hasCompute: !!this.wasmCompute,
-                  hasMemory: !!this.wasmMemory,
-                  hasU32: !!this.wasmU32,
-                  numInputs: this.wasmNumInputs,
-                  numOutputs: this.wasmNumOutputs,
-                });
-
-                if (this.wasmCompute && this.wasmMemory && this.wasmU32) {
-                  console.log("[Worklet] Entering FAUST mode");
-                  this.wasmMode = "faust";
-                  const init = instance.exports?.init || null;
-                  if (init) {
-                    init(this.wasmDspPtr, this.sampleRate);
-                  }
-
-                  // Resolve gain parameter index from UI if provided
-                  const ui = event.data?.ui || null;
-                  this.wasmParamMap = this.buildParamIndexMap(ui);
-                  const index =
-                    this.wasmParamMap.get("/gain/gain") ??
-                    this.wasmParamMap.get("gain");
-                  this.wasmParamIndex = typeof index === "number" ? index : 0;
-
-                  console.log("[Worklet] Sending wasm-faust-loaded");
-                  this.port.postMessage({
-                    type: "status",
-                    message: "wasm-faust-loaded",
-                    module: this.wasmName,
-                    numInputs: this.wasmNumInputs,
-                    numOutputs: this.wasmNumOutputs,
-                  });
-                  return;
-                }
-
-                if (!this.wasmProcess || !this.wasmF32) {
-                  this.port.postMessage({
-                    type: "status",
-                    message: "wasm-unsupported-exports",
-                    hasCompute: !!this.wasmCompute,
-                    hasMemory: !!this.wasmMemory,
-                    hasU32: !!this.wasmU32,
-                    hasProcess: !!this.wasmProcess,
-                    hasF32: !!this.wasmF32,
-                  });
-                  return;
-                }
-                this.wasmMode = "raw";
-                this.port.postMessage({
-                  type: "status",
-                  message: "wasm-loaded",
-                });
-              })
-              .catch((error) => {
-                this.port.postMessage({
-                  type: "error",
-                  message: `wasm-instantiate-failed: ${error.message}`,
-                });
-              });
-          }
-        } catch (error) {
-          this.port.postMessage({
-            type: "error",
-            message: `wasm-load-failed: ${error.message}`,
-          });
+        this.wasmModule = event.data.module || null;
+        this.wasmName = event.data.name || null;
+        this.port.postMessage({
+          type: "status",
+          message: "wasm-received",
+          module: this.wasmName || "unknown",
+        });
+        if (!this.wasmModule) {
+          return;
         }
+        const imports = {
+          env: {
+            _powf: Math.pow,
+            _logf: Math.log,
+            _expf: Math.exp,
+            _sqrtf: Math.sqrt,
+            _sinf: Math.sin,
+            _cosf: Math.cos,
+            _tanf: Math.tan,
+            _asinf: Math.asin,
+            _acosf: Math.acos,
+            _atanf: Math.atan,
+            _atan2f: Math.atan2,
+            _floorf: Math.floor,
+            _ceilf: Math.ceil,
+            _roundf: Math.round,
+            _fmodf: (a, b) => a % b,
+            _fabs: Math.abs,
+          },
+        };
+        WebAssembly.instantiate(this.wasmModule, imports)
+          .then((result) => {
+            const instance = result.instance;
+            console.log("[Worklet] WebAssembly.instance exports:", Object.keys(instance.exports || {}));
+            this.port.postMessage({
+              type: "status",
+              message: "wasm-instantiate-attempt",
+              module: this.wasmName,
+            });
+            this.wasmInstance = instance;
+            this.wasmProcess = instance.exports?.processBlock || null;
+            this.wasmMemory = instance.exports?.memory || null;
+            this.wasmF32 = this.wasmMemory
+              ? new Float32Array(this.wasmMemory.buffer)
+              : null;
+            if (this.wasmProcess && this.wasmF32) {
+              this.port.postMessage({
+                type: "status",
+                message: "wasm-loaded",
+                module: this.wasmName,
+              });
+            } else {
+              this.port.postMessage({
+                type: "status",
+                message: "wasm-unsupported-exports",
+                hasProcess: !!this.wasmProcess,
+                hasF32: !!this.wasmF32,
+              });
+            }
+          })
+          .catch((error) => {
+            this.port.postMessage({
+              type: "error",
+              message: `wasm-instantiate-failed: ${error.message}`,
+            });
+          });
       }
     };
   }
@@ -428,48 +331,6 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       this.wasmGain = patch.wasmGain;
     } else {
       this.wasmGain = 1.0;
-    }
-
-    const faustGain = patch?.faust?.params?.gain;
-    if (!this.wasmSetParam && Number.isFinite(faustGain)) {
-      this.wasmGain = faustGain;
-    }
-
-    this.faustBypassEffects = !!patch?.faust?.bypassEffects;
-
-    // Switch FAUST module if specified
-    const moduleName = patch?.faust?.module;
-    console.log(
-      "[Worklet applyPatch] Module requested:",
-      moduleName,
-      "Cache has",
-      this.faustModuleCache.size,
-      "modules",
-    );
-    if (moduleName && this.faustModuleCache.has(moduleName)) {
-      console.log("[Worklet applyPatch] Module found in cache, switching...");
-      this.switchFaustModule(moduleName);
-    } else if (moduleName) {
-      console.log(
-        "[Worklet applyPatch] Module NOT in cache. Available:",
-        Array.from(this.faustModuleCache.keys()),
-      );
-    }
-
-    if (this.wasmMode === "faust" && this.wasmSetParam) {
-      const params = patch?.faust?.params || {};
-      Object.entries(params).forEach(([key, value]) => {
-        const index = this.wasmParamMap.get(key);
-        if (typeof index === "number" && Number.isFinite(value)) {
-          this.wasmSetParam(this.wasmDspPtr, index, value);
-          this.port.postMessage({
-            type: "status",
-            message: "faust-param-set",
-            param: key,
-            value,
-          });
-        }
-      });
     }
 
     this.oscillators = (patch.oscillators || []).map((osc) => {
@@ -626,77 +487,6 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
 
   renderNoiseSample() {
     return Math.random() * 2 - 1;
-  }
-
-  buildParamIndexMap(ui) {
-    const map = new Map();
-    if (!ui || !Array.isArray(ui.ui)) return map;
-    const stack = [...ui.ui];
-    while (stack.length) {
-      const node = stack.pop();
-      if (node.items) {
-        stack.push(...node.items);
-      }
-      if (
-        node.type === "hslider" ||
-        node.type === "vslider" ||
-        node.type === "nentry"
-      ) {
-        if (typeof node.index === "number") {
-          if (node.address) map.set(node.address, node.index);
-          if (node.shortname) map.set(node.shortname, node.index);
-          if (node.label) map.set(node.label, node.index);
-        }
-      }
-    }
-    return map;
-  }
-
-  ensureFaustBuffers(blockSize) {
-    if (!this.wasmMemory || !this.wasmF32 || !this.wasmU32) return;
-    if (
-      this.wasmBlockSize === blockSize &&
-      this.wasmInputPtrBase !== 0 &&
-      this.wasmOutputPtrBase !== 0
-    ) {
-      return;
-    }
-
-    const numInputs = Math.max(1, this.wasmNumInputs || 1);
-    const numOutputs = Math.max(1, this.wasmNumOutputs || 1);
-    const ptrBytes = (numInputs + numOutputs) * 4;
-    const dataBytes = (numInputs + numOutputs) * blockSize * 4;
-    const totalBytes = ptrBytes + dataBytes;
-
-    // Allocate DSP instance at byte 0, input/output buffers after
-    this.wasmDspPtr = 0;
-    let heapBase = 2048; // Reserve first 2KB for DSP instance
-    const needed = heapBase + totalBytes;
-    if (needed > this.wasmMemory.buffer.byteLength) {
-      const pageSize = 65536;
-      const growPages = Math.ceil(
-        (needed - this.wasmMemory.buffer.byteLength) / pageSize,
-      );
-      this.wasmMemory.grow(growPages);
-      this.wasmF32 = new Float32Array(this.wasmMemory.buffer);
-      this.wasmU32 = new Uint32Array(this.wasmMemory.buffer);
-    }
-
-    this.wasmInputPtrBase = heapBase;
-    this.wasmOutputPtrBase = heapBase + numInputs * 4;
-    this.wasmInputDataBase = heapBase + ptrBytes;
-    this.wasmOutputDataBase =
-      this.wasmInputDataBase + numInputs * blockSize * 4;
-    this.wasmBlockSize = blockSize;
-
-    for (let i = 0; i < numInputs; i++) {
-      this.wasmU32[this.wasmInputPtrBase / 4 + i] =
-        this.wasmInputDataBase + i * blockSize * 4;
-    }
-    for (let i = 0; i < numOutputs; i++) {
-      this.wasmU32[this.wasmOutputPtrBase / 4 + i] =
-        this.wasmOutputDataBase + i * blockSize * 4;
-    }
   }
 
   applyPan(sample, pan) {
@@ -916,47 +706,45 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         this.activeNotes = stillActive;
       }
 
-      if (!this.faustBypassEffects) {
-        // Effects chain (global)
-        for (let e = 0; e < this.effects.length; e++) {
-          const effect = this.effects[e];
-          const state = this.effectState[e];
-          if (effect.type === "filter" && state) {
-            const freq =
-              (effect.freq || 1000) +
-              this.getModSum(effect.id, "freq", modValues);
-            const q =
-              (effect.q || 1) + this.getModSum(effect.id, "q", modValues);
-            state.update(effect.filterType || "lowpass", freq, q);
-            l = state.process(l);
-            r = state.process(r);
-          } else if (effect.type === "delay" && state) {
-            const timeVal =
-              (effect.time || 0.25) +
-              this.getModSum(effect.id, "time", modValues);
-            const fb =
-              (effect.feedback || 0.3) +
-              this.getModSum(effect.id, "feedback", modValues);
-            state.update(timeVal, fb);
-            [l, r] = state.process(l, r);
-          } else if (effect.type === "distortion") {
-            const amount =
-              (effect.amount || 0) +
-              this.getModSum(effect.id, "amount", modValues);
-            const k = Math.max(0, amount) / 50 + 1;
-            l = Math.tanh(l * k);
-            r = Math.tanh(r * k);
-          } else if (effect.type === "compressor" && state) {
-            const threshold = effect.threshold ?? -24;
-            const ratio = effect.ratio ?? 4;
-            const attack = effect.attack ?? 0.003;
-            const release = effect.release ?? 0.25;
-            const knee = effect.knee ?? 0;
-            const makeup = effect.makeup ?? 0;
-            state.update(threshold, ratio, attack, release, knee, makeup);
-            l = state.process(l);
-            r = state.process(r);
-          }
+      // Effects chain (global)
+      for (let e = 0; e < this.effects.length; e++) {
+        const effect = this.effects[e];
+        const state = this.effectState[e];
+        if (effect.type === "filter" && state) {
+          const freq =
+            (effect.freq || 1000) +
+            this.getModSum(effect.id, "freq", modValues);
+          const q =
+            (effect.q || 1) + this.getModSum(effect.id, "q", modValues);
+          state.update(effect.filterType || "lowpass", freq, q);
+          l = state.process(l);
+          r = state.process(r);
+        } else if (effect.type === "delay" && state) {
+          const timeVal =
+            (effect.time || 0.25) +
+            this.getModSum(effect.id, "time", modValues);
+          const fb =
+            (effect.feedback || 0.3) +
+            this.getModSum(effect.id, "feedback", modValues);
+          state.update(timeVal, fb);
+          [l, r] = state.process(l, r);
+        } else if (effect.type === "distortion") {
+          const amount =
+            (effect.amount || 0) +
+            this.getModSum(effect.id, "amount", modValues);
+          const k = Math.max(0, amount) / 50 + 1;
+          l = Math.tanh(l * k);
+          r = Math.tanh(r * k);
+        } else if (effect.type === "compressor" && state) {
+          const threshold = effect.threshold ?? -24;
+          const ratio = effect.ratio ?? 4;
+          const attack = effect.attack ?? 0.003;
+          const release = effect.release ?? 0.25;
+          const knee = effect.knee ?? 0;
+          const makeup = effect.makeup ?? 0;
+          state.update(threshold, ratio, attack, release, knee, makeup);
+          l = state.process(l);
+          r = state.process(r);
         }
       }
 
@@ -965,104 +753,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     }
 
     let wasmApplied = false;
-    if (this.wasmMode === "faust" && this.wasmCompute) {
-      try {
-        const len = left.length;
-        this.ensureFaustBuffers(len);
-
-        // Re-apply all parameters each frame to ensure they're current
-        if (this.wasmSetParam && this.patch?.faust?.params) {
-          const params = this.patch.faust.params;
-          console.log("[Worklet] Setting FAUST params:", params);
-          Object.entries(params).forEach(([key, value]) => {
-            const index = this.wasmParamMap.get(key);
-            console.log(
-              `[Worklet] Param ${key}: index=${index}, value=${value}`,
-            );
-            if (typeof index === "number" && Number.isFinite(value)) {
-              this.wasmSetParam(this.wasmDspPtr, index, value);
-              console.log(`[Worklet] Set param ${key} to ${value}`);
-            }
-          });
-        }
-
-        const numInputs = Math.max(1, this.wasmNumInputs || 1);
-        const numOutputs = Math.max(1, this.wasmNumOutputs || 1);
-
-        // Write input samples directly into the allocated input buffers
-        for (let i = 0; i < len; i++) {
-          this.wasmF32[this.wasmInputDataBase / 4 + i] = left[i];
-          if (numInputs > 1) {
-            this.wasmF32[this.wasmInputDataBase / 4 + len + i] = right[i];
-          }
-        }
-
-        // DEBUG: Log input buffer values
-        if (!this.wasmDebugLogged) {
-          console.log("[Worklet] Input data written:");
-          console.log("  - Input buffer base (bytes):", this.wasmInputDataBase);
-          console.log("  - First 3 input samples:", [
-            this.wasmF32[this.wasmInputDataBase / 4],
-            this.wasmF32[this.wasmInputDataBase / 4 + 1],
-            this.wasmF32[this.wasmInputDataBase / 4 + 2],
-          ]);
-          console.log(
-            "  - Input pointer table (bytes):",
-            this.wasmInputPtrBase,
-          );
-          console.log(
-            "  - Input ptr[0] (should be data offset):",
-            this.wasmU32[this.wasmInputPtrBase / 4],
-          );
-          console.log(
-            "  - Output pointer table (bytes):",
-            this.wasmOutputPtrBase,
-          );
-          console.log(
-            "  - Output ptr[0] (should be data offset):",
-            this.wasmU32[this.wasmOutputPtrBase / 4],
-          );
-          this.wasmDebugLogged = true;
-        }
-
-        this.wasmCompute(
-          this.wasmDspPtr,
-          len,
-          this.wasmInputPtrBase,
-          this.wasmOutputPtrBase,
-        );
-
-        // DEBUG: Log output buffer values after compute
-        if (this.wasmDebugLogged && !this.wasmComputeLogged) {
-          console.log("[Worklet] Output data after compute:");
-          console.log(
-            "  - Output buffer base (bytes):",
-            this.wasmOutputDataBase,
-          );
-          console.log("  - First 3 output samples:", [
-            this.wasmF32[this.wasmOutputDataBase / 4],
-            this.wasmF32[this.wasmOutputDataBase / 4 + 1],
-            this.wasmF32[this.wasmOutputDataBase / 4 + 2],
-          ]);
-          this.wasmComputeLogged = true;
-        }
-
-        // Read output from output buffers
-        for (let i = 0; i < len; i++) {
-          left[i] = this.wasmF32[this.wasmOutputDataBase / 4 + i];
-          right[i] =
-            numOutputs > 1
-              ? this.wasmF32[this.wasmOutputDataBase / 4 + len + i]
-              : left[i];
-        }
-        wasmApplied = true;
-      } catch (e) {
-        this.port.postMessage({
-          type: "error",
-          message: `wasm-compute-failed: ${e.message}`,
-        });
-      }
-    } else if (this.wasmMode === "raw" && this.wasmProcess && this.wasmF32) {
+    if (this.wasmProcess && this.wasmF32) {
       try {
         const len = left.length;
         const leftOffset = 0;
@@ -1105,142 +796,6 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     return true;
   }
 
-  async initializeFaustModules() {
-    console.log("[Worklet] Pre-loading FAUST modules...");
-    for (const moduleName of this.faustModuleNames) {
-      try {
-        const wasmUrl = `/faust/${moduleName}.wasm`;
-        console.log("[Worklet] Fetching:", wasmUrl);
-
-        const wasmRes = await fetch(wasmUrl);
-        console.log(
-          `[Worklet] Fetch response for ${moduleName}:`,
-          wasmRes.status,
-          wasmRes.statusText,
-        );
-
-        if (!wasmRes.ok) {
-          throw new Error(
-            `Fetch failed: ${wasmRes.status} ${wasmRes.statusText}`,
-          );
-        }
-
-        const wasmBytes = await wasmRes.arrayBuffer();
-        console.log(
-          `[Worklet] Got bytes for ${moduleName}:`,
-          wasmBytes.byteLength,
-        );
-
-        const wasmModule = await WebAssembly.compile(wasmBytes);
-        console.log(`[Worklet] Compiled ${moduleName}`);
-
-        let ui = null;
-        try {
-          const uiRes = await fetch(`/faust/${moduleName}.json`);
-          if (uiRes.ok) {
-            const jsonText = await uiRes.text();
-            try {
-              ui = JSON.parse(jsonText);
-            } catch (parseErr) {
-              console.warn(
-                `[Worklet] Failed to parse JSON for ${moduleName}:`,
-                parseErr.message,
-              );
-            }
-          }
-        } catch (e) {
-          console.warn(
-            `[Worklet] Failed to fetch UI for ${moduleName}:`,
-            e.message,
-          );
-        }
-
-        // FAUST modules need math functions from env
-        const imports = {
-          env: {
-            _powf: Math.pow,
-            _logf: Math.log,
-            _expf: Math.exp,
-            _sqrtf: Math.sqrt,
-            _sinf: Math.sin,
-            _cosf: Math.cos,
-            _tanf: Math.tan,
-            _asinf: Math.asin,
-            _acosf: Math.acos,
-            _atanf: Math.atan,
-            _atan2f: Math.atan2,
-            _floorf: Math.floor,
-            _ceilf: Math.ceil,
-            _roundf: Math.round,
-            _fmodf: (a, b) => a % b,
-            _fabs: Math.abs,
-          },
-        };
-        const wasmInstance = new WebAssembly.Instance(wasmModule, imports);
-        console.log("[Worklet] Instantiated", moduleName);
-        this.faustModuleCache.set(moduleName, {
-          module: wasmModule,
-          instance: wasmInstance,
-          ui: ui,
-          name: moduleName,
-        });
-        console.log("[Worklet] Loaded FAUST module:", moduleName);
-      } catch (error) {
-        console.error(
-          "[Worklet] Failed to load FAUST module",
-          moduleName,
-          error.message || error,
-        );
-      }
-    }
-    console.log("[Worklet] FAUST module pre-loading complete");
-  }
-
-  switchFaustModule(moduleName) {
-    const cached = this.faustModuleCache.get(moduleName);
-    if (!cached) {
-      console.error("[Worklet] FAUST module not cached:", moduleName);
-      return;
-    }
-
-    const instance = cached.instance;
-    this.wasmInstance = instance;
-    this.wasmMode = "faust";
-    this.wasmName = moduleName;
-    this.wasmCompute = instance.exports?.compute || null;
-    this.wasmSetParam = instance.exports?.setParamValue || null;
-    this.wasmMemory = instance.exports?.memory || null;
-    this.wasmF32 = this.wasmMemory
-      ? new Float32Array(this.wasmMemory.buffer)
-      : null;
-    this.wasmU32 = this.wasmMemory
-      ? new Uint32Array(this.wasmMemory.buffer)
-      : null;
-    this.wasmNumInputs = instance.exports?.getNumInputs
-      ? instance.exports.getNumInputs()
-      : 0;
-    this.wasmNumOutputs = instance.exports?.getNumOutputs
-      ? instance.exports.getNumOutputs()
-      : 0;
-
-    // Initialize the module
-    const init = instance.exports?.init || null;
-    if (init) {
-      init(this.wasmDspPtr, this.sampleRate);
-    }
-
-    // Build parameter map
-    this.wasmParamMap = this.buildParamIndexMap(cached.ui);
-
-    console.log("[Worklet] Switched to FAUST module:", moduleName);
-    this.port.postMessage({
-      type: "status",
-      message: "wasm-faust-loaded",
-      module: moduleName,
-      numInputs: this.wasmNumInputs,
-      numOutputs: this.wasmNumOutputs,
-    });
-  }
 }
 
 registerProcessor("dsp-worklet", DSPWorkletProcessor);

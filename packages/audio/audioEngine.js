@@ -18,11 +18,6 @@ class AudioEngine {
     this.workletReady = false;
     this.workletWasmActive = false;
     this.workletWasmStatus = "uninitialized";
-    this.workletFaustLastParam = "-";
-    this.faustModuleCache = new Map();
-    this.workletFaustModuleA = null;
-    this.workletFaustModuleB = null;
-    this.workletFaustModuleName = "-";
 
     // Track active nodes for cleanup
     this.activeNodes = [];
@@ -155,18 +150,9 @@ class AudioEngine {
         const data = event.data;
         if (!data) return;
         if (data.type === "status") {
-          if (
-            data.message === "wasm-faust-loaded" ||
-            data.message === "wasm-loaded"
-          ) {
-            this.workletWasmActive = true;
+          if (data.message && data.message.startsWith("wasm-")) {
+            this.workletWasmActive = data.message === "wasm-loaded";
             this.workletWasmStatus = data.message;
-          } else if (data.message && data.message.startsWith("wasm-")) {
-            this.workletWasmActive = false;
-            this.workletWasmStatus = data.message;
-          }
-          if (data.message === "faust-param-set" && data.param) {
-            this.workletFaustLastParam = `${data.param}=${data.value}`;
           }
           console.log("[Worklet]", data.message || "status", data.counts || "");
         } else if (data.type === "error") {
@@ -518,11 +504,6 @@ class AudioEngine {
     this.workletReady = false;
     this.workletWasmActive = false;
     this.workletWasmStatus = "uninitialized";
-    this.workletFaustLastParam = "-";
-    this.faustModuleCache = new Map();
-    this.workletFaustModuleA = null;
-    this.workletFaustModuleB = null;
-    this.workletFaustModuleName = "-";
     this.isRunning = false;
     this.pendingChannelSwap = false;
     this.activeNodes = [];
@@ -1480,107 +1461,7 @@ class AudioEngine {
       console.log("[sendPatchToWorklet] setPatch sent");
     }
 
-    const moduleName = patch?.faust?.module || "gain";
-    console.log("[sendPatchToWorklet] Module name:", moduleName);
-    this.ensureFaustModuleForChannel(channel, moduleName).catch((err) =>
-      console.error("[sendPatchToWorklet] Module load error:", err),
-    );
   }
-
-  async loadFaustModule(moduleName) {
-    if (this.faustModuleCache.has(moduleName)) {
-      return this.faustModuleCache.get(moduleName);
-    }
-    const wasmRes = await fetch(`/faust/${moduleName}.wasm`);
-    if (!wasmRes.ok) {
-      throw new Error(`FAUST wasm ${moduleName} not found (${wasmRes.status})`);
-    }
-    const wasmBytes = await wasmRes.arrayBuffer();
-    // Store raw bytes, not compiled module (compiled modules can't be transferred via postMessage)
-    const wasmModule = wasmBytes;
-
-    let ui = null;
-    try {
-      const uiRes = await fetch(`/faust/${moduleName}.json`);
-      if (uiRes.ok) {
-        ui = await uiRes.json();
-      }
-    } catch (e) {
-      // ignore
-    }
-
-    const record = { module: wasmModule, ui, name: moduleName };
-    this.faustModuleCache.set(moduleName, record);
-    return record;
-  }
-
-  async ensureFaustModuleForChannel(channel, moduleName) {
-    console.log(
-      "[ensureFaustModuleForChannel] START with moduleName:",
-      moduleName,
-    );
-    if (!this.useWorklet || !this.workletReady) {
-      console.log(
-        "[ensureFaustModuleForChannel] EARLY_RETURN: worklet not ready",
-      );
-      return;
-    }
-    const isA = channel === this.channelA;
-    const current = isA ? this.workletFaustModuleA : this.workletFaustModuleB;
-    console.log("[ensureFaustModuleForChannel] isA=", isA, "current=", current);
-    // FORCE RELOAD - comment out the early return to always send the module
-    // if (!moduleName || moduleName === current) {
-    //   console.log("[ensureFaustModuleForChannel] EARLY_RETURN: already loaded");
-    //   return;
-    // }
-    if (!moduleName) {
-      console.log("[ensureFaustModuleForChannel] EARLY_RETURN: no moduleName");
-      return;
-    }
-
-    try {
-      this.workletWasmStatus = `wasm-loading:${moduleName}`;
-      const record = await this.loadFaustModule(moduleName);
-      const target = isA ? this.workletA : this.workletB;
-
-      if (target && target.port) {
-        try {
-          // Test: send a simple message first
-          target.port.postMessage({
-            type: "test",
-            data: "hello",
-          });
-
-          target.port.postMessage({
-            type: "setWasm",
-            module: record.module,
-            ui: record.ui,
-            name: record.name,
-          });
-          console.log(
-            "[ensureFaustModuleForChannel] setWasm sent for",
-            moduleName,
-          );
-        } catch (err) {
-          console.error(
-            "[ensureFaustModuleForChannel] postMessage failed:",
-            err,
-          );
-        }
-        this.workletFaustModuleName = record.name;
-        if (isA) this.workletFaustModuleA = moduleName;
-        else this.workletFaustModuleB = moduleName;
-        console.log("[ensureFaustModuleForChannel] SUCCESS");
-      } else {
-        console.log("[ensureFaustModuleForChannel] NO TARGET/PORT");
-      }
-    } catch (error) {
-      console.error("[ensureFaustModuleForChannel] ERROR:", error);
-      this.workletWasmStatus = `wasm-load-failed:${moduleName}`;
-      console.warn("[Worklet] FAUST load skipped:", error);
-    }
-  }
-
   /**
    * Queue a channel swap for the next beat
    */

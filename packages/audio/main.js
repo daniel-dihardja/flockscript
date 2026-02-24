@@ -27,9 +27,6 @@ const validationStatus = document.getElementById("validationStatus");
 const channelAStatus = document.getElementById("channelAStatus");
 const channelBStatus = document.getElementById("channelBStatus");
 const activeChannelStatus = document.getElementById("activeChannelStatus");
-const faustStatus = document.getElementById("faustStatus");
-const faustModuleStatus = document.getElementById("faustModuleStatus");
-const faustParamStatus = document.getElementById("faustParamStatus");
 const modeStatus = null;
 
 // CodeMirror editor instance
@@ -67,15 +64,6 @@ function updateDebugInfo() {
     channelAStatus.textContent = "- (not initialized)";
     channelBStatus.textContent = "- (not initialized)";
     activeChannelStatus.textContent = `Channel ${activeCh}`;
-    if (faustStatus) {
-      faustStatus.textContent = "-";
-    }
-    if (faustModuleStatus) {
-      faustModuleStatus.textContent = "-";
-    }
-    if (faustParamStatus) {
-      faustParamStatus.textContent = "-";
-    }
     if (modeStatus) {
       modeStatus.textContent = "Replace (swap)";
     }
@@ -98,17 +86,6 @@ function updateDebugInfo() {
   channelAStatus.textContent = `${activeOscA}osc + ${activeNoiseA}noise (gain: ${channelA.gain.value.toFixed(2)})`;
   channelBStatus.textContent = `${activeOscB}osc + ${activeNoiseB}noise (gain: ${channelB.gain.value.toFixed(2)})`;
   activeChannelStatus.textContent = `Channel ${activeCh}`;
-  if (faustStatus) {
-    faustStatus.textContent = audioEngine.workletWasmStatus || "-";
-  }
-  if (faustModuleStatus) {
-    faustModuleStatus.textContent =
-      audioEngine.workletFaustModuleName ||
-      (audioEngine.workletWasmActive ? "loaded" : "inactive");
-  }
-  if (faustParamStatus) {
-    faustParamStatus.textContent = audioEngine.workletFaustLastParam || "-";
-  }
   if (modeStatus) {
     modeStatus.textContent = "Replace (swap)";
   }
