@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  Compartment,
   EditorState,
   RangeSetBuilder,
   StateEffect,
@@ -34,6 +35,7 @@ type SyntaxStyleConfig = {
   keywordAliases: Record<string, string>;
   waveforms?: string[];
   gainTokenPattern?: string;
+  paramKeywords?: string[];
   regex: Record<
     | "block"
     | "osc"
@@ -48,20 +50,256 @@ type SyntaxStyleConfig = {
 };
 
 const {
-  theme,
+  theme: defaultTheme,
   mainKeywords = [],
   keywordList,
   keywordAliases,
   waveforms = [],
   gainTokenPattern,
+  paramKeywords: configuredParamKeywords = [],
   regex,
 } = syntaxConfig as SyntaxStyleConfig;
+
+const fallbackParamKeywords = [
+  "frequency",
+  "frq",
+  "detune",
+  "pan",
+  "rate",
+  "depth",
+  "gain",
+  "wave",
+  "filter",
+  "q",
+  "offset",
+  "env",
+];
+const paramKeywords =
+  configuredParamKeywords.length > 0
+    ? configuredParamKeywords
+    : fallbackParamKeywords;
 
 const makeRegex = ({ pattern, flags }: RegexSpec) => new RegExp(pattern, flags);
 const escapeForRegex = (value: string) =>
   value.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
 
-const editorTheme = EditorView.theme(theme, { dark: true });
+const baseThemeClone = (source: Record<string, Record<string, string>>) =>
+  JSON.parse(JSON.stringify(source)) as Record<string, Record<string, string>>;
+
+const createThemeVariant = (
+  overrides: Record<string, Record<string, string>>,
+) => {
+  const clone = baseThemeClone(defaultTheme);
+  Object.entries(overrides).forEach(([selector, styles]) => {
+    clone[selector] = { ...(clone[selector] ?? {}), ...styles };
+  });
+  return clone;
+};
+
+const applySyntaxColors = (
+  base: Record<string, Record<string, string>>,
+  colors: (typeof SYNTAX_VARIATIONS)[number]["colors"],
+) => {
+  const clone = baseThemeClone(base);
+  const apply = (selector: string, styles: Record<string, string>) => {
+    clone[selector] = { ...(clone[selector] ?? {}), ...styles };
+  };
+  apply(".cm-dsl-main-keyword", {
+    color: colors.mainKeyword,
+    fontWeight: "700",
+  });
+  apply(".cm-dsl-waveform", {
+    color: colors.waveform,
+    fontWeight: "400",
+  });
+  apply(".cm-dsl-gain", {
+    color: colors.gain,
+  });
+  apply(".cm-dsl-param", {
+    color: colors.param,
+    fontWeight: "700",
+  });
+  apply(".cm-dsl-name, .cm-dsl-route-source, .cm-dsl-route-target", {
+    backgroundColor: colors.nameBg,
+  });
+  return clone;
+};
+
+const THEME_VARIATIONS = [
+  {
+    id: "nebula",
+    label: "Nebula",
+    theme: defaultTheme,
+  },
+  {
+    id: "lumen",
+    label: "Lumen",
+    theme: createThemeVariant({
+      "&": {
+        backgroundImage: "linear-gradient(160deg, #1f1b2e, #3c1053 45%, #020617)",
+      },
+      ".cm-gutters": {
+        backgroundColor: "rgba(8, 8, 18, 0.85)",
+        borderRight: "1px solid rgba(248, 113, 113, 0.3)",
+      },
+      ".cm-selectionBackground": {
+        backgroundColor: "rgba(248, 113, 113, 0.35)",
+      },
+    }),
+  },
+  {
+    id: "pulse",
+    label: "Pulse",
+    theme: createThemeVariant({
+      "&": {
+        backgroundImage: "linear-gradient(160deg, #020617, #0f172a 45%, #0f766e)",
+      },
+      ".cm-gutters": {
+        backgroundColor: "rgba(2, 6, 23, 0.9)",
+        borderRight: "1px solid rgba(59, 130, 246, 0.4)",
+      },
+      ".cm-selectionBackground": {
+        backgroundColor: "rgba(59, 130, 246, 0.4)",
+      },
+    }),
+  },
+  {
+    id: "drone",
+    label: "Drone",
+    theme: createThemeVariant({
+      "&": {
+        backgroundImage: "linear-gradient(160deg, #030712, #0f0f1f 50%, #14202a)",
+        color: "#cbd5f5",
+      },
+      ".cm-gutters": {
+        backgroundColor: "rgba(4, 8, 20, 0.95)",
+        borderRight: "1px solid rgba(16, 185, 129, 0.4)",
+      },
+      ".cm-selectionBackground": {
+        backgroundColor: "rgba(16, 185, 129, 0.25)",
+      },
+    }),
+  },
+  {
+    id: "hacker",
+    label: "Hacker",
+    theme: applySyntaxColors(
+      createThemeVariant({
+        "&": {
+          backgroundImage: "linear-gradient(160deg, #020802, #001316 60%, #051c11)",
+          color: "#b4f0be",
+        },
+        ".cm-gutters": {
+          backgroundColor: "rgba(0, 12, 0, 0.95)",
+          borderRight: "1px solid rgba(16, 185, 129, 0.5)",
+        },
+        ".cm-selectionBackground": {
+          backgroundColor: "rgba(16, 185, 129, 0.35)",
+        },
+      }),
+      {
+        mainKeyword: "#41ff00",
+        waveform: "#7ef9ff",
+        gain: "#79ff4d",
+        param: "#51e1ff",
+        nameBg: "#021701",
+      },
+    ),
+  },
+  {
+    id: "contrast",
+    label: "Contrast",
+    theme: applySyntaxColors(
+      createThemeVariant({
+        "&": {
+          backgroundImage: "linear-gradient(180deg, #000000, #0b0b0b)",
+          color: "#ffffff",
+        },
+        ".cm-gutters": {
+          backgroundColor: "#000000",
+          borderRight: "1px solid #f97316",
+        },
+        ".cm-selectionBackground": {
+          backgroundColor: "rgba(14, 165, 233, 0.4)",
+          boxShadow: "0 0 20px rgba(14, 165, 233, 0.35)",
+        },
+      }),
+      {
+        mainKeyword: "#fb923c",
+        waveform: "#06b6d4",
+        gain: "#f97316",
+        param: "#22d3ee",
+        nameBg: "#000000",
+      },
+    ),
+  },
+  {
+    id: "industrial",
+    label: "Industrial",
+    theme: applySyntaxColors(
+      createThemeVariant({
+        "&": {
+          backgroundColor: "#090909",
+          color: "#d9d9d9",
+          backgroundImage: "linear-gradient(180deg, #111111, #040404 60%)",
+        },
+        ".cm-gutters": {
+          backgroundColor: "#0e0e0e",
+          borderRight: "1px solid #4b5563",
+        },
+        ".cm-selectionBackground": {
+          backgroundColor: "#1f1b1b",
+        },
+        ".cm-scroller": {
+          fontFamily: "'Space Mono', 'Fira Code', 'JetBrains Mono', monospace",
+        },
+      }),
+      {
+        mainKeyword: "#f97316",
+        waveform: "#e5e7eb",
+        gain: "#d946ef",
+        param: "#4dd0e1",
+        nameBg: "#050505",
+      },
+    ),
+  },
+];
+
+const SYNTAX_VARIATIONS = [
+  {
+    id: "aurora",
+    label: "Aurora",
+    colors: {
+      mainKeyword: "#fb923c",
+      waveform: "#fbbf24",
+      gain: "#f472b6",
+      param: "#38bdf8",
+      nameBg: "#000000",
+    },
+  },
+  {
+    id: "mist",
+    label: "Mist",
+    colors: {
+      mainKeyword: "#f97316",
+      waveform: "#34d399",
+      gain: "#a855f7",
+      param: "#67e8f9",
+      nameBg: "#050506",
+    },
+  },
+  {
+    id: "nocturne",
+    label: "Nocturne",
+    colors: {
+      mainKeyword: "#a5f3fc",
+      waveform: "#fde047",
+      gain: "#fb7185",
+      param: "#5eead4",
+      nameBg: "#010204",
+    },
+  },
+];
 
 const completionKeywords = Array.from(
   new Set([
@@ -99,6 +337,11 @@ const waveformRegex = waveformPattern
 const gainRegex = gainTokenPattern
   ? new RegExp(gainTokenPattern, "gi")
   : null;
+const paramPattern =
+  paramKeywords.length > 0
+    ? `\\b(${paramKeywords.map(escapeForRegex).join("|")})\\b`
+    : "";
+const paramRegex = paramPattern ? new RegExp(paramPattern, "gi") : null;
 
 const oscRegex = makeRegex(regex.osc);
 const numberRegex = makeRegex(regex.number);
@@ -188,6 +431,9 @@ const dslHighlight = ViewPlugin.fromClass(
         collectMatches(operatorRegex, "cm-dsl-operator");
         collectMatches(routeSourceRegex, "cm-dsl-route-source");
         collectMatches(routeTargetRegex, "cm-dsl-route-target");
+        if (paramRegex) {
+          collectMatches(paramRegex, "cm-dsl-param");
+        }
 
         ranges
           .sort((a, b) => a.from - b.from || a.to - b.to)
@@ -416,7 +662,11 @@ function LiveEditorComponent(
   const [engineStatus, setEngineStatus] = React.useState<{
     label: string;
     state: "idle" | "initializing" | "running" | "error";
-  }>({ label: "Audio engine idle", state: "idle" });
+  }>({ label: "Idle", state: "idle" });
+  const engineStateRef = React.useRef(engineStatus.state);
+  React.useEffect(() => {
+    engineStateRef.current = engineStatus.state;
+  }, [engineStatus.state]);
   const [debugPatch, setDebugPatch] = React.useState<
     CompileResult["patch"] | null
   >(null);
@@ -424,6 +674,21 @@ function LiveEditorComponent(
     SAMPLE_CATEGORIES[0].name,
   );
   const [selectedSampleIndex, setSelectedSampleIndex] = React.useState(0);
+  const [selectedThemeId, setSelectedThemeId] = React.useState(
+    THEME_VARIATIONS[0].id,
+  );
+  const [debugPanelOpen, setDebugPanelOpen] = React.useState(false);
+  const activeTheme = React.useMemo(() => {
+    return (
+      THEME_VARIATIONS.find((variant) => variant.id === selectedThemeId)?.theme ??
+      defaultTheme
+    );
+  }, [selectedThemeId]);
+const themeCompartment = React.useMemo(() => new Compartment(), []);
+const themeExtension = React.useMemo(
+  () => EditorView.theme(activeTheme, { dark: true }),
+  [activeTheme],
+);
 
   React.useEffect(() => {
     if (!hostRef.current || viewRef.current) {
@@ -499,7 +764,7 @@ function LiveEditorComponent(
       doc: initialDoc,
       extensions: [
         basicSetup,
-        editorTheme,
+        themeCompartment.of(themeExtension),
         highlightField,
         dslHighlight,
         lastLineHighlight,
@@ -568,6 +833,15 @@ function LiveEditorComponent(
       viewRef.current = null;
     };
   }, [initialDoc]);
+
+  React.useEffect(() => {
+    if (!viewRef.current) {
+      return;
+    }
+    viewRef.current.dispatch({
+      effects: themeCompartment.reconfigure(themeExtension),
+    });
+  }, [themeExtension, themeCompartment]);
 
   const currentCategory =
     SAMPLE_CATEGORIES.find((cat) => cat.name === selectedCategory) ??
@@ -702,14 +976,15 @@ function LiveEditorComponent(
     runLine,
   }));
 
-  const initAudioEngine = async () => {
-    if (engineStatus.state === "initializing") {
+  const initAudioEngine = React.useCallback(async () => {
+    if (engineStateRef.current === "initializing") {
       return;
     }
     setEngineStatus({
-      label: "Initializing audio engine…",
+      label: "Initializing…",
       state: "initializing",
     });
+    engineStateRef.current = "initializing";
     try {
       const { audioEngine, PatchBuilder } = await import("@workspace/audio");
       await audioEngine.init();
@@ -717,59 +992,53 @@ function LiveEditorComponent(
       engineRef.current = audioEngine;
       const engineState = audioEngine.audioContext?.state ?? "unknown";
       setEngineStatus({
-        label: `Audio engine ${engineState}`,
+        label: "Ready",
         state: "running",
       });
+      engineStateRef.current = "running";
     } catch (error) {
       console.error("Audio engine failed to initialize", error);
       setEngineStatus({
-        label: "Audio engine failed",
+        label: "Failed",
         state: "error",
       });
+      engineStateRef.current = "error";
     }
-  };
+  }, []);
+
+  React.useEffect(() => {
+    initAudioEngine();
+  }, [initAudioEngine]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden border border-neutral-800 bg-background shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-700 bg-neutral-900 px-4 py-2 text-sm">
         <div className="flex items-center gap-2 font-medium">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          Live Editor
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="font-semibold"
-            onClick={initAudioEngine}
-            disabled={engineStatus.state === "initializing"}
-          >
-            {engineStatus.state === "running"
-              ? "Engine running"
-              : "Init audio engine"}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="font-semibold"
-            onClick={runLine}
-            disabled={engineStatus.state !== "running"}
-          >
-            Run line (Cmd+Enter)
-          </Button>
           <span
-            className={
+            className={`h-2 w-2 rounded-full ${
               engineStatus.state === "running"
-                ? "text-emerald-300"
-                : engineStatus.state === "error"
-                  ? "text-rose-400"
-                  : "text-muted-foreground"
-            }
-          >
-            {engineStatus.label}
-          </span>
+                ? "bg-emerald-500"
+                : engineStatus.state === "initializing"
+                  ? "bg-amber-400 animate-pulse"
+                  : engineStatus.state === "error"
+                    ? "bg-rose-500"
+                    : "bg-neutral-500"
+            }`}
+          />
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+            <span>Audio</span>
+            <span
+              className={
+                engineStatus.state === "running"
+                  ? "text-emerald-300"
+                  : engineStatus.state === "error"
+                    ? "text-rose-400"
+                    : "text-muted-foreground"
+              }
+            >
+              {engineStatus.label}
+            </span>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <label className="flex flex-col text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -802,48 +1071,47 @@ function LiveEditorComponent(
               ))}
             </select>
           </label>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Cmd+Enter line · Shift+Enter block · Alt+Enter selection
+          <label className="flex flex-col text-[10px] uppercase tracking-widest text-muted-foreground">
+            Theme
+            <select
+              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
+              value={selectedThemeId}
+              onChange={(event) => setSelectedThemeId(event.target.value)}
+            >
+              {THEME_VARIATIONS.map((variant) => (
+                <option key={variant.id} value={variant.id}>
+                  {variant.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className="font-semibold uppercase tracking-[0.3em] text-[10px]"
+            onClick={() => setDebugPanelOpen((prev) => !prev)}
+          >
+            {debugPanelOpen ? "Hide debug" : "Show debug"}
+          </Button>
         </div>
       </div>
       <div className="min-h-0 flex-1" ref={hostRef} />
-      <div className="border-t border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-muted-foreground">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-foreground">
-            {compileState === "compiling" && "Compiling"}
-            {compileState === "ok" && "Compiled"}
-            {compileState === "error" && "Compile error"}
-            {compileState === "idle" && "Idle"}
-          </span>
-          <span className="text-muted-foreground">
-            {compileResult
-              ? `${compileResult.diagnostics.length} diagnostics`
-              : "No diagnostics"}
-          </span>
-          <span className="text-muted-foreground">
-            {compileResult?.patch
-              ? `${compileResult.patch.oscillators.length} osc, ${compileResult.patch.modulators.length} lfo, ${compileResult.patch.effects.length} fx`
-              : "No patch"}
-          </span>
-          <span className="flex-1 truncate">
-            {lastEval
-              ? `${lastEval.type}: ${lastEval.text}`
-              : "No evaluation yet"}
-          </span>
-      </div>
+      {debugPanelOpen && (
+        <div className="border-t border-neutral-700 bg-[#070b1a] px-4 py-3 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-[11px] text-foreground uppercase tracking-[0.35em]">
+            <span>Compiled patch</span>
+            <span className="text-[10px] text-muted-foreground">
+              {debugPatch ? "latest block" : "no patch yet"}
+            </span>
+          </div>
+          <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded border border-neutral-800 bg-[#0c111c] p-3 text-[11px] font-mono text-[#f8fafc]">
+            {debugPatch
+              ? JSON.stringify(debugPatch, null, 2)
+              : "No compiled patch available"}
+          </pre>
+        </div>
+      )}
     </div>
-    <div className="border-t border-neutral-700 bg-[#070b1a] px-4 py-3 text-xs text-muted-foreground">
-      <div className="flex items-center justify-between text-[11px] text-foreground uppercase tracking-[0.35em]">
-        <span>Compiled patch</span>
-        <span className="text-[10px] text-muted-foreground">
-          {debugPatch ? "latest block" : "no patch yet"}
-        </span>
-      </div>
-      <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded border border-neutral-800 bg-[#0c111c] p-3 text-[11px] font-mono text-[#f8fafc]">
-        {debugPatch ? JSON.stringify(debugPatch, null, 2) : "No compiled patch available"}
-      </pre>
-    </div>
-  </div>
-);
+  );
 }
