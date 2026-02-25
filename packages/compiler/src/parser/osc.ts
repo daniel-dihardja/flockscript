@@ -176,7 +176,7 @@ function consumeWave(
     const next = stream.peek();
     if (!next) {
       pushDiag("osc requires a wave type after 'wave'");
-      return null;
+      return DEFAULT_WAVE;
     }
     stream.next();
     return next;
