@@ -1,138 +1,127 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "https://flockscript.audio/patch-schema.json",
-    "title": "Audio Patch",
-    "description": "JSON schema for the minimal device/route syntax that feeds the new worklet engine",
-    "type": "object",
-    "properties": {
-        "devices": {
-            "type": "array",
-            "description": "List of available signal generators or sinks",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "description": "Unique device identifier"
-                    },
-                    "type": {
-                        "type": "string",
-                        "description": "Device type selector",
-                        "enum": [
-                            "osc",
-                            "output"
-                        ]
-                    },
-                    "params": {
-                        "type": "object",
-                        "description": "Device-specific parameters",
-                        "properties": {
-                            "wave": {
-                                "type": "string",
-                                "description": "Oscillator waveform",
-                                "enum": [
-                                    "sine",
-                                    "square",
-                                    "saw",
-                                    "sawtooth",
-                                    "triangle"
-                                ],
-                                "default": "sine"
-                            },
-                            "frequency": {
-                                "type": "number",
-                                "description": "Oscillator frequency in Hz",
-                                "minimum": 20,
-                                "maximum": 20000,
-                                "default": 440
-                            },
-                            "gain": {
-                                "type": "number",
-                                "description": "Linear gain (0-1)",
-                                "minimum": 0,
-                                "maximum": 1,
-                                "default": 0.5
-                            }
-                        },
-                        "additionalProperties": true
-                    }
-                },
-                "additionalProperties": false
-            }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flockscript.audio/patch-schema.json",
+  "title": "Audio Patch",
+  "description": "JSON schema for the minimal device/route syntax that feeds the new worklet engine",
+  "type": "object",
+  "required": ["devices", "routes"],
+  "properties": {
+    "devices": {
+      "type": "array",
+      "description": "List of available signal generators or sinks",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional device identifier used for referencing and routing"
+          },
+          "type": {
+            "type": "string",
+            "description": "Device type selector",
+            "enum": ["osc", "output"]
+          },
+          "params": {
+            "type": "object",
+            "description": "Device-specific parameters",
+            "properties": {
+              "wave": {
+                "type": "string",
+                "description": "Oscillator waveform",
+                "enum": ["sine", "square", "saw", "sawtooth", "triangle"],
+                "default": "sine"
+              },
+              "frequency": {
+                "type": "number",
+                "description": "Oscillator frequency in Hz",
+                "minimum": 20,
+                "maximum": 20000,
+                "default": 440
+              },
+              "gain": {
+                "type": "number",
+                "description": "Linear gain (0-1)",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 0.5
+              }
+            },
+            "additionalProperties": true
+          }
         },
-        "routes": {
-            "type": "array",
-            "description": "Connections between devices",
-            "items": {
-                "type": "object",
-                "required": [
-                    "from",
-                    "to",
-                    "signal"
-                ],
-                "properties": {
-                    "from": {
-                        "type": "string",
-                        "description": "Source device channel, e.g. osc1.out"
-                    },
-                    "to": {
-                        "type": "string",
-                        "description": "Destination device channel, e.g. out.in"
-                    },
-                    "signal": {
-                        "type": "string",
-                        "description": "Signal type carried by the route",
-                        "enum": [
-                            "audio"
-                        ]
-                    }
-                },
-                "additionalProperties": false
-            }
-        }
+        "additionalProperties": false
+      }
     },
-    "additionalProperties": false,
-    "examples": [
+    "routes": {
+      "type": "array",
+      "description": "Connections between devices",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "signal"],
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Source device channel, e.g. osc1.out"
+          },
+          "to": {
+            "type": "string",
+            "description": "Destination device channel, e.g. out.in"
+          },
+          "signal": {
+            "type": "string",
+            "description": "Signal type carried by the route",
+            "enum": ["audio"]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "devices": [
         {
-            "devices": [
-                {
-                    "id": "osc1",
-                    "type": "osc",
-                    "params": {
-                        "wave": "sine",
-                        "frequency": 80,
-                        "gain": 0.7
-                    }
-                },
-                {
-                    "id": "osc2",
-                    "type": "osc",
-                    "params": {
-                        "wave": "sine",
-                        "frequency": 432,
-                        "gain": 0.03
-                    }
-                },
-                {
-                    "id": "out",
-                    "type": "output",
-                    "params": {
-                        "gain": 1
-                    }
-                }
-            ],
-            "routes": [
-                {
-                    "from": "osc1.out",
-                    "to": "out.in",
-                    "signal": "audio"
-                },
-                {
-                    "from": "osc2.out",
-                    "to": "out.in",
-                    "signal": "audio"
-                }
-            ]
+          "id": "osc1",
+          "type": "osc",
+          "params": {
+            "wave": "sine",
+            "frequency": 80,
+            "gain": 0.7
+          }
+        },
+        {
+          "id": "osc2",
+          "type": "osc",
+          "params": {
+            "wave": "sine",
+            "frequency": 432,
+            "gain": 0.03
+          }
+        },
+        {
+          "id": "out",
+          "type": "output",
+          "params": {
+            "gain": 1
+          }
         }
-    ]
+      ],
+      "routes": [
+        {
+          "from": "osc1.out",
+          "to": "out.in",
+          "signal": "audio"
+        },
+        {
+          "from": "osc2.out",
+          "to": "out.in",
+          "signal": "audio"
+        }
+      ]
+    }
+  ]
 }

@@ -107,6 +107,10 @@ importers:
         version: 5.9.3
 
   packages/audio:
+    dependencies:
+      ajv:
+        specifier: ^8.14.1
+        version: 8.18.0
     devDependencies:
       tsup:
         specifier: ^7.0.0

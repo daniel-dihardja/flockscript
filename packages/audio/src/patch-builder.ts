@@ -1,9 +1,11 @@
+import Ajv, { ErrorObject } from "ajv";
 import audioEngine from "./audio-engine";
+import patchSchema from "../../patches/patch-schema.json";
 
 type DeviceType = "osc" | "output";
 
 type SyntaxDevice = {
-  id: string;
+  id?: string;
   type: DeviceType;
   params?: Record<string, unknown>;
 };
@@ -15,9 +17,20 @@ type SyntaxRoute = {
 };
 
 type SyntaxPatch = {
-  devices?: SyntaxDevice[];
-  routes?: SyntaxRoute[];
+  devices: SyntaxDevice[];
+  routes: SyntaxRoute[];
 };
+
+const ajv = new Ajv({ allErrors: true });
+const validatePatch = ajv.compile(patchSchema as Record<string, unknown>);
+
+const formatErrors = (errors: ErrorObject[] | null | undefined) =>
+  (errors ?? [])
+    .map((error) => {
+      const path = error.instancePath || error.schemaPath;
+      return `${path} ${error.message ?? "validation failed"}`.trim();
+    })
+    .join("; ");
 
 class PatchBuilder {
   build(patchData: SyntaxPatch) {
@@ -25,23 +38,13 @@ class PatchBuilder {
       throw new Error("Audio engine is not ready");
     }
 
-    const devices = Array.isArray(patchData.devices) ? patchData.devices : [];
-    const routes = Array.isArray(patchData.routes) ? patchData.routes : [];
-
-    if (!devices.length) {
-      throw new Error("Patch must define at least one device");
+    const isValid = validatePatch(patchData);
+    if (!isValid) {
+      throw new Error(`Patch validation failed: ${formatErrors(validatePatch.errors)}`);
     }
 
-    const hasOscillator = devices.some((device) => device.type === "osc");
-    const hasOutput = devices.some((device) => device.type === "output");
-
-    if (!hasOscillator || !hasOutput) {
-      throw new Error("Patch must include at least one osc and one output");
-    }
-
-    if (!routes.length) {
-      throw new Error("Patch must define routes");
-    }
+    const devices = patchData.devices ?? [];
+    const routes = patchData.routes ?? [];
 
     audioEngine.sendPatch({ devices, routes });
   }

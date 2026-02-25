@@ -17,21 +17,35 @@ const initialPatch = {
       type: "osc",
       params: {
         wave: "sine",
-        frequency: 440,
-        gain: 0.5,
+        frequency: 80,
+        gain: 0.7,
+      },
+    },
+    {
+      id: "osc2",
+      type: "osc",
+      params: {
+        wave: "sine",
+        frequency: 432,
+        gain: 0.03,
       },
     },
     {
       id: "out",
       type: "output",
       params: {
-        gain: 1.0,
+        gain: 1,
       },
     },
   ],
   routes: [
     {
       from: "osc1.out",
+      to: "out.in",
+      signal: "audio",
+    },
+    {
+      from: "osc2.out",
       to: "out.in",
       signal: "audio",
     },
