@@ -311,6 +311,11 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     this.routing.forEach((route) => {
       if (!route?.from || !route?.to || !route?.param) return;
       const key = `${route.to}:${route.param}`;
+      if (!this.routingMap.has(key)) {
+        this.routingMap.set(key, []);
+      }
+      this.routingMap.get(key).push(route.from);
+    });
 
     this.effects = (patch.effects || []).map((effect) => ({
       ...effect,
