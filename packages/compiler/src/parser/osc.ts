@@ -69,6 +69,9 @@ const positionalInvalidMessage = (key: OscPropertyKey) =>
 
 const requiredStatement =
   "osc requires: osc <id?> <wave> <freq> @<gain> [detune <cents>] [pan <value>]";
+const DEFAULT_WAVE = "sine";
+const DEFAULT_FREQ = 220;
+const DEFAULT_GAIN = 0.25;
 
 function createTokenStream(tokens: string[], startIndex = 1): TokenStream {
   let index = startIndex;
@@ -161,11 +164,10 @@ function consumeIdentifier(
 function consumeWave(
   stream: TokenStream,
   pushDiag: (message: string) => void,
-): string | null {
+): string {
   const candidate = stream.peek();
   if (!candidate) {
-    pushDiag(requiredStatement);
-    return null;
+    return DEFAULT_WAVE;
   }
 
   const lowerCandidate = candidate.toLowerCase();
@@ -256,28 +258,23 @@ export function parseOscStatement(
   const stream = createTokenStream(tokens);
   const identifier = consumeIdentifier(stream, pushDiag);
   const waveToken = consumeWave(stream, pushDiag);
-  if (!waveToken) {
-    return null;
-  }
 
   const params = parseParameters(stream, pushDiag);
   if (!params) {
     return null;
   }
 
-  if (params.freq == null || params.gain == null) {
-    pushDiag(requiredStatement);
-    return null;
-  }
+  const freqToken = params.freq ?? DEFAULT_FREQ;
+  const gainToken = params.gain ?? DEFAULT_GAIN;
 
-  const wave = resolveWave(waveToken);
+  const wave = resolveWave(waveToken ?? DEFAULT_WAVE);
   if (!wave) {
     pushDiag(`unsupported osc wave: ${waveToken}`);
     return null;
   }
 
-  const freqValue = clamp(params.freq, 20, 20000);
-  const gainValue = clamp(params.gain, 0, 1);
+  const freqValue = clamp(freqToken, 20, 20000);
+  const gainValue = clamp(gainToken, 0, 1);
   const detuneValue =
     params.detune != null ? clamp(params.detune, -1200, 1200) : undefined;
   const panValue = params.pan != null ? clamp(params.pan, -1, 1) : 0;

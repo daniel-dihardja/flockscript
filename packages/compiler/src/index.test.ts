@@ -19,6 +19,16 @@ describe("osc compiler", () => {
     expect(result.patch?.oscillators[0]?.id).toMatch(/^osc-auto-/);
   });
 
+  it("uses defaults when no params provided", () => {
+    const result = compile("osc");
+    expect(result.ok).toBe(true);
+    expect(result.patch?.oscillators[0]).toMatchObject({
+      type: "sine",
+      freq: 220,
+      gain: 0.25,
+    });
+  });
+
   it("reports diagnostics for unsupported statements", () => {
     const result = compile("foo bar");
     expect(result.ok).toBe(false);
