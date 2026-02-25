@@ -1,0 +1,27 @@
+{
+  "devices": [
+    {
+      "id": "osc1",
+      "type": "osc",
+      "params": {
+        "wave": "sine",
+        "frequency": 440,
+        "gain": 0.5
+      }
+    },
+    {
+      "id": "out",
+      "type": "output",
+      "params": {
+        "gain": 1.0
+      }
+    }
+  ],
+  "routes": [
+    {
+      "from": "osc1.out",
+      "to": "out.in",
+      "signal": "audio"
+    }
+  ]
+}

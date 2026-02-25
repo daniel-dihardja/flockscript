@@ -11,44 +11,39 @@ type ManifestEntry = {
 };
 
 const initialPatch = {
-  oscillators: [
+  devices: [
     {
-      id: "sine",
-      freq: 440,
-      gain: 0.2,
-      type: "sine",
-      pan: 0,
+      id: "osc1",
+      type: "osc",
+      params: {
+        wave: "sine",
+        frequency: 440,
+        gain: 0.5,
+      },
+    },
+    {
+      id: "out",
+      type: "output",
+      params: {
+        gain: 1.0,
+      },
     },
   ],
-  modulators: [],
-  routing: [],
-  effects: [],
+  routes: [
+    {
+      from: "osc1.out",
+      to: "out.in",
+      signal: "audio",
+    },
+  ],
 };
 
 type EngineDebugStatus = {
   contextState: string;
   sampleRate: number;
-  currentTime: number;
   isRunning: boolean;
   useWorklet: boolean;
   workletReady: boolean;
-  masterGain: number;
-  channelA: {
-    gain: number;
-    activeOscillators: number;
-    activeNoise: number;
-  };
-  channelB: {
-    gain: number;
-    activeOscillators: number;
-    activeNoise: number;
-  };
-  activeChannel: string;
-  activeVoices: number;
-  pendingVoiceUpdates: number;
-  pendingChannelSwap: boolean;
-  tailHoldTime: number;
-  totalNodes: number;
 };
 
 export default function AudioTestPage() {
@@ -130,13 +125,15 @@ export default function AudioTestPage() {
     const loadPatch = async () => {
       try {
         setStatusMessage(`Loading ${entry.name}...`);
-        const res = await fetch(
+        setStatusMessage(`Loading ${entry.name}...`);
+        const patch = await fetch(
           `/api/patch?file=${encodeURIComponent(entry.file)}`,
-        );
-        if (!res.ok) {
-          throw new Error(`Failed to load patch (${res.status})`);
-        }
-        const patch = await res.json();
+        ).then((res) => {
+          if (!res.ok) {
+            throw new Error(`Failed to load patch (${res.status})`);
+          }
+          return res.json();
+        });
         if (canceled) return;
         setEditorValue(JSON.stringify(patch, null, 2));
         setIsValid(true);
@@ -211,25 +208,14 @@ export default function AudioTestPage() {
     return [];
   }, [categoryGroups, selectedCategory]);
 
-  const formatGain = (value: number) => value.toFixed(2);
   const serializeDebugStatus = (status: EngineDebugStatus | null) => {
     if (!status) return "Engine diagnostics unavailable";
     const entries = [
       ["Context state", status.contextState],
       ["Sample rate", `${status.sampleRate.toFixed(0)} Hz`],
-      ["Current time", `${status.currentTime.toFixed(2)} s`],
-      ["Active channel", status.activeChannel],
-      ["Background voices", `${status.activeVoices}`],
-      ["Pending swap", status.pendingChannelSwap ? "pending" : "none"],
-      ["Pending updates", `${status.pendingVoiceUpdates}`],
-      ["Active nodes", `${status.totalNodes}`],
-      ["Channel A gain", formatGain(status.channelA.gain)],
-      ["Channel B gain", formatGain(status.channelB.gain)],
-      ["Channel A oscillators", `${status.channelA.activeOscillators}`],
-      ["Channel B oscillators", `${status.channelB.activeOscillators}`],
-      ["Channel A noise", `${status.channelA.activeNoise}`],
-      ["Channel B noise", `${status.channelB.activeNoise}`],
-      ["Tail hold", `${status.tailHoldTime.toFixed(2)} s`],
+      ["Is running", status.isRunning ? "yes" : "no"],
+      ["Worklet enabled", status.useWorklet ? "yes" : "no"],
+      ["Worklet ready", status.workletReady ? "yes" : "no"],
     ];
     return entries.map(([label, value]) => `${label}: ${value}`).join("\n");
   };
@@ -364,7 +350,7 @@ export default function AudioTestPage() {
             </div>
             <div className="grid grid-cols-2 gap-1">
               <div className="flex justify-between">
-                <span>Context</span>
+                <span>Context state</span>
                 <span className="font-mono text-[#8bf08b]">
                   {debugStatus?.contextState ?? "loading"}
                 </span>
@@ -378,85 +364,21 @@ export default function AudioTestPage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Time</span>
+                <span>Is running</span>
                 <span className="font-mono text-[#8bf08b]">
-                  {debugStatus ? `${debugStatus.currentTime.toFixed(2)}s` : "-"}
+                  {debugStatus ? (debugStatus.isRunning ? "yes" : "no") : "-"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Active channel</span>
+                <span>Worklet enabled</span>
                 <span className="font-mono text-[#8bf08b]">
-                  {debugStatus?.activeChannel ?? "-"}
+                  {debugStatus ? (debugStatus.useWorklet ? "yes" : "no") : "-"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Active voices</span>
+                <span>Worklet ready</span>
                 <span className="font-mono text-[#8bf08b]">
-                  {debugStatus?.activeVoices ?? "-"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Pending swap</span>
-                <span className="font-mono text-[#8bf08b]">
-                  {debugStatus?.pendingChannelSwap ? "pending" : "-"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Pending updates</span>
-                <span className="font-mono text-[#8bf08b]">
-                  {debugStatus?.pendingVoiceUpdates ?? "-"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Total nodes</span>
-                <span className="font-mono text-[#8bf08b]">
-                  {debugStatus?.totalNodes ?? "-"}
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-1 pt-1 text-[11px]">
-              <div className="flex justify-between text-[#aaa]">
-                <span>Channel A gain</span>
-                <span className="font-mono text-[#8bf08b]">
-                  {debugStatus ? formatGain(debugStatus.channelA.gain) : "-"}
-                </span>
-              </div>
-              <div className="flex justify-between text-[#aaa]">
-                <span>Channel B gain</span>
-                <span className="font-mono text-[#8bf08b]">
-                  {debugStatus ? formatGain(debugStatus.channelB.gain) : "-"}
-                </span>
-              </div>
-              <div className="flex justify-between text-[#aaa]">
-                <span>A active osc</span>
-                <span className="font-mono text-[#8bf08b]">
-                  {debugStatus?.channelA.activeOscillators ?? "-"}
-                </span>
-              </div>
-              <div className="flex justify-between text-[#aaa]">
-                <span>B active osc</span>
-                <span className="font-mono text-[#8bf08b]">
-                  {debugStatus?.channelB.activeOscillators ?? "-"}
-                </span>
-              </div>
-              <div className="flex justify-between text-[#aaa]">
-                <span>A noise</span>
-                <span className="font-mono text-[#8bf08b]">
-                  {debugStatus?.channelA.activeNoise ?? "-"}
-                </span>
-              </div>
-              <div className="flex justify-between text-[#aaa]">
-                <span>B noise</span>
-                <span className="font-mono text-[#8bf08b]">
-                  {debugStatus?.channelB.activeNoise ?? "-"}
-                </span>
-              </div>
-              <div className="flex justify-between text-[#aaa]">
-                <span>Tail hold</span>
-                <span className="font-mono text-[#8bf08b]">
-                  {debugStatus
-                    ? `${debugStatus.tailHoldTime.toFixed(2)}s`
-                    : "-"}
+                  {debugStatus ? (debugStatus.workletReady ? "yes" : "no") : "-"}
                 </span>
               </div>
             </div>
