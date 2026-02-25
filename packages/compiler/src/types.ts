@@ -1,16 +1,30 @@
 export type OscillatorType = "sine" | "square" | "sawtooth" | "triangle";
 
-export type OscillatorEntry = {
-  id: string;
-  freq: number;
-  gain: number;
-  type: OscillatorType;
+export type DeviceType = "osc" | "output";
+
+export type OscillatorParams = {
+  wave?: OscillatorType;
+  frequency?: number;
+  gain?: number;
   detune?: number;
   pan?: number;
 };
 
+export type DeviceDefinition = {
+  id: string;
+  type: DeviceType;
+  params: OscillatorParams;
+};
+
+export type RouteDefinition = {
+  from: string;
+  to: string;
+  signal: "audio";
+};
+
 export type CompilePatch = {
-  oscillators: OscillatorEntry[];
+  devices: DeviceDefinition[];
+  routes: RouteDefinition[];
 };
 
 export type CompileDiagnostic = {

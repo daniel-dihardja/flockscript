@@ -44,7 +44,8 @@ type SyntaxStyleConfig = {
     | "operator"
     | "name"
     | "routeSource"
-    | "routeTarget",
+    | "routeTarget"
+    | "listName",
     RegexSpec
   >;
 };
@@ -351,6 +352,7 @@ const operatorRegex = makeRegex(regex.operator);
 const nameRegex = makeRegex(regex.name);
 const routeSourceRegex = makeRegex(regex.routeSource);
 const routeTargetRegex = makeRegex(regex.routeTarget);
+const listNameRegex = makeRegex(regex.listName);
 const highlightEffect = StateEffect.define<{ from: number; to: number } | null>();
 const highlightField = StateField.define<{ from: number; to: number } | null>({
   create: () => null,
@@ -431,6 +433,7 @@ const dslHighlight = ViewPlugin.fromClass(
         collectMatches(operatorRegex, "cm-dsl-operator");
         collectMatches(routeSourceRegex, "cm-dsl-route-source");
         collectMatches(routeTargetRegex, "cm-dsl-route-target");
+        collectMatches(listNameRegex, "cm-dsl-name");
         if (paramRegex) {
           collectMatches(paramRegex, "cm-dsl-param");
         }

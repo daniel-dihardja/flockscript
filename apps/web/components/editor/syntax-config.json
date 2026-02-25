@@ -47,7 +47,7 @@
       "fontWeight": "600"
     },
     ".cm-dsl-waveform": {
-      "color": "#fbbf24",
+      "color": "#fca5a5",
       "fontWeight": "400"
     },
     ".cm-dsl-gain": {
@@ -96,7 +96,8 @@
     "noi",
     "env",
     "seq",
-    "filter"
+    "filter",
+    "output"
   ],
   "keywordList": [
     "rate",
@@ -145,7 +146,8 @@
     "cha": "chaos",
     "chs": "chaos",
     "sil": "silence",
-    "voi": "voice"
+    "voi": "voice",
+    "out": "output"
   },
   "paramKeywords": [
     "frequency",
@@ -172,11 +174,11 @@
       "flags": "g"
     },
     "number": {
-      "pattern": "(?<!\\\\w)[+-]?\\\\d+(?:\\\\.\\\\d+)?c?",
+      "pattern": "(?<!\\w)[+-]?\\d+(?:\\.\\d+)?c?",
       "flags": "g"
     },
     "macro": {
-      "pattern": "@macro\\([^\\)]*\\)|@\\\\d+(?:\\\\.\\\\d+)?",
+      "pattern": "@macro\\([^\\)]*\\)|@\\d+(?:\\.\\d+)?",
       "flags": "g"
     },
     "operator": {
@@ -184,7 +186,7 @@
       "flags": "g"
     },
     "name": {
-      "pattern": "(?<=\\b(?:osc|lfo|noi|noise|fx|voice|voi|env|filter)(?:\\s+|<))(?!(?:sin|sine|saw|sawtooth|square|sqr|triangle|tri|lowpass|lps|lp|highpass|hps|hp|bandpass|bnp|bnd|notch|ntc|nct)\\b)(?![0-9\\.])#?[A-Za-z0-9_-]+(?=(?:>|\\s|\\.|$))",
+      "pattern": "(?<=\\b(?:osc|lfo|noi|noise|fx|voice|voi|env|filter|output)(?:\\s+|<))(?!(?:sin|sine|saw|sawtooth|square|sqr|triangle|tri|lowpass|lps|lp|highpass|hps|hp|bandpass|bnp|bnd|notch|ntc|nct)\\b)(?![0-9\\.])#?[A-Za-z0-9_-]+(?=(?:>|\\s|\\.|$))",
       "flags": "gi"
     },
     "routeSource": {
@@ -194,6 +196,10 @@
     "routeTarget": {
       "pattern": "(?<=->\\s+)[A-Za-z0-9_-]+(?=\\.|\\s|$)",
       "flags": "gi"
+    },
+    "listName": {
+      "pattern": "(?<=\\[|,\\s*)(#?[A-Za-z0-9_-]+)(?=\\s*(?:,|\\]))",
+      "flags": "g"
     }
   }
 }
