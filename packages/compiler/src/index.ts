@@ -15,44 +15,75 @@ export function compile(source: string): CompileResult {
   let unnamedOscCount = 0;
   const generateAutoOscId = () => `osc-auto-${++unnamedOscCount}`;
 
+  const statements: Array<{ tokens: string[]; startLine: number }> = [];
+  let buffer: string[] = [];
+  let bufferStart = 0;
+
+  const flushBuffer = () => {
+    if (!buffer.length) {
+      return;
+    }
+    statements.push({ tokens: [...buffer], startLine: bufferStart });
+    buffer = [];
+  };
+
   lines.forEach((rawLine, index) => {
     const line = rawLine.trim();
     if (!line || line.startsWith("---")) {
+      flushBuffer();
       return;
     }
-
-    const tokens = line.split(/\s+/).filter(Boolean);
-    if (!tokens.length) {
-      return;
+    if (!buffer.length) {
+      bufferStart = index;
     }
+    buffer.push(...line.split(/\s+/).filter(Boolean));
+  });
+  flushBuffer();
 
-    const rawHead = tokens[0];
-    if (!rawHead) {
-      return;
-    }
-    const head = rawHead.toLowerCase();
-    const normalizedHead = KEYWORD_ALIASES[head] ?? head;
+  const mainKeywords = new Set(["osc", "silence"]);
+  const normalize = (token: string) =>
+    KEYWORD_ALIASES[token.toLowerCase()] ?? token.toLowerCase();
+  const isMainKeyword = (token: string) => mainKeywords.has(normalize(token));
 
-    if (normalizedHead === "osc") {
-      const oscillator = parseOscStatement(tokens, {
-        diagnostics,
-        generateAutoOscId,
-        lineIndex: index,
-        sourceLines: lines,
-      });
-      if (oscillator) {
-        oscillators.push(oscillator);
+  statements.forEach(({ tokens, startLine }) => {
+    let cursor = 0;
+    while (cursor < tokens.length) {
+      const headToken = tokens[cursor];
+      if (!headToken) {
+        cursor += 1;
+        continue;
       }
-      return;
-    }
+      const normalizedHead = normalize(headToken);
 
-    if (normalizedHead === "silence") {
-      return;
-    }
+      if (normalizedHead === "osc") {
+        let nextCursor = cursor + 1;
+        while (nextCursor < tokens.length && !isMainKeyword(tokens[nextCursor])) {
+          nextCursor += 1;
+        }
+        const slice = tokens.slice(cursor, nextCursor);
+        const oscillator = parseOscStatement(slice, {
+          diagnostics,
+          generateAutoOscId,
+          lineIndex: startLine,
+          sourceLines: lines,
+        });
+        if (oscillator) {
+          oscillators.push(oscillator);
+        }
+        cursor = nextCursor;
+        continue;
+      }
 
-    diagnostics.push(
-      diagnosticForLine(lines, index, `Unknown statement: ${head}`),
-    );
+      if (normalizedHead === "silence") {
+        cursor += 1;
+        continue;
+      }
+
+      diagnostics.push(
+        diagnosticForLine(lines, startLine, `Unknown statement: ${headToken}`),
+      );
+      cursor += 1;
+    }
   });
 
   if (diagnostics.some((diag) => diag.severity === "error")) {
