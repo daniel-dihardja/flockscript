@@ -93,7 +93,10 @@ class AudioEngine {
     // Load AudioWorklet module (optional)
     if (this.useWorklet && this.audioContext.audioWorklet) {
       try {
-        const workletUrl = new URL("../worklet/dsp-worklet.js", import.meta.url);
+        const workletUrl = new URL(
+          "../worklet/dsp-worklet.js",
+          import.meta.url,
+        );
         await this.audioContext.audioWorklet.addModule(workletUrl);
       } catch (error) {
         console.warn("[Worklet] Failed to load worklet module:", error);
@@ -155,7 +158,7 @@ class AudioEngine {
         const data = event.data;
         if (!data) return;
         if (data.type === "status") {
-    } else if (data.type === "error") {
+        } else if (data.type === "error") {
         }
       };
       this.workletA.port.onmessage = handleWorkletMessage;
@@ -167,7 +170,6 @@ class AudioEngine {
 
       this.workletA.port.postMessage({ type: "ping" });
       this.workletB.port.postMessage({ type: "ping" });
-
     } else {
       this.workletReady = false;
     }
@@ -268,7 +270,6 @@ class AudioEngine {
         active: false,
       });
     }
-
   }
 
   /**
@@ -286,7 +287,6 @@ class AudioEngine {
       console.warn("[Pool] No available oscillators in pool!");
       return null;
     }
-
 
     // Clear scheduled automation before reuse
     const now = this.audioContext.currentTime;
@@ -336,7 +336,6 @@ class AudioEngine {
       console.warn("[Pool] No available noise sources in pool!");
       return null;
     }
-
 
     // Clear scheduled automation before reuse
     const now = this.audioContext.currentTime;
@@ -399,7 +398,6 @@ class AudioEngine {
         item.panner.pan.cancelScheduledValues(now);
       }
     });
-
   }
 
   /**
@@ -1219,7 +1217,6 @@ class AudioEngine {
 
     // Update the trigger function
     existingVoice.trigger = triggerVoice;
-
   }
 
   /**
@@ -1306,7 +1303,6 @@ class AudioEngine {
       },
       fadeTime * 1000 + 50,
     );
-
   }
 
   /**
@@ -1541,7 +1537,6 @@ class AudioEngine {
     if (target && target.port) {
       target.port.postMessage({ type: "setPatch", patch });
     }
-
   }
   /**
    * Queue a channel swap for the next beat
@@ -1581,7 +1576,6 @@ class AudioEngine {
     // Get current channels BEFORE swapping
     const previousActiveChannel = this.getActiveChannel();
     const newActiveChannel = this.getStandbyChannel();
-
 
     // Crossfade: equal-power curve
     const steps = 128;

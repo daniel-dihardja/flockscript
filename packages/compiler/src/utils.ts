@@ -41,10 +41,7 @@ export function parseGainToken(token: string) {
   return parseNumber(token.slice(1));
 }
 
-export function parseOscNumericProperty(
-  key: OscPropertyKey,
-  raw: string,
-) {
+export function parseOscNumericProperty(key: OscPropertyKey, raw: string) {
   if (key === "gain") {
     const gain = parseGainToken(raw);
     if (gain !== null) {

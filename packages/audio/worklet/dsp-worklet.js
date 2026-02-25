@@ -620,8 +620,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
           const freq =
             (effect.freq || 1000) +
             this.getModSum(effect.id, "freq", modValues);
-          const q =
-            (effect.q || 1) + this.getModSum(effect.id, "q", modValues);
+          const q = (effect.q || 1) + this.getModSum(effect.id, "q", modValues);
           state.update(effect.filterType || "lowpass", freq, q);
           l = state.process(l);
           r = state.process(r);
@@ -666,7 +665,6 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
 
     return true;
   }
-
 }
 
 registerProcessor("dsp-worklet", DSPWorkletProcessor);
