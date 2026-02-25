@@ -18,10 +18,6 @@
       "fontWeight": "500"
     },
     ".cm-selectionBackground": {
-      "backgroundColor": "rgba(249, 115, 22, 0.4)",
-      "boxShadow": "0 0 14px rgba(249, 115, 22, 0.35)"
-    },
-    ".cm-selectionLayer .cm-selectionBackground": {
       "backgroundColor": "rgba(249, 115, 22, 0.4)"
     },
     ".cm-selection": {
@@ -51,8 +47,8 @@
       "fontWeight": "600"
     },
     ".cm-dsl-waveform": {
-      "color": "#7dd3fc",
-      "fontWeight": "600"
+      "color": "#fbbf24",
+      "fontWeight": "400"
     },
     ".cm-dsl-gain": {
       "color": "#f472b6",
@@ -79,6 +75,10 @@
     ".cm-dsl-macro": {
       "color": "#c4b5fd"
     },
+    ".cm-dsl-param": {
+      "fontWeight": "700",
+      "color": "#38bdf8"
+    },
     ".cm-dsl-last-executed": {
       "backgroundColor": "rgba(251, 146, 60, 0.3)",
       "borderRadius": "3px",
@@ -99,7 +99,6 @@
     "filter"
   ],
   "keywordList": [
-    "detune",
     "rate",
     "depth",
     "offset",
@@ -148,6 +147,21 @@
     "sil": "silence",
     "voi": "voice"
   },
+  "paramKeywords": [
+    "frequency",
+    "frq",
+    "detune",
+    "dtn",
+    "pan",
+    "rate",
+    "depth",
+    "gain",
+    "wave",
+    "filter",
+    "q",
+    "offset",
+    "env"
+  ],
   "regex": {
     "block": {
       "pattern": "^---.*---$",
@@ -170,7 +184,7 @@
       "flags": "g"
     },
     "name": {
-    "pattern": "(?<=\\b(?:osc|lfo|noi|noise|fx|voice|voi|env|filter)(?:\\s+|<))(?!(?:sin|sine|saw|sawtooth|square|sqr|triangle|tri|lowpass|lps|lp|highpass|hps|hp|bandpass|bnp|bnd|notch|ntc|nct)\\b)(?![0-9\\.])#?[A-Za-z0-9_-]+(?=(?:>|\\s|\\.|$))",
+      "pattern": "(?<=\\b(?:osc|lfo|noi|noise|fx|voice|voi|env|filter)(?:\\s+|<))(?!(?:sin|sine|saw|sawtooth|square|sqr|triangle|tri|lowpass|lps|lp|highpass|hps|hp|bandpass|bnp|bnd|notch|ntc|nct)\\b)(?![0-9\\.])#?[A-Za-z0-9_-]+(?=(?:>|\\s|\\.|$))",
       "flags": "gi"
     },
     "routeSource": {
