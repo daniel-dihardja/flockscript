@@ -19,7 +19,7 @@ class AudioEngine {
     this.isRunning = false;
 
     // Worklet / WASM DSP (optional)
-    this.useWorklet = true;
+    this.useWorklet = false;
     this.workletA = null;
     this.workletB = null;
     this.workletReady = false;
