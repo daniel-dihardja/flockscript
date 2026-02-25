@@ -57,7 +57,11 @@ export function compile(source: string): CompileResult {
 
       if (normalizedHead === "osc") {
         let nextCursor = cursor + 1;
-        while (nextCursor < tokens.length && !isMainKeyword(tokens[nextCursor])) {
+        while (nextCursor < tokens.length) {
+          const nextToken = tokens[nextCursor];
+          if (!nextToken || isMainKeyword(nextToken)) {
+            break;
+          }
           nextCursor += 1;
         }
         const slice = tokens.slice(cursor, nextCursor);
