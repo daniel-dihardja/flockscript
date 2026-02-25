@@ -1,11 +1,7 @@
 import {
   GAIN_TOKEN_REGEX,
-  KEYWORD_ALIASES,
-  OSC_PROPERTY_ALIASES,
   clamp,
-  findNextPositionalKey,
   parseGainToken,
-  parseNumber,
   parseOscNumericProperty,
   resolveWave,
   OscPropertyKey,
@@ -14,213 +10,269 @@ import { OscillatorEntry } from "../types.ts";
 import { diagnosticForLine } from "../diagnostics.ts";
 import { ParserContext } from "./context.ts";
 
-export type OscParseContext = ParserContext & {
-  generateAutoOscId: () => string;
+type TokenStream = {
+  peek(offset?: number): string | undefined;
+  next(): string | undefined;
+  hasMore(): boolean;
 };
 
-export function parseOscStatement(
-  tokens: string[],
-  context: OscParseContext,
-): OscillatorEntry | null {
-  const { diagnostics, sourceLines, lineIndex, generateAutoOscId } = context;
-  const pushDiag = (message: string) => {
-    diagnostics.push(diagnosticForLine(sourceLines, lineIndex, message));
+type ParamDescriptor = {
+  key: OscPropertyKey;
+  aliases: string[];
+  positional?: boolean;
+  required?: boolean;
+  parse: (value: string) => number | null;
+};
+
+const PARAM_DESCRIPTORS: ParamDescriptor[] = [
+  {
+    key: "freq",
+    aliases: ["freq", "frequency", "frq"],
+    positional: true,
+    required: true,
+    parse: (value) => parseOscNumericProperty("freq", value),
+  },
+  {
+    key: "gain",
+    aliases: ["gain"],
+    positional: true,
+    required: true,
+    parse: (value) => parseOscNumericProperty("gain", value),
+  },
+  {
+    key: "detune",
+    aliases: ["detune", "dtn"],
+    parse: (value) => parseOscNumericProperty("detune", value),
+  },
+  {
+    key: "pan",
+    aliases: ["pan"],
+    parse: (value) => parseOscNumericProperty("pan", value),
+  },
+];
+
+const PARAM_DESCRIPTOR_BY_ALIAS = new Map<string, ParamDescriptor>();
+PARAM_DESCRIPTORS.forEach((descriptor) => {
+  descriptor.aliases.forEach((alias) =>
+    PARAM_DESCRIPTOR_BY_ALIAS.set(alias, descriptor)
+  );
+});
+
+const POSITIONAL_DESCRIPTORS = PARAM_DESCRIPTORS.filter(
+  (descriptor) => descriptor.positional,
+);
+
+const positionalInvalidMessage = (key: OscPropertyKey) =>
+  key === "freq" || key === "gain"
+    ? "osc frequency or gain is invalid"
+    : `${key} value is invalid`;
+
+const requiredStatement =
+  "osc requires: osc <id?> <wave> <freq> @<gain> [detune <cents>] [pan <value>]";
+
+function createTokenStream(tokens: string[], startIndex = 1): TokenStream {
+  let index = startIndex;
+  return {
+    peek(offset = 0) {
+      return tokens[index + offset];
+    },
+    next() {
+      return tokens[index++];
+    },
+    hasMore() {
+      return index < tokens.length;
+    },
   };
+}
 
-  let cursor = 1;
-  let id: string | undefined;
-  let waveRaw: string | null = null;
-
-  const readIdentifier = () => {
-    const token = tokens[cursor];
-    if (!token) {
-      return false;
-    }
-    if (!token.startsWith("#") && !token.startsWith("<")) {
-      return false;
-    }
-    let candidate = token;
-    let hasHash = false;
-    if (candidate.startsWith("#")) {
-      hasHash = true;
-      candidate = candidate.slice(1);
-    }
-    if (!candidate.startsWith("<")) {
-      id = candidate;
-      cursor += 1;
-      return true;
-    }
-    const remainder = candidate.slice(1);
-    const closingIndex = remainder.indexOf(">");
-    if (closingIndex !== -1) {
-      if (closingIndex !== remainder.length - 1) {
-        pushDiag("osc identifier must not include extra characters after '>'");
-        return false;
-      }
-      id = remainder.slice(0, closingIndex);
-      cursor += 1;
-      return true;
-    }
-    cursor += 1;
-    let value = remainder;
-    while (cursor < tokens.length) {
-      const part = tokens[cursor];
-      if (!part) {
-        break;
-      }
-      const closing = part.indexOf(">");
-      if (closing !== -1) {
-        value += " " + part.slice(0, closing);
-        id = value;
-        cursor += 1;
-        return true;
-      }
-      value += " " + part;
-      cursor += 1;
-    }
-    pushDiag("osc name is not closed with '>'");
-    return false;
-  };
-
-  if (readIdentifier()) {
-    if (cursor >= tokens.length) {
-      pushDiag("osc requires a wave type after the identifier");
-      return null;
-    }
+function collectAngleIdentifier(
+  initial: string,
+  stream: TokenStream,
+  pushDiag: (message: string) => void,
+): string | undefined {
+  if (initial.length === 0) {
+    pushDiag("osc identifier cannot be empty");
+    return undefined;
   }
 
-  const firstToken = tokens[cursor];
-  if (!firstToken) {
-    pushDiag(
-      "osc requires: osc <id?> <wave> <freq> @<gain> [detune <cents>] [pan <value>]",
-    );
-    return null;
-  }
-
-  const readWaveToken = (): string | null => {
-    const candidate = tokens[cursor];
-    if (!candidate) {
-      pushDiag("osc requires a wave type");
-      return null;
+  const closingIndex = initial.indexOf(">");
+  if (closingIndex !== -1) {
+    if (closingIndex !== initial.length - 1) {
+      pushDiag("osc identifier must not include extra characters after '>'");
+      return undefined;
     }
-    const lowerCandidate = candidate.toLowerCase();
-    if (lowerCandidate === "wave") {
-      cursor += 1;
-      const next = tokens[cursor];
-      if (!next) {
-        pushDiag("osc requires a wave type after 'wave'");
-        return null;
-      }
-      cursor += 1;
-      return next;
-    }
-    cursor += 1;
-    return candidate;
-  };
-
-  const lowerFirst = firstToken.toLowerCase();
-  const nextToken = tokens[cursor + 1];
-  const nextIsWave =
-    typeof nextToken === "string" &&
-    (resolveWave(nextToken) !== null || nextToken.toLowerCase() === "wave");
-  const firstIsWave = Boolean(resolveWave(firstToken));
-
-  if (lowerFirst === "wave") {
-    id = id ?? generateAutoOscId();
-    cursor += 1;
-    waveRaw = readWaveToken();
-  } else if (firstIsWave && !nextIsWave) {
-    id ??= generateAutoOscId();
-    waveRaw = firstToken;
-    cursor += 1;
-  } else if (!firstIsWave && nextIsWave) {
-    id = firstToken;
-    cursor += 1;
-    waveRaw = readWaveToken();
-  } else if (firstIsWave && nextIsWave) {
-    id = firstToken;
-    cursor += 1;
-    waveRaw = readWaveToken();
-  } else {
-    id = firstToken;
-    cursor += 1;
-    waveRaw = readWaveToken();
+    return initial.slice(0, closingIndex).trim();
   }
 
-  if (!waveRaw) {
-    return null;
-  }
-
-  const params: Partial<Record<OscPropertyKey, number>> = {};
-  const positionalOrder: OscPropertyKey[] = ["freq", "gain"];
-
-  while (cursor < tokens.length) {
-    const currentToken = tokens[cursor];
-    if (!currentToken) {
+  let value = initial;
+  while (stream.hasMore()) {
+    const segment = stream.next();
+    if (!segment) {
       break;
     }
-    const normalizedToken =
-      KEYWORD_ALIASES[currentToken.toLowerCase()] ?? currentToken.toLowerCase();
+    const closing = segment.indexOf(">");
+    if (closing !== -1) {
+      if (closing !== segment.length - 1) {
+        pushDiag("osc identifier must not include extra characters after '>'");
+        return undefined;
+      }
+      value += " " + segment.slice(0, closing);
+      return value.trim();
+    }
+    value += " " + segment;
+  }
 
-    const propertyKey = OSC_PROPERTY_ALIASES[normalizedToken];
-    if (propertyKey) {
-      cursor += 1;
-      const valueToken = tokens[cursor];
-      if (!valueToken) {
-        pushDiag(`missing value for ${normalizedToken}`);
-        return null;
-      }
-      const parsedValue = parseOscNumericProperty(propertyKey, valueToken);
-      if (parsedValue === null) {
-        const message =
-          propertyKey === "freq" || propertyKey === "gain"
-            ? "osc frequency or gain is invalid"
-            : `${propertyKey} value is invalid`;
-        pushDiag(message);
-        return null;
-      }
-      params[propertyKey] = parsedValue;
-      cursor += 1;
-      continue;
+  pushDiag("osc name is not closed with '>'");
+  return undefined;
+}
+
+function consumeIdentifier(
+  stream: TokenStream,
+  pushDiag: (message: string) => void,
+): string | undefined {
+  const candidate = stream.peek();
+  if (!candidate) {
+    return undefined;
+  }
+  if (!candidate.startsWith("#") && !candidate.startsWith("<")) {
+    return undefined;
+  }
+
+  stream.next();
+  const trimmed = candidate.startsWith("#")
+    ? candidate.slice(1)
+    : candidate;
+  if (!trimmed.length) {
+    pushDiag("osc identifier cannot be empty");
+    return undefined;
+  }
+
+  if (trimmed.startsWith("<")) {
+    return collectAngleIdentifier(
+      trimmed.slice(1),
+      stream,
+      pushDiag,
+    );
+  }
+
+  return trimmed.trim();
+}
+
+function consumeWave(
+  stream: TokenStream,
+  pushDiag: (message: string) => void,
+): string | null {
+  const candidate = stream.peek();
+  if (!candidate) {
+    pushDiag(requiredStatement);
+    return null;
+  }
+
+  const lowerCandidate = candidate.toLowerCase();
+  if (lowerCandidate === "wave") {
+    stream.next();
+    const next = stream.peek();
+    if (!next) {
+      pushDiag("osc requires a wave type after 'wave'");
+      return null;
+    }
+    stream.next();
+    return next;
+  }
+
+  stream.next();
+  return candidate;
+}
+
+function parseParameters(
+  stream: TokenStream,
+  pushDiag: (message: string) => void,
+) {
+  const params: Partial<Record<OscPropertyKey, number>> = {};
+
+  while (stream.hasMore()) {
+    const token = stream.peek();
+    if (!token) {
+      break;
     }
 
-    if (GAIN_TOKEN_REGEX.test(currentToken) && params.gain == null) {
-      const gainValue = parseGainToken(currentToken);
+    if (GAIN_TOKEN_REGEX.test(token)) {
+      const gainValue = parseGainToken(token);
       if (gainValue === null) {
         pushDiag("osc frequency or gain is invalid");
         return null;
       }
       params.gain = gainValue;
-      cursor += 1;
+      stream.next();
       continue;
     }
 
-    const positionalKey = findNextPositionalKey(params, positionalOrder);
-    if (!positionalKey) {
-      pushDiag(`unknown osc option: ${currentToken}`);
+    const normalized = token.toLowerCase();
+    const descriptor = PARAM_DESCRIPTOR_BY_ALIAS.get(normalized);
+    if (descriptor) {
+      stream.next();
+      const valueToken = stream.next();
+      if (!valueToken) {
+        pushDiag(`missing value for ${token}`);
+        return null;
+      }
+      const parsedValue = descriptor.parse(valueToken);
+      if (parsedValue === null) {
+        pushDiag(positionalInvalidMessage(descriptor.key));
+        return null;
+      }
+      params[descriptor.key] = parsedValue;
+      continue;
+    }
+
+    const positional = POSITIONAL_DESCRIPTORS.find(
+      (desc) => params[desc.key] == null,
+    );
+    if (!positional) {
+      pushDiag(`unknown osc option: ${token}`);
       return null;
     }
 
-    const positionalValue = parseOscNumericProperty(
-      positionalKey,
-      currentToken,
-    );
+    const positionalValue = positional.parse(token);
     if (positionalValue === null) {
-      const message =
-        positionalKey === "freq" || positionalKey === "gain"
-          ? "osc frequency or gain is invalid"
-          : `${positionalKey} value is invalid`;
-      pushDiag(message);
+      pushDiag(positionalInvalidMessage(positional.key));
       return null;
     }
-    params[positionalKey] = positionalValue;
-    cursor += 1;
+    params[positional.key] = positionalValue;
+    stream.next();
+  }
+
+  return params;
+}
+
+export function parseOscStatement(
+  tokens: string[],
+  context: ParserContext & { generateAutoOscId: () => string },
+): OscillatorEntry | null {
+  const { diagnostics, sourceLines, lineIndex, generateAutoOscId } = context;
+  const pushDiag = (message: string) =>
+    diagnostics.push(diagnosticForLine(sourceLines, lineIndex, message));
+
+  const stream = createTokenStream(tokens);
+  const identifier = consumeIdentifier(stream, pushDiag);
+  const waveToken = consumeWave(stream, pushDiag);
+  if (!waveToken) {
+    return null;
+  }
+
+  const params = parseParameters(stream, pushDiag);
+  if (!params) {
+    return null;
   }
 
   if (params.freq == null || params.gain == null) {
-    pushDiag(
-      "osc requires: osc <id?> <wave> <freq> @<gain> [detune <cents>] [pan <value>]",
-    );
+    pushDiag(requiredStatement);
+    return null;
+  }
+
+  const wave = resolveWave(waveToken);
+  if (!wave) {
+    pushDiag(`unsupported osc wave: ${waveToken}`);
     return null;
   }
 
@@ -230,14 +282,8 @@ export function parseOscStatement(
     params.detune != null ? clamp(params.detune, -1200, 1200) : undefined;
   const panValue = params.pan != null ? clamp(params.pan, -1, 1) : 0;
 
-  const wave = resolveWave(waveRaw);
-  if (!wave) {
-    pushDiag(`unsupported osc wave: ${waveRaw}`);
-    return null;
-  }
-
   return {
-    id: id ?? generateAutoOscId(),
+    id: identifier ?? generateAutoOscId(),
     type: wave,
     freq: freqValue,
     gain: gainValue,

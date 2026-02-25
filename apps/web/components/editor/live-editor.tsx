@@ -667,6 +667,58 @@ function LiveEditorComponent(
   React.useEffect(() => {
     engineStateRef.current = engineStatus.state;
   }, [engineStatus.state]);
+  const formatContextLabel = (state?: string) => {
+    if (!state) {
+      return "Idle";
+    }
+    return state.charAt(0).toUpperCase() + state.slice(1);
+  };
+
+  const updateEngineStatusFromContext = (contextState?: string) => {
+    if (contextState === "running") {
+      setEngineStatus({ label: "Running", state: "running" });
+      engineStateRef.current = "running";
+      return;
+    }
+    if (contextState === "suspended") {
+      setEngineStatus({ label: "Suspended", state: "idle" });
+      if (engineStateRef.current !== "initializing") {
+        engineStateRef.current = "idle";
+      }
+      return;
+    }
+    if (contextState === "closed") {
+      setEngineStatus({ label: "Closed", state: "error" });
+      engineStateRef.current = "error";
+      return;
+    }
+    setEngineStatus({ label: formatContextLabel(contextState), state: "idle" });
+    if (engineStateRef.current !== "initializing") {
+      engineStateRef.current = "idle";
+    }
+  };
+
+  const ensureEngineRunning = () => {
+    const engine = engineRef.current;
+    const context = engine?.audioContext;
+    if (!context) {
+      return;
+    }
+    if (context.state === "running") {
+      updateEngineStatusFromContext("running");
+      return;
+    }
+    engine
+      .resume?.()
+      .then(() => {
+        updateEngineStatusFromContext(engine.audioContext?.state);
+      })
+      .catch((error) => {
+        console.error("Failed to resume audio engine", error);
+        setEngineStatus({ label: "Failed", state: "error" });
+        engineStateRef.current = "error";
+      });
+  };
   const [debugPatch, setDebugPatch] = React.useState<
     CompileResult["patch"] | null
   >(null);
@@ -896,6 +948,7 @@ const themeExtension = React.useMemo(
   ) {
     const raw = view.state.doc.sliceString(range.from, range.to);
     const text = raw.trim();
+    ensureEngineRunning();
     if (!text) {
       return false;
     }
@@ -990,12 +1043,7 @@ const themeExtension = React.useMemo(
       await audioEngine.init();
       builderRef.current = new PatchBuilder();
       engineRef.current = audioEngine;
-      const engineState = audioEngine.audioContext?.state ?? "unknown";
-      setEngineStatus({
-        label: "Ready",
-        state: "running",
-      });
-      engineStateRef.current = "running";
+      updateEngineStatusFromContext(audioEngine.audioContext?.state);
     } catch (error) {
       console.error("Audio engine failed to initialize", error);
       setEngineStatus({
