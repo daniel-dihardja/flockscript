@@ -54,7 +54,7 @@ const PARAM_DESCRIPTORS: ParamDescriptor[] = [
 const PARAM_DESCRIPTOR_BY_ALIAS = new Map<string, ParamDescriptor>();
 PARAM_DESCRIPTORS.forEach((descriptor) => {
   descriptor.aliases.forEach((alias) =>
-    PARAM_DESCRIPTOR_BY_ALIAS.set(alias, descriptor)
+    PARAM_DESCRIPTOR_BY_ALIAS.set(alias, descriptor),
   );
 });
 
@@ -68,7 +68,7 @@ const positionalInvalidMessage = (key: OscPropertyKey) =>
     : `${key} value is invalid`;
 
 const requiredStatement =
-  "osc requires: osc <id?> <wave> <freq> @<gain> [detune <cents>] [pan <value>]";
+  "osc requires: osc #<id?> <wave> <freq> @<gain> [detune <cents>] [pan <value>]";
 const DEFAULT_WAVE = "sine";
 const DEFAULT_FREQ = 220;
 const DEFAULT_GAIN = 0.25;
@@ -88,47 +88,6 @@ function createTokenStream(tokens: string[], startIndex = 1): TokenStream {
   };
 }
 
-function collectAngleIdentifier(
-  initial: string,
-  stream: TokenStream,
-  pushDiag: (message: string) => void,
-): string | undefined {
-  if (initial.length === 0) {
-    pushDiag("osc identifier cannot be empty");
-    return undefined;
-  }
-
-  const closingIndex = initial.indexOf(">");
-  if (closingIndex !== -1) {
-    if (closingIndex !== initial.length - 1) {
-      pushDiag("osc identifier must not include extra characters after '>'");
-      return undefined;
-    }
-    return initial.slice(0, closingIndex).trim();
-  }
-
-  let value = initial;
-  while (stream.hasMore()) {
-    const segment = stream.next();
-    if (!segment) {
-      break;
-    }
-    const closing = segment.indexOf(">");
-    if (closing !== -1) {
-      if (closing !== segment.length - 1) {
-        pushDiag("osc identifier must not include extra characters after '>'");
-        return undefined;
-      }
-      value += " " + segment.slice(0, closing);
-      return value.trim();
-    }
-    value += " " + segment;
-  }
-
-  pushDiag("osc name is not closed with '>'");
-  return undefined;
-}
-
 function consumeIdentifier(
   stream: TokenStream,
   pushDiag: (message: string) => void,
@@ -137,25 +96,15 @@ function consumeIdentifier(
   if (!candidate) {
     return undefined;
   }
-  if (!candidate.startsWith("#") && !candidate.startsWith("<")) {
+  if (!candidate.startsWith("#")) {
     return undefined;
   }
 
   stream.next();
-  const trimmed = candidate.startsWith("#")
-    ? candidate.slice(1)
-    : candidate;
+  const trimmed = candidate.slice(1);
   if (!trimmed.length) {
     pushDiag("osc identifier cannot be empty");
     return undefined;
-  }
-
-  if (trimmed.startsWith("<")) {
-    return collectAngleIdentifier(
-      trimmed.slice(1),
-      stream,
-      pushDiag,
-    );
   }
 
   return trimmed.trim();
