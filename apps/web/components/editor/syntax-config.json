@@ -42,8 +42,6 @@
     },
     ".cm-dsl-osc": {
       "color": "#fb923c",
-      "borderRadius": "4px",
-      "padding": "0 4px",
       "fontWeight": "600"
     },
     ".cm-dsl-waveform": {
