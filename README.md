@@ -1,6 +1,6 @@
 # FlockScript Live Coding Workspace
 
-This Workspace hosts the FlockScript live-coding environment for drone, noise, and experimental audio performance. The main web app (`apps/web`) exposes a CodeMirror-based IDE where you author a compact DSL that compiles to the JSON patch schema consumed by the audio engine. Behind the scenes there is:
+This Workspace hosts the **FlockScript** live-coding environment for drone, noise, and experimental audio performance. FlockScript is the custom DSL implemented in this project—it's not a pre-existing language, but the specific script that authoring happens in. The main web app (`apps/web`) exposes a CodeMirror-based IDE where you write FlockScript to compile to the JSON patch schema consumed by the audio engine. Behind the scenes there is:
 
 - a **compiler** package (`packages/compiler`) that parses the DSL, validates it, and emits the device/route JSON,
 - an **audio** package (`packages/audio`) that exposes the shared audio engine, patch builder, and worklet logic used by both the playground and the Next.js app,
