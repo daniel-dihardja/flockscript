@@ -17,14 +17,15 @@ This Workspace hosts the **FlockScript** live-coding environment for drone, nois
    pnpm --filter web dev
    ```
    The live editor is mounted at `/`, and the dedicated audio test playground is at `/audio-test`.
-3. Use the editor samples or write your own FlockScript lines like:
+3. Use the editor samples or write your own FlockScript like:
 
    ```text
-   osc osc1 wave=sine frequency=80 gain=0.7
-   osc osc2 wave=sine frequency=432 gain=0.03
-   output out gain=1
-
-   [osc1, osc2] -> out
+   audio {
+     osc osc1 wave=sine frequency=80 gain=0.7
+     osc osc2 wave=sine frequency=432 gain=0.03
+     output out gain=1
+     [osc1, osc2] -> out
+   }
    ```
 
    Press `Cmd+Enter` (or `Ctrl+Enter`) to run the current block, `Shift+Enter` for the current line, and `Alt+Enter` for a selection.
