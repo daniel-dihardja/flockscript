@@ -34,6 +34,15 @@ export type CompileDiagnostic = {
   severity: "error" | "warning";
 };
 
+export type OscillatorEntry = {
+  id: string;
+  type: OscillatorType;
+  freq: number;
+  gain: number;
+  detune?: number;
+  pan?: number;
+};
+
 export type CompileResult = {
   ok: boolean;
   patch?: CompilePatch;

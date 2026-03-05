@@ -172,8 +172,9 @@ const parseOscillatorLine = (
   let cursor = 1;
   let identifier: string | undefined;
 
-  if (tokens.length > 1 && !tokens[1].startsWith("@") && !tokens[1].includes("=")) {
-    const candidate = cleanIdentifier(tokens[1]);
+  const secondOscToken = tokens[1];
+  if (secondOscToken !== undefined && !secondOscToken.startsWith("@") && !secondOscToken.includes("=")) {
+    const candidate = cleanIdentifier(secondOscToken);
     if (candidate) {
       identifier = candidate;
       cursor = 2;
@@ -222,8 +223,9 @@ const parseOutputLine = (
   let cursor = 1;
   let identifier: string | undefined;
 
-  if (tokens.length > 1 && !tokens[1].startsWith("@") && !tokens[1].includes("=")) {
-    const candidate = cleanIdentifier(tokens[1]);
+  const secondOutToken = tokens[1];
+  if (secondOutToken !== undefined && !secondOutToken.startsWith("@") && !secondOutToken.includes("=")) {
+    const candidate = cleanIdentifier(secondOutToken);
     if (candidate) {
       identifier = candidate;
       cursor = 2;
@@ -271,7 +273,7 @@ const parseRouteLine = (
     return null;
   }
 
-  const sourceList = match[1]
+  const sourceList = match[1]!
     .split(",")
     .map((value) => cleanIdentifier(value))
     .filter((value) => Boolean(value)) as string[];
@@ -280,7 +282,7 @@ const parseRouteLine = (
     return null;
   }
 
-  const target = cleanIdentifier(match[2]);
+  const target = cleanIdentifier(match[2]!);
   if (!target) {
     pushDiagnostic(context, lineIndex, "route target is invalid");
     return null;
@@ -320,7 +322,7 @@ export function compile(source: string): CompileResult {
       return;
     }
 
-    const normalizedHead = normalizeKeyword(tokens[0]);
+    const normalizedHead = normalizeKeyword(tokens[0] ?? "");
 
     if (normalizedHead === "silence" || normalizedHead === "sil") {
       devices.length = 0;
@@ -338,7 +340,7 @@ export function compile(source: string): CompileResult {
       return;
     }
 
-    pushDiagnostic(context, index, `Unknown statement: ${tokens[0]}`);
+    pushDiagnostic(context, index, `Unknown statement: ${tokens[0] ?? ""}`);
   });
 
   const hasError = diagnostics.some((diag) => diag.severity === "error");
