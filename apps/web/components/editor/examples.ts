@@ -21,6 +21,9 @@ export const SAMPLE_CATEGORIES: SampleCategory[] = [
           "  output out gain=1",
           "  [osc1, osc2] -> out",
           "}",
+          "",
+          "sil",
+          ""
         ].join("\n"),
       },
     ],

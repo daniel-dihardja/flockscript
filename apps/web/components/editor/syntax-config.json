@@ -40,7 +40,7 @@
       "backgroundColor": "none",
       "color": "#facc15",
       "fontWeight": "700",
-      "padding": "2px 8px",
+      "padding": "2px 4px",
       "borderRadius": "4px"
     },
     ".cm-dsl-osc": {
@@ -57,7 +57,7 @@
     ".cm-dsl-name, .cm-dsl-route-source, .cm-dsl-route-target": {
       "backgroundColor": "none",
       "borderRadius": "4px",
-      "padding": "2px 8px",
+      "padding": "2px 4px",
       "color": "#CCCCCC",
       "fontWeight": "700"
     },
