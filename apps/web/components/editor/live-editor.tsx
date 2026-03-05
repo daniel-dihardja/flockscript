@@ -16,10 +16,15 @@ import {
 import { setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { Decoration, EditorView, ViewPlugin, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
-import { compile, type CompileResult } from "@workspace/compiler";
+import {
+  compile,
+  type CompileResult as CompilerResult,
+} from "@workspace/compiler";
 import { Button } from "@workspace/ui/components/button";
 import syntaxConfig from "./syntax-config.json";
 import { SAMPLE_CATEGORIES } from "./examples";
+import { LiveEditorToolbar } from "./live-editor-toolbar";
+import { LiveEditorDebugPanel } from "./live-editor-debug-panel";
 
 const defaultScript = SAMPLE_CATEGORIES[0].samples[0].code;
 
@@ -559,17 +564,6 @@ type EvalPayload = {
   to: number;
 };
 
-type CompileResult = {
-  ok: boolean;
-  diagnostics: Diagnostic[];
-  patch?: {
-    oscillators: Array<Record<string, unknown>>;
-    modulators: Array<Record<string, unknown>>;
-    effects: Array<Record<string, unknown>>;
-    routing: Array<Record<string, unknown>>;
-  };
-};
-
 type LiveEditorProps = {
   initialDoc?: string;
 };
@@ -664,7 +658,7 @@ function LiveEditorComponent(
     "idle" | "compiling" | "ok" | "error"
   >("idle");
   const [compileResult, setCompileResult] =
-    React.useState<CompileResult | null>(null);
+    React.useState<CompilerResult | null>(null);
   const [engineStatus, setEngineStatus] = React.useState<{
     label: string;
     state: "idle" | "initializing" | "running" | "error";
@@ -726,7 +720,7 @@ function LiveEditorComponent(
       });
   };
   const [debugPatch, setDebugPatch] = React.useState<
-    CompileResult["patch"] | null
+    CompilerResult["patch"] | null
   >(null);
   const [selectedCategory, setSelectedCategory] = React.useState(
     SAMPLE_CATEGORIES[0].name,
@@ -736,6 +730,7 @@ function LiveEditorComponent(
     THEME_VARIATIONS[0].id,
   );
   const [debugPanelOpen, setDebugPanelOpen] = React.useState(false);
+  const highlightTimeoutRef = React.useRef<number | null>(null);
   const activeTheme = React.useMemo(() => {
     return (
       THEME_VARIATIONS.find((variant) => variant.id === selectedThemeId)?.theme ??
@@ -763,8 +758,8 @@ const themeExtension = React.useMemo(
       const payload = event.data as {
         id: number;
         ok: boolean;
-        diagnostics: Diagnostic[];
-        patch?: CompileResult["patch"];
+        diagnostics: CompilerResult["diagnostics"];
+        patch?: CompilerResult["patch"];
       };
       if (payload.id !== requestIdRef.current) {
         return;
@@ -901,11 +896,19 @@ const themeExtension = React.useMemo(
     });
   }, [themeExtension, themeCompartment]);
 
+  const categories = React.useMemo(
+    () => SAMPLE_CATEGORIES.map((cat) => cat.name),
+    [],
+  );
   const currentCategory =
     SAMPLE_CATEGORIES.find((cat) => cat.name === selectedCategory) ??
     SAMPLE_CATEGORIES[0];
   const currentSample =
     currentCategory.samples[selectedSampleIndex] ?? currentCategory.samples[0];
+  const currentSamplesLabels = React.useMemo(
+    () => currentCategory.samples.map((sample) => sample.label),
+    [currentCategory],
+  );
 
   React.useEffect(() => {
     if (!currentSample || !viewRef.current) {
@@ -929,14 +932,21 @@ const themeExtension = React.useMemo(
     if (!viewRef.current) {
       return;
     }
-    window.requestAnimationFrame(() => {
-      viewRef.current?.dispatch({
+    if (highlightTimeoutRef.current) {
+      window.clearTimeout(highlightTimeoutRef.current);
+    }
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      if (!viewRef.current) {
+        return;
+      }
+      viewRef.current.dispatch({
         effects: highlightEffect.of(null),
       });
-    });
+      highlightTimeoutRef.current = null;
+    }, 1000);
   };
 
-  const applyPatchToEngine = (patch: CompileResult["patch"]) => {
+  const applyPatchToEngine = (patch: CompilerResult["patch"]) => {
     if (!patch || !builderRef.current) {
       return;
     }
@@ -971,17 +981,20 @@ const themeExtension = React.useMemo(
     const [headToken] = text.split(/\s+/);
     const normalizedHead = headToken?.toLowerCase() ?? "";
     if (normalizedHead === "sil" || normalizedHead === "silence") {
-      const silencePatch = { devices: [], routes: [] };
+      const silencePatch: NonNullable<CompilerResult["patch"]> = {
+        devices: [],
+        routes: [],
+      };
       engineRef.current?.silence?.();
-      const silenceResult: CompileResult = {
+      const silenceResult: CompilerResult = {
         ok: true,
         diagnostics: [],
-        patch: silencePatch as any,
+        patch: silencePatch,
       };
       setCompileResult(silenceResult);
       setCompileState("ok");
       setLastExecMode("silence");
-      setDebugPatch(silencePatch as any);
+      setDebugPatch(silencePatch);
       if (viewRef.current) {
         viewRef.current.dispatch(
           setDiagnostics(viewRef.current.state, silenceResult.diagnostics),
@@ -1066,149 +1079,40 @@ const themeExtension = React.useMemo(
 
   return (
     <div className="flex h-full flex-col overflow-hidden border border-neutral-800 bg-background shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-700 bg-neutral-900 px-4 py-2 text-sm">
-        <div className="flex items-center gap-2 font-medium">
-          <span
-            className={`h-2 w-2 rounded-full ${
-              engineStatus.state === "running"
-                ? "bg-emerald-500"
-                : engineStatus.state === "initializing"
-                  ? "bg-amber-400 animate-pulse"
-                  : engineStatus.state === "error"
-                    ? "bg-rose-500"
-                    : "bg-neutral-500"
-            }`}
-          />
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            <span>Audio</span>
-            <span
-              className={
-                engineStatus.state === "running"
-                  ? "text-emerald-300"
-                  : engineStatus.state === "error"
-                    ? "text-rose-400"
-                    : "text-muted-foreground"
-              }
-            >
-              {engineStatus.label}
-            </span>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              className="font-semibold uppercase tracking-[0.3em] text-[10px]"
-              onClick={() => {
-                if (viewRef.current) {
-                  executeLine(viewRef.current);
-                }
-              }}
-            >
-              Run line
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              className="font-semibold uppercase tracking-[0.3em] text-[10px]"
-              onClick={() => {
-                if (viewRef.current) {
-                  executeBlock(viewRef.current);
-                }
-              }}
-            >
-              Run block
-            </Button>
-          </div>
-          <label className="flex flex-col text-[10px] uppercase tracking-widest text-muted-foreground">
-            Category
-            <select
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
-              value={selectedCategory}
-              onChange={(event) => setSelectedCategory(event.target.value)}
-            >
-              {SAMPLE_CATEGORIES.map((cat) => (
-                <option key={cat.name} value={cat.name}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col text-[10px] uppercase tracking-widest text-muted-foreground">
-            Sample
-            <select
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
-              value={selectedSampleIndex}
-              onChange={(event) =>
-                setSelectedSampleIndex(Number(event.target.value))
-              }
-            >
-              {currentCategory.samples.map((sample, index) => (
-                <option key={sample.label} value={index}>
-                  {sample.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col text-[10px] uppercase tracking-widest text-muted-foreground">
-            Theme
-            <select
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
-              value={selectedThemeId}
-              onChange={(event) => setSelectedThemeId(event.target.value)}
-            >
-              {THEME_VARIATIONS.map((variant) => (
-                <option key={variant.id} value={variant.id}>
-                  {variant.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            className="font-semibold uppercase tracking-[0.3em] text-[10px]"
-            onClick={() => setDebugPanelOpen((prev) => !prev)}
-          >
-            {debugPanelOpen ? "Hide debug" : "Show debug"}
-          </Button>
-        </div>
-      </div>
+      <LiveEditorToolbar
+        engineStatus={engineStatus}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+        samples={currentSamplesLabels}
+        selectedSampleIndex={selectedSampleIndex}
+        onSampleChange={setSelectedSampleIndex}
+        themeOptions={THEME_VARIATIONS.map((variant) => ({
+          id: variant.id,
+          label: variant.label,
+        }))}
+        selectedThemeId={selectedThemeId}
+        onThemeChange={setSelectedThemeId}
+        debugPanelOpen={debugPanelOpen}
+        onToggleDebug={() => setDebugPanelOpen((prev) => !prev)}
+        onRunLine={() => {
+          if (viewRef.current) {
+            executeLine(viewRef.current);
+          }
+        }}
+        onRunBlock={() => {
+          if (viewRef.current) {
+            executeBlock(viewRef.current);
+          }
+        }}
+      />
       <div className="min-h-0 flex-1" ref={hostRef} />
-      {debugPanelOpen && (
-        <div className="border-t border-neutral-700 bg-[#070b1a] px-4 py-3 text-xs text-muted-foreground">
-          <div className="flex items-center justify-between text-[11px] text-foreground uppercase tracking-[0.35em]">
-            <span>Execution debug</span>
-            <span className="text-[10px] text-muted-foreground">
-              {lastEval ? `${lastEval.type} • ${lastExecMode ?? "idle"}` : "no execution yet"}
-            </span>
-          </div>
-          {lastEval && (
-            <div className="mt-2">
-              <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                Source
-              </div>
-              <pre className="max-h-24 overflow-y-auto whitespace-pre-wrap break-words rounded border border-neutral-800 bg-[#020617] p-2 text-[11px] font-mono text-[#e5e7eb]">
-                {lastEval.text}
-              </pre>
-            </div>
-          )}
-          <div className="mt-3">
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-              Patch sent to engine
-            </div>
-            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words rounded border border-neutral-800 bg-[#0c111c] p-3 text-[11px] font-mono text-[#f8fafc]">
-              {debugPatch
-                ? JSON.stringify(debugPatch, null, 2)
-                : "No compiled patch available"}
-            </pre>
-          </div>
-        </div>
-      )}
+      <LiveEditorDebugPanel
+        open={debugPanelOpen}
+        lastEval={lastEval}
+        lastExecMode={lastExecMode}
+        debugPatch={debugPatch}
+      />
     </div>
   );
 }
