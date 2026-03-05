@@ -767,7 +767,7 @@ const themeExtension = React.useMemo(
           },
           {
             key: "Alt-Enter",
-            run: evalSelection,
+            run: executeSelection,
           },
         ]),
         EditorView.domEventHandlers({
@@ -953,12 +953,24 @@ const themeExtension = React.useMemo(
       { from: line.from, to: line.to },
       "line",
     );
-  };
+  }
 
   function executeBlock(view: EditorView) {
     const range = getBlockRange(view.state, view.state.selection.main.head);
     return executeRange(view, range, "block");
-  };
+  }
+
+  function executeSelection(view: EditorView) {
+    const selection = view.state.selection.main;
+    if (selection.from === selection.to) {
+      return false;
+    }
+    return executeRange(
+      view,
+      { from: selection.from, to: selection.to },
+      "selection",
+    );
+  }
 
   const runLine = () => {
     if (!viewRef.current) {
