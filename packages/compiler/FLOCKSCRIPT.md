@@ -1,87 +1,83 @@
-# FlockScript Quick Reference
+# FlockScript – Basic syntax used by the live editor
 
-FlockScript is the live-coding language you write in `apps/web/components/editor/live-editor.tsx`. It is compiled by `packages/compiler/src/index.ts` into the JSON patch schema (`packages/patches/patch-schema.json`) which the audio engine consumes.
+FlockScript is the small language you write in `apps/web/components/editor/live-editor.tsx`.  
+The compiler in `packages/compiler/src/index.ts` turns it into a JSON patch (`CompilePatch`) that the audio engine consumes.
 
-## Command structure
+For now the compiler only implements the minimal subset used by the **Basic / Syntax draft** example in the editor.
 
-- **General form:** `command target args…`
-- **Keywords** are case-insensitive and often have 3-letter aliases (`osc`, `lfo`, `fx`, `route`, `sil`, `noi`, etc.).
-- **Numeric values** can use `@` to denote gain (`@0.2`) or plain numbers for freq/detune/pan.
-- **Lines are independent**: run a single line (`Mod+Enter`/`Cmd+Enter`) or multiple lines together.
+## Commands
 
-## Examples
+### `osc` – oscillator device
 
-### Example 1 – single oscillator
+General form (order of arguments does not matter except for the `@gain` shorthand):
 
-```
-osc bass sin 110 @0.2
+```flock
+osc <id?> wave=<wave> frequency=<hz> gain=<number> [detune=<cents>] [pan=<value>]
 ```
 
-Creates an oscillator named `bass` with sine wave, 110 Hz frequency, and gain 0.2. The compiler normalizes `sin`→`sine`, clamps frequency/gain to schema ranges, and emits:
+- `<id?>`: optional name for the oscillator. If omitted, an id like `osc-auto-1` is generated.
+- `wave`: waveform name. Supported: `sine`, `square`, `sawtooth`, `triangle` (plus short aliases `sin`, `sqr`, `saw`, `tri`).
+- `frequency`: base frequency in Hz.
+- `gain`: linear amplitude (0–1). You can also write `@0.25` as a shorthand for gain.
+- `detune` (optional): pitch offset in cents, clamped to [-1200, 1200].
+- `pan` (optional): stereo position from -1 (left) to 1 (right).
 
-```json
-{
-  "oscillators": [
-    { "id": "bass", "type": "sine", "freq": 110, "gain": 0.2, "pan": 0 }
-  ]
-}
+The Basic example uses two oscillators:
+
+```flock
+osc osc1 wave=sine frequency=80 gain=0.7
+osc osc2 wave=sine frequency=432 gain=0.03
 ```
 
-### Example 2 – modulated tone
+### `output` – master output device
 
-```
-osc lead sqr 440 @0.15
-lfo wobble sin rate 2 depth 800
-route wobble -> lead freq
+```flock
+output <id?> gain=<number>
 ```
 
-`lfo` defines a slow oscillator (`rate 2` Hz) that modulates `lead` frequency by ±800 cents (`depth`). `route` wires `wobble` to `lead`’s `freq` parameter. The compiler produces `modulators` and `routing` objects matching the schema.
+- `<id?>`: optional output id. If omitted, the id `out` is used.
+- `gain`: master gain for the output device.
 
-`lfo` accepts `wave <name>` plus optional `offset <value>` so you can set its waveform and phase shift without repositioning tokens (e.g., `lfo wobble wave square rate 1 depth 120 offset 50`). `route wobble -> lead pan` lets modulators also target stereo position.
+Example from the Basic block:
 
-### Example 3 – sequenced voice
-
-```
-voi kick osc sin 60 @0.5 pan -0.2 env 0.001 0.02 0.6 0.1 seq 1 0 1 0 rate 4 filter lowpass freq 150 q 2
-```
-
-`voi` (alias for `voice`) defines a sequenced voice: an oscillator source, ADSR envelope, stereo pan, a 4-step sequence, and a filter. The compiler emits `voices[]` entries with `source`, `envelope`, `sequence`, `filter`, and `pan` that the audio engine uses to trigger rhythmically.
-
-### Example 4 – simple effect
-
-```
-fx bass-filter filter lowpass freq 600 q 4
+```flock
+output out gain=1
 ```
 
-Creates a filter effect `bass-filter` (type `filter`) with cutoff 600 Hz and resonance 4. Combine with oscillators/modulators in the same block to let the PatchBuilder route sources through the effect chain.
+### Route lines – connect oscillators to output
 
-The `fx` command currently supports the Web Audio nodes `filter`, `delay`, `distortion`, `gain`, `reverb`, and `compressor`, so you can chain the same native effects from FlockScript.
-
-### Example 5 – reverb tail
-
-```
-fx hall reverb duration 3 decay 2 reverse false
+```flock
+[id1, id2, ...] -> targetId
 ```
 
-The `reverb` effect uses the Web Audio convolution chain to add spacey tails. The compiler emits a `reverb` entry with `duration`, `decay`, and `reverse` flags alongside the other built-in effects (filter, delay, distortion, gain).
+- Left-hand side: comma‑separated list of oscillator ids.
+- Right-hand side: output id to route into.
 
-### Example 6 – silence quick mute
+Example:
 
+```flock
+[osc1, osc2] -> out
 ```
-sil
+
+The compiler turns this minimal language into a patch of the form:
+
+```ts
+type CompilePatch = {
+  devices: {
+    id: string;
+    type: "osc" | "output";
+    params: {
+      wave?: "sine" | "square" | "sawtooth" | "triangle";
+      frequency?: number;
+      gain?: number;
+      detune?: number;
+      pan?: number;
+    };
+  }[];
+  routes: { from: string; to: string; signal: "audio" }[];
+};
 ```
 
-`sil`/`silence` immediately generates an empty patch while keeping diagnostics `ok`. Useful for muting between experiments.
+Anything that is not one of the commands above results in an `Unknown statement` diagnostic.
 
-## Workflow
-
-1. Write FlockScript line(s) in the editor.
-2. The frontend worker calls `compile()` (see `packages/compiler/README.md`).
-3. On success, the resulting JSON patch (`CompilePatch`) is passed to `PatchBuilder`.
-4. `PatchBuilder` builds/updates the Web Audio graph inside the engine.
-
-## Next steps
-
-- Add new keywords by extending the compiler’s `switch` near the bottom of `packages/compiler/src/index.ts`.
-- Verify JSON output against `packages/patches/patch-schema.json` (same schema referenced in `packages/audio/patches/README.md`).
-- Use the live diagnostics (“Unknown statement”, range errors) to iteratively refine commands.
+> Note: quick mute / silence is handled at the editor + audio engine level, not by the compiler.

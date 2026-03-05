@@ -7,12 +7,7 @@ import {
   RouteDefinition,
   OscillatorParams,
 } from "./types.ts";
-import {
-  clamp,
-  KEYWORD_ALIASES,
-  parseNumber,
-  resolveWave,
-} from "./utils.ts";
+import { clamp, parseNumber, resolveWave } from "./utils.ts";
 
 const ROUTE_PATTERN = /^\s*\[([^\]]+)\]\s*->\s*([A-Za-z0-9_-]+)\s*$/;
 const DEFAULT_OSC_FREQUENCY = 220;
@@ -37,8 +32,7 @@ type ParserContext = {
   lines: string[];
 };
 
-const normalizeKeyword = (value: string) =>
-  KEYWORD_ALIASES[value.toLowerCase()] ?? value.toLowerCase();
+const normalizeKeyword = (value: string) => value.toLowerCase();
 
 const cleanIdentifier = (raw: string) => {
   const trimmed = raw.trim();
