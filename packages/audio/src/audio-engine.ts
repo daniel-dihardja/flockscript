@@ -73,6 +73,13 @@ class AudioEngine {
       workletReady: this.workletReady,
     };
   }
+
+  silence() {
+    if (!this.audioContext || !this.isRunning) {
+      return;
+    }
+    this.sendPatch({ devices: [], routes: [] });
+  }
 }
 
 const audioEngine = new AudioEngine();

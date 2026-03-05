@@ -657,6 +657,9 @@ function LiveEditorComponent(
   const builderRef = React.useRef<any>(null);
   const engineRef = React.useRef<any>(null);
   const [lastEval, setLastEval] = React.useState<EvalPayload | null>(null);
+  const [lastExecMode, setLastExecMode] = React.useState<
+    "silence" | "compile" | "error" | null
+  >(null);
   const [compileState, setCompileState] = React.useState<
     "idle" | "compiling" | "ok" | "error"
   >("idle");
@@ -965,21 +968,20 @@ const themeExtension = React.useMemo(
       effects: highlightEffect.of(range),
     });
 
-    const normalizedCommand = text.toLowerCase();
-    if (normalizedCommand === "sil" || normalizedCommand === "silence") {
+    const [headToken] = text.split(/\s+/);
+    const normalizedHead = headToken?.toLowerCase() ?? "";
+    if (normalizedHead === "sil" || normalizedHead === "silence") {
+      const silencePatch = { devices: [], routes: [] };
       engineRef.current?.silence?.();
       const silenceResult: CompileResult = {
         ok: true,
         diagnostics: [],
-        patch: {
-          oscillators: [],
-          modulators: [],
-          effects: [],
-          routing: [],
-        },
+        patch: silencePatch as any,
       };
       setCompileResult(silenceResult);
       setCompileState("ok");
+      setLastExecMode("silence");
+      setDebugPatch(silencePatch as any);
       if (viewRef.current) {
         viewRef.current.dispatch(
           setDiagnostics(viewRef.current.state, silenceResult.diagnostics),
@@ -992,6 +994,7 @@ const themeExtension = React.useMemo(
     const result = compile(text);
     setCompileResult(result);
     setCompileState(result.ok ? "ok" : "error");
+    setLastExecMode(result.ok ? "compile" : "error");
     if (viewRef.current) {
       viewRef.current.dispatch(
         setDiagnostics(viewRef.current.state, result.diagnostics),
@@ -1092,6 +1095,34 @@ const themeExtension = React.useMemo(
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className="font-semibold uppercase tracking-[0.3em] text-[10px]"
+              onClick={() => {
+                if (viewRef.current) {
+                  executeLine(viewRef.current);
+                }
+              }}
+            >
+              Run line
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className="font-semibold uppercase tracking-[0.3em] text-[10px]"
+              onClick={() => {
+                if (viewRef.current) {
+                  executeBlock(viewRef.current);
+                }
+              }}
+            >
+              Run block
+            </Button>
+          </div>
           <label className="flex flex-col text-[10px] uppercase tracking-widest text-muted-foreground">
             Category
             <select
@@ -1151,16 +1182,31 @@ const themeExtension = React.useMemo(
       {debugPanelOpen && (
         <div className="border-t border-neutral-700 bg-[#070b1a] px-4 py-3 text-xs text-muted-foreground">
           <div className="flex items-center justify-between text-[11px] text-foreground uppercase tracking-[0.35em]">
-            <span>Compiled patch</span>
+            <span>Execution debug</span>
             <span className="text-[10px] text-muted-foreground">
-              {debugPatch ? "latest block" : "no patch yet"}
+              {lastEval ? `${lastEval.type} • ${lastExecMode ?? "idle"}` : "no execution yet"}
             </span>
           </div>
-          <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded border border-neutral-800 bg-[#0c111c] p-3 text-[11px] font-mono text-[#f8fafc]">
-            {debugPatch
-              ? JSON.stringify(debugPatch, null, 2)
-              : "No compiled patch available"}
-          </pre>
+          {lastEval && (
+            <div className="mt-2">
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                Source
+              </div>
+              <pre className="max-h-24 overflow-y-auto whitespace-pre-wrap break-words rounded border border-neutral-800 bg-[#020617] p-2 text-[11px] font-mono text-[#e5e7eb]">
+                {lastEval.text}
+              </pre>
+            </div>
+          )}
+          <div className="mt-3">
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+              Patch sent to engine
+            </div>
+            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words rounded border border-neutral-800 bg-[#0c111c] p-3 text-[11px] font-mono text-[#f8fafc]">
+              {debugPatch
+                ? JSON.stringify(debugPatch, null, 2)
+                : "No compiled patch available"}
+            </pre>
+          </div>
         </div>
       )}
     </div>
