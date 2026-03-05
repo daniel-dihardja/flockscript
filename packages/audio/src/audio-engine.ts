@@ -64,6 +64,13 @@ class AudioEngine {
     this.workletNode.port.postMessage({ type: "setPatch", patch });
   }
 
+  silence() {
+    if (!this.audioContext || !this.isRunning) {
+      return;
+    }
+    this.sendPatch({ devices: [], routes: [] });
+  }
+
   getDebugStatus() {
     return {
       contextState: this.audioContext?.state ?? "unknown",
