@@ -1,87 +1,134 @@
-# FlockScript Quick Reference
+# FlockScript – compiler reference
 
-FlockScript is the live-coding language you write in `apps/web/components/editor/live-editor.tsx`. It is compiled by `packages/compiler/src/index.ts` into the JSON patch schema (`packages/patches/patch-schema.json`) which the audio engine consumes.
+FlockScript is the small language you write in `apps/web/components/editor/live-editor.tsx`.  
+The compiler in `packages/compiler/src/index.ts` turns it into a JSON patch (`CompilePatch`) that the audio engine consumes.
 
-## Command structure
+---
 
-- **General form:** `command target args…`
-- **Keywords** are case-insensitive and often have 3-letter aliases (`osc`, `lfo`, `fx`, `route`, `sil`, `noi`, etc.).
-- **Numeric values** can use `@` to denote gain (`@0.2`) or plain numbers for freq/detune/pan.
-- **Lines are independent**: run a single line (`Mod+Enter`/`Cmd+Enter`) or multiple lines together.
+## Supported commands
 
-## Examples
+### `osc` – oscillator device
 
-### Example 1 – single oscillator
-
-```
-osc bass sin 110 @0.2
+```flock
+osc <id?> wave=<wave> frequency=<hz> gain=<number> [detune=<cents>] [pan=<value>]
 ```
 
-Creates an oscillator named `bass` with sine wave, 110 Hz frequency, and gain 0.2. The compiler normalizes `sin`→`sine`, clamps frequency/gain to schema ranges, and emits:
+| Argument | Description |
+|---|---|
+| `<id?>` | Optional name. Defaults to `osc-auto-<n>`. |
+| `wave` | Waveform: `sine`/`sin`, `square`/`sqr`, `sawtooth`/`saw`, `triangle`/`tri`. |
+| `frequency` | Base frequency in Hz (aliases: `freq`, `frq`). |
+| `gain` | Amplitude 0–1. Shorthand: `@0.25`. |
+| `detune` | Pitch offset in cents (alias: `dtn`), clamped to [-1200, 1200]. |
+| `pan` | Stereo position from -1 (left) to 1 (right). |
 
-```json
-{
-  "oscillators": [
-    { "id": "bass", "type": "sine", "freq": 110, "gain": 0.2, "pan": 0 }
-  ]
-}
+### `output` – master output device
+
+```flock
+output <id?> gain=<number>
 ```
 
-### Example 2 – modulated tone
+- `<id?>` defaults to `out`.
+- `gain` is clamped to [0, 1].
 
-```
-osc lead sqr 440 @0.15
-lfo wobble sin rate 2 depth 800
-route wobble -> lead freq
-```
+### Route lines
 
-`lfo` defines a slow oscillator (`rate 2` Hz) that modulates `lead` frequency by ±800 cents (`depth`). `route` wires `wobble` to `lead`’s `freq` parameter. The compiler produces `modulators` and `routing` objects matching the schema.
-
-`lfo` accepts `wave <name>` plus optional `offset <value>` so you can set its waveform and phase shift without repositioning tokens (e.g., `lfo wobble wave square rate 1 depth 120 offset 50`). `route wobble -> lead pan` lets modulators also target stereo position.
-
-### Example 3 – sequenced voice
-
-```
-voi kick osc sin 60 @0.5 pan -0.2 env 0.001 0.02 0.6 0.1 seq 1 0 1 0 rate 4 filter lowpass freq 150 q 2
+```flock
+[id1, id2, ...] -> targetId
 ```
 
-`voi` (alias for `voice`) defines a sequenced voice: an oscillator source, ADSR envelope, stereo pan, a 4-step sequence, and a filter. The compiler emits `voices[]` entries with `source`, `envelope`, `sequence`, `filter`, and `pan` that the audio engine uses to trigger rhythmically.
+Connects the listed device outputs to a target device's input. Generates one `RouteDefinition` per source.
 
-### Example 4 – simple effect
+---
 
-```
-fx bass-filter filter lowpass freq 600 q 4
-```
+## Full example (Basic / Syntax draft)
 
-Creates a filter effect `bass-filter` (type `filter`) with cutoff 600 Hz and resonance 4. Combine with oscillators/modulators in the same block to let the PatchBuilder route sources through the effect chain.
+```flock
+osc osc1 wave=sine frequency=80 gain=0.7
+osc osc2 wave=sine frequency=432 gain=0.03
+output out gain=1
 
-The `fx` command currently supports the Web Audio nodes `filter`, `delay`, `distortion`, `gain`, `reverb`, and `compressor`, so you can chain the same native effects from FlockScript.
-
-### Example 5 – reverb tail
-
-```
-fx hall reverb duration 3 decay 2 reverse false
+[osc1, osc2] -> out
 ```
 
-The `reverb` effect uses the Web Audio convolution chain to add spacey tails. The compiler emits a `reverb` entry with `duration`, `decay`, and `reverse` flags alongside the other built-in effects (filter, delay, distortion, gain).
+---
 
-### Example 6 – silence quick mute
+## Patch shape
+
+```ts
+type CompilePatch = {
+  devices: {
+    id: string;
+    type: "osc" | "output";
+    params: {
+      wave?: "sine" | "square" | "sawtooth" | "triangle";
+      frequency?: number;
+      gain?: number;
+      detune?: number;
+      pan?: number;
+    };
+  }[];
+  routes: { from: string; to: string; signal: "audio" }[];
+};
+```
+
+> Quick mute / silence is handled at the editor + audio engine level, not by the compiler.
+
+---
+
+## Modular device architecture
+
+The compiler is structured so that each device type lives in its own module under `packages/compiler/src/devices/`:
 
 ```
-sil
+packages/compiler/src/
+  index.ts              ← thin orchestrator: split lines, dispatch to devices
+  types.ts              ← shared types: DeviceDefinition, RouteDefinition, DeviceCompiler, …
+  diagnostics.ts        ← helper for building CompileDiagnostic values
+  utils.ts              ← clamp, parseNumber, resolveWave, …
+  devices/
+    index.ts            ← central registry: Map<keyword, DeviceCompiler>
+    osc.ts              ← compileOsc()
+    output.ts           ← compileOutput()
+    route.ts            ← compileRoutes()
 ```
 
-`sil`/`silence` immediately generates an empty patch while keeping diagnostics `ok`. Useful for muting between experiments.
+### Key types
 
-## Workflow
+```ts
+/** Shared context passed to every device compiler. */
+type DeviceCompileContext = {
+  lines: string[];
+  lineIndex: number;
+  diagnostics: CompileDiagnostic[];
+};
 
-1. Write FlockScript line(s) in the editor.
-2. The frontend worker calls `compile()` (see `packages/compiler/README.md`).
-3. On success, the resulting JSON patch (`CompilePatch`) is passed to `PatchBuilder`.
-4. `PatchBuilder` builds/updates the Web Audio graph inside the engine.
+/** Contract every device compiler must satisfy. */
+type DeviceCompiler = (
+  tokens: string[],
+  context: DeviceCompileContext,
+  devices: DeviceDefinition[],
+  routes: RouteDefinition[],
+) => void;
+```
 
-## Next steps
+### Adding a new device (e.g. `lfo`)
 
-- Add new keywords by extending the compiler’s `switch` near the bottom of `packages/compiler/src/index.ts`.
-- Verify JSON output against `packages/patches/patch-schema.json` (same schema referenced in `packages/audio/patches/README.md`).
-- Use the live diagnostics (“Unknown statement”, range errors) to iteratively refine commands.
+1. **Create `devices/lfo.ts`** and export `compileLfo` with signature `DeviceCompiler`.
+2. **Add `LfoParams`** (and optionally extend `DeviceType`) in `types.ts`.
+3. **Register it** in `devices/index.ts`:
+
+```ts
+import { compileLfo } from "./lfo.ts";
+
+const DEVICE_REGISTRY = new Map<string, DeviceCompiler>([
+  ["osc",    compileOsc],
+  ["output", compileOutput],
+  ["lfo",    compileLfo],   // ← new line
+]);
+```
+
+4. **Add tests** in `index.test.ts` (or a dedicated `lfo.test.ts`).
+5. **Document** the new syntax in this file.
+
+No changes to `index.ts` are needed — the registry lookup handles dispatch automatically.

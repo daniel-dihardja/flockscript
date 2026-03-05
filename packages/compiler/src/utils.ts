@@ -1,7 +1,5 @@
 import { OscillatorType } from "./types.ts";
 
-export type OscPropertyKey = "freq" | "gain" | "detune" | "pan";
-
 export const WAVE_ALIASES: Record<string, OscillatorType> = {
   sine: "sine",
   sin: "sine",
@@ -11,11 +9,6 @@ export const WAVE_ALIASES: Record<string, OscillatorType> = {
   saw: "sawtooth",
   triangle: "triangle",
   tri: "triangle",
-};
-
-export const KEYWORD_ALIASES: Record<string, string> = {
-  sil: "silence",
-  voi: "voice",
 };
 
 export const GAIN_TOKEN_REGEX = /^@[+-]?\d+(?:\.\d+)?$/;
@@ -39,14 +32,4 @@ export function parseGainToken(token: string) {
     return null;
   }
   return parseNumber(token.slice(1));
-}
-
-export function parseOscNumericProperty(key: OscPropertyKey, raw: string) {
-  if (key === "gain") {
-    const gain = parseGainToken(raw);
-    if (gain !== null) {
-      return gain;
-    }
-  }
-  return parseNumber(raw);
 }
