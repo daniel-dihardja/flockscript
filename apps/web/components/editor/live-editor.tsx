@@ -25,6 +25,7 @@ import syntaxConfig from "./syntax-config.json";
 import { SAMPLE_CATEGORIES } from "./examples";
 import { LiveEditorToolbar } from "./live-editor-toolbar";
 import { LiveEditorDebugPanel } from "./live-editor-debug-panel";
+import { useAudioEngine } from "./use-audio-engine";
 
 const defaultScript = SAMPLE_CATEGORIES[0].samples[0].code;
 
@@ -648,8 +649,12 @@ function LiveEditorComponent(
   const workerRef = React.useRef<Worker | null>(null);
   const requestIdRef = React.useRef(0);
   const debounceRef = React.useRef<number | null>(null);
-  const builderRef = React.useRef<any>(null);
-  const engineRef = React.useRef<any>(null);
+  const {
+    engineStatus,
+    ensureEngineRunning,
+    applyPatchToEngine,
+    silence,
+  } = useAudioEngine();
   const [lastEval, setLastEval] = React.useState<EvalPayload | null>(null);
   const [lastExecMode, setLastExecMode] = React.useState<
     "silence" | "compile" | "error" | null
@@ -659,66 +664,6 @@ function LiveEditorComponent(
   >("idle");
   const [compileResult, setCompileResult] =
     React.useState<CompilerResult | null>(null);
-  const [engineStatus, setEngineStatus] = React.useState<{
-    label: string;
-    state: "idle" | "initializing" | "running" | "error";
-  }>({ label: "Idle", state: "idle" });
-  const engineStateRef = React.useRef(engineStatus.state);
-  React.useEffect(() => {
-    engineStateRef.current = engineStatus.state;
-  }, [engineStatus.state]);
-  const formatContextLabel = (state?: string) => {
-    if (!state) {
-      return "Idle";
-    }
-    return state.charAt(0).toUpperCase() + state.slice(1);
-  };
-
-  const updateEngineStatusFromContext = (contextState?: string) => {
-    if (contextState === "running") {
-      setEngineStatus({ label: "Running", state: "running" });
-      engineStateRef.current = "running";
-      return;
-    }
-    if (contextState === "suspended") {
-      setEngineStatus({ label: "Suspended", state: "idle" });
-      if (engineStateRef.current !== "initializing") {
-        engineStateRef.current = "idle";
-      }
-      return;
-    }
-    if (contextState === "closed") {
-      setEngineStatus({ label: "Closed", state: "error" });
-      engineStateRef.current = "error";
-      return;
-    }
-    setEngineStatus({ label: formatContextLabel(contextState), state: "idle" });
-    if (engineStateRef.current !== "initializing") {
-      engineStateRef.current = "idle";
-    }
-  };
-
-  const ensureEngineRunning = () => {
-    const engine = engineRef.current;
-    const context = engine?.audioContext;
-    if (!context) {
-      return;
-    }
-    if (context.state === "running") {
-      updateEngineStatusFromContext("running");
-      return;
-    }
-    engine
-      .resume?.()
-      .then(() => {
-        updateEngineStatusFromContext(engine.audioContext?.state);
-      })
-      .catch((error) => {
-        console.error("Failed to resume audio engine", error);
-        setEngineStatus({ label: "Failed", state: "error" });
-        engineStateRef.current = "error";
-      });
-  };
   const [debugPatch, setDebugPatch] = React.useState<
     CompilerResult["patch"] | null
   >(null);
@@ -946,17 +891,6 @@ const themeExtension = React.useMemo(
     }, 1000);
   };
 
-  const applyPatchToEngine = (patch: CompilerResult["patch"]) => {
-    if (!patch || !builderRef.current) {
-      return;
-    }
-    try {
-      builderRef.current.build(patch);
-    } catch (error) {
-      console.error("Failed to apply patch", error);
-    }
-  };
-
   function executeRange(
     view: EditorView,
     range: { from: number; to: number },
@@ -985,7 +919,7 @@ const themeExtension = React.useMemo(
         devices: [],
         routes: [],
       };
-      engineRef.current?.silence?.();
+      silence();
       const silenceResult: CompilerResult = {
         ok: true,
         diagnostics: [],
@@ -1047,35 +981,6 @@ const themeExtension = React.useMemo(
   React.useImperativeHandle(ref, () => ({
     runLine,
   }));
-
-  const initAudioEngine = React.useCallback(async () => {
-    if (engineStateRef.current === "initializing") {
-      return;
-    }
-    setEngineStatus({
-      label: "Initializing…",
-      state: "initializing",
-    });
-    engineStateRef.current = "initializing";
-    try {
-      const { audioEngine, PatchBuilder } = await import("@workspace/audio");
-      await audioEngine.init();
-      builderRef.current = new PatchBuilder();
-      engineRef.current = audioEngine;
-      updateEngineStatusFromContext(audioEngine.audioContext?.state);
-    } catch (error) {
-      console.error("Audio engine failed to initialize", error);
-      setEngineStatus({
-        label: "Failed",
-        state: "error",
-      });
-      engineStateRef.current = "error";
-    }
-  }, []);
-
-  React.useEffect(() => {
-    initAudioEngine();
-  }, [initAudioEngine]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden border border-neutral-800 bg-background shadow-sm">
