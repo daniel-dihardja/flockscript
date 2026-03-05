@@ -121,7 +121,10 @@ export function useAudioEngine(): UseAudioEngineResult {
       try {
         builderRef.current.build(patch);
       } catch (error) {
-        console.error("Failed to apply patch", error);
+        console.warn(
+          "Patch validation failed — check that the block has at least one device and one route:",
+          error instanceof Error ? error.message : error,
+        );
       }
     },
     [],
