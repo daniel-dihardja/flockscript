@@ -16,16 +16,13 @@ import {
 import { setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { Decoration, EditorView, ViewPlugin, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
-import {
-  compile,
-  type CompileResult as CompilerResult,
-} from "@workspace/compiler";
 import { Button } from "@workspace/ui/components/button";
 import syntaxConfig from "./syntax-config.json";
 import { SAMPLE_CATEGORIES } from "./examples";
 import { LiveEditorToolbar } from "./live-editor-toolbar";
 import { LiveEditorDebugPanel } from "./live-editor-debug-panel";
 import { useAudioEngine } from "./use-audio-engine";
+import { useFlockScriptCompiler } from "./use-flockscript-compiler";
 
 const defaultScript = SAMPLE_CATEGORIES[0].samples[0].code;
 
@@ -656,17 +653,16 @@ function LiveEditorComponent(
     silence,
   } = useAudioEngine();
   const [lastEval, setLastEval] = React.useState<EvalPayload | null>(null);
-  const [lastExecMode, setLastExecMode] = React.useState<
-    "silence" | "compile" | "error" | null
-  >(null);
-  const [compileState, setCompileState] = React.useState<
-    "idle" | "compiling" | "ok" | "error"
-  >("idle");
-  const [compileResult, setCompileResult] =
-    React.useState<CompilerResult | null>(null);
-  const [debugPatch, setDebugPatch] = React.useState<
-    CompilerResult["patch"] | null
-  >(null);
+  const {
+    compileState,
+    compileResult,
+    debugPatch,
+    lastExecMode,
+    setCompiling,
+    setSilenceResult,
+    compileAndApply,
+  } = useFlockScriptCompiler();
+  const highlightTimeoutRef = React.useRef<number | null>(null);
   const [selectedCategory, setSelectedCategory] = React.useState(
     SAMPLE_CATEGORIES[0].name,
   );
@@ -675,7 +671,6 @@ function LiveEditorComponent(
     THEME_VARIATIONS[0].id,
   );
   const [debugPanelOpen, setDebugPanelOpen] = React.useState(false);
-  const highlightTimeoutRef = React.useRef<number | null>(null);
   const activeTheme = React.useMemo(() => {
     return (
       THEME_VARIATIONS.find((variant) => variant.id === selectedThemeId)?.theme ??
@@ -709,12 +704,6 @@ const themeExtension = React.useMemo(
       if (payload.id !== requestIdRef.current) {
         return;
       }
-      setCompileResult({
-        ok: payload.ok,
-        diagnostics: payload.diagnostics,
-        patch: payload.patch,
-      });
-      setCompileState(payload.ok ? "ok" : "error");
       if (viewRef.current) {
         viewRef.current.dispatch(
           setDiagnostics(viewRef.current.state, payload.diagnostics),
