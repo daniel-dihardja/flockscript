@@ -37,48 +37,33 @@
       "fontWeight": "700"
     },
     ".cm-dsl-top-level-keyword": {
-      "backgroundColor": "#facc15",
-      "color": "#000000",
+      "backgroundColor": "none",
+      "color": "#facc15",
       "fontWeight": "700",
-      "padding": "2px 4px",
-      "borderRadius": "0px"
-    },
-    ".cm-dsl-sub-keyword": {
-      "color": "#a5b4fc",
-      "fontWeight": "600"
+      "padding": "2px 8px",
+      "borderRadius": "4px"
     },
     ".cm-dsl-osc": {
       "color": "#fb923c",
       "fontWeight": "600"
     },
     ".cm-dsl-waveform": {
-      "color": "#fca5a5",
+      "color": "#fca5a1",
       "fontWeight": "400"
-    },
-    ".cm-dsl-gain": {
-      "color": "#f472b6",
-      "fontWeight": "600"
     },
     ".cm-dsl-number": {
       "color": "#fca5a5"
     },
-    ".cm-dsl-block": {
-      "color": "#94a3b8",
-      "fontStyle": "italic"
-    },
     ".cm-dsl-name, .cm-dsl-route-source, .cm-dsl-route-target": {
-      "backgroundColor": "#000000",
-      "borderRadius": "0px",
-      "padding": "2px 4px",
-      "color": "#ffffff",
+      "backgroundColor": "none",
+      "borderRadius": "4px",
+      "padding": "2px 8px",
+      "color": "#CCCCCC",
       "fontWeight": "700"
     },
     ".cm-dsl-operator": {
       "color": "#fbbf24",
       "fontWeight": "600"
-    },
-    ".cm-dsl-macro": {
-      "color": "#c4b5fd"
     },
     ".cm-dsl-param": {
       "fontWeight": "700",
@@ -91,83 +76,13 @@
     }
   },
   "topLevelKeywords": ["audio"],
-  "mainKeywords": [
-    "osc",
-    "lfo",
-    "fx",
-    "route",
-    "silence",
-    "sil",
-    "noise",
-    "noi",
-    "env",
-    "seq",
-    "filter",
-    "output"
-  ],
-  "keywordList": [
-    "rate",
-    "depth",
-    "offset",
-    "filter",
-    "bandpass",
-    "highpass",
-    "dist",
-    "delay",
-    "samplehold",
-    "chaos"
-  ],
-  "waveforms": [
-    "sine",
-    "sin",
-    "saw",
-    "square",
-    "sqr",
-    "triangle",
-    "tri",
-    "noise",
-    "noi"
-  ],
-  "gainTokenPattern": "@[+-]?\\d+(?:\\.\\d+)?",
+  "mainKeywords": ["osc", "output", "silence", "sil"],
+  "keywordList": [],
+  "waveforms": ["sine"],
   "keywordAliases": {
-    "rte": "route",
-    "dtn": "detune",
-    "rat": "rate",
-    "dep": "depth",
-    "off": "offset",
-    "flt": "filter",
-    "lwp": "lowpass",
-    "bnp": "bandpass",
-    "hgp": "highpass",
-    "dly": "delay",
-    "sin": "sine",
-    "sqr": "square",
-    "tri": "triangle",
-    "noi": "noise",
-    "frq": "freq",
-    "sph": "samplehold",
-    "smp": "samplehold",
-    "cha": "chaos",
-    "chs": "chaos",
-    "sil": "silence",
-    "voi": "voice",
-    "out": "output"
+    "sil": "silence"
   },
-  "paramKeywords": [
-    "frequency",
-    "frq",
-    "detune",
-    "dtn",
-    "pan",
-    "rate",
-    "depth",
-    "gain",
-    "wave",
-    "filter",
-    "q",
-    "offset",
-    "env"
-  ],
+  "paramKeywords": ["frequency", "gain", "wave"],
   "regex": {
     "block": {
       "pattern": "^---.*---$",
