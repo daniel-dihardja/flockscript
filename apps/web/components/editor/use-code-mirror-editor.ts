@@ -20,6 +20,24 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 import { basicSetup } from "codemirror";
 import syntaxConfig from "./syntax-config.json";
 
+function findMatchingCloseBrace(
+  doc: { sliceString: (from: number, to: number) => string; length: number },
+  openBracePos: number,
+): number | null {
+  let depth = 1;
+  let pos = openBracePos + 1;
+  while (pos < doc.length) {
+    const ch = doc.sliceString(pos, pos + 1);
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return pos;
+    }
+    pos += 1;
+  }
+  return null;
+}
+
 type RegexSpec = {
   pattern: string;
   flags: string;
@@ -195,7 +213,38 @@ const dslHighlight = ViewPlugin.fromClass(
         collectMatches(blockRegex, "cm-dsl-block");
         collectMatches(oscRegex, "cm-dsl-osc");
         if (topLevelKeywordRegex) {
-          collectMatches(topLevelKeywordRegex, "cm-dsl-top-level-keyword");
+          const doc = view.state.doc;
+          topLevelKeywordRegex.lastIndex = 0;
+          let match = topLevelKeywordRegex.exec(text);
+          while (match) {
+            const start = offset + match.index;
+            const end = start + match[0].length;
+            const line = doc.lineAt(start);
+            let openEnd = end;
+            const afterKeyword = doc.sliceString(end, line.to);
+            const braceIdx = afterKeyword.indexOf("{");
+            if (braceIdx !== -1) {
+              openEnd = end + braceIdx + 1;
+            }
+            ranges.push({
+              from: start,
+              to: openEnd,
+              className: "cm-dsl-top-level-keyword",
+            });
+            if (braceIdx !== -1) {
+              const openBracePos = end + braceIdx;
+              const closeBracePos = findMatchingCloseBrace(doc, openBracePos);
+              if (closeBracePos !== null) {
+                const closeLine = doc.lineAt(closeBracePos);
+                ranges.push({
+                  from: closeLine.from,
+                  to: closeLine.to,
+                  className: "cm-dsl-top-level-keyword",
+                });
+              }
+            }
+            match = topLevelKeywordRegex.exec(text);
+          }
         }
         if (mainKeywordRegex) {
           collectMatches(mainKeywordRegex, "cm-dsl-main-keyword");
