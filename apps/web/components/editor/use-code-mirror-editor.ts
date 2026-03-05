@@ -27,6 +27,7 @@ type RegexSpec = {
 
 type SyntaxStyleConfig = {
   mainKeywords: string[];
+  topLevelKeywords?: string[];
   keywordList: string[];
   keywordAliases: Record<string, string>;
   waveforms?: string[];
@@ -48,6 +49,7 @@ type SyntaxStyleConfig = {
 
 const {
   mainKeywords = [],
+  topLevelKeywords = [],
   keywordList,
   keywordAliases,
   waveforms = [],
@@ -79,6 +81,7 @@ const wrapKeyword = (value: string) =>
 const completionKeywords = Array.from(
   new Set([
     ...mainKeywords,
+    ...topLevelKeywords,
     ...keywordList,
     ...waveforms,
     ...Object.keys(keywordAliases),
@@ -89,6 +92,13 @@ const mainKeywordPattern =
   mainKeywords.length > 0
     ? `(${mainKeywords.map((keyword) => wrapKeyword(escapeForRegex(keyword))).join("|")})`
     : "";
+const topLevelKeywordPattern =
+  topLevelKeywords.length > 0
+    ? `(${topLevelKeywords.map((keyword) => wrapKeyword(escapeForRegex(keyword))).join("|")})`
+    : "";
+const topLevelKeywordRegex = topLevelKeywordPattern
+  ? new RegExp(topLevelKeywordPattern, "g")
+  : null;
 const subKeywordPattern =
   keywordList.length > 0
     ? `(${keywordList.map((keyword) => wrapKeyword(escapeForRegex(keyword))).join("|")})`
@@ -184,6 +194,9 @@ const dslHighlight = ViewPlugin.fromClass(
 
         collectMatches(blockRegex, "cm-dsl-block");
         collectMatches(oscRegex, "cm-dsl-osc");
+        if (topLevelKeywordRegex) {
+          collectMatches(topLevelKeywordRegex, "cm-dsl-top-level-keyword");
+        }
         if (mainKeywordRegex) {
           collectMatches(mainKeywordRegex, "cm-dsl-main-keyword");
         }
