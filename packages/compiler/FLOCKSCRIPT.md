@@ -1,33 +1,26 @@
-# FlockScript – Basic syntax used by the live editor
+# FlockScript – compiler reference
 
 FlockScript is the small language you write in `apps/web/components/editor/live-editor.tsx`.  
 The compiler in `packages/compiler/src/index.ts` turns it into a JSON patch (`CompilePatch`) that the audio engine consumes.
 
-For now the compiler only implements the minimal subset used by the **Basic / Syntax draft** example in the editor.
+---
 
-## Commands
+## Supported commands
 
 ### `osc` – oscillator device
-
-General form (order of arguments does not matter except for the `@gain` shorthand):
 
 ```flock
 osc <id?> wave=<wave> frequency=<hz> gain=<number> [detune=<cents>] [pan=<value>]
 ```
 
-- `<id?>`: optional name for the oscillator. If omitted, an id like `osc-auto-1` is generated.
-- `wave`: waveform name. Supported: `sine`, `square`, `sawtooth`, `triangle` (plus short aliases `sin`, `sqr`, `saw`, `tri`).
-- `frequency`: base frequency in Hz.
-- `gain`: linear amplitude (0–1). You can also write `@0.25` as a shorthand for gain.
-- `detune` (optional): pitch offset in cents, clamped to [-1200, 1200].
-- `pan` (optional): stereo position from -1 (left) to 1 (right).
-
-The Basic example uses two oscillators:
-
-```flock
-osc osc1 wave=sine frequency=80 gain=0.7
-osc osc2 wave=sine frequency=432 gain=0.03
-```
+| Argument | Description |
+|---|---|
+| `<id?>` | Optional name. Defaults to `osc-auto-<n>`. |
+| `wave` | Waveform: `sine`/`sin`, `square`/`sqr`, `sawtooth`/`saw`, `triangle`/`tri`. |
+| `frequency` | Base frequency in Hz (aliases: `freq`, `frq`). |
+| `gain` | Amplitude 0–1. Shorthand: `@0.25`. |
+| `detune` | Pitch offset in cents (alias: `dtn`), clamped to [-1200, 1200]. |
+| `pan` | Stereo position from -1 (left) to 1 (right). |
 
 ### `output` – master output device
 
@@ -35,31 +28,32 @@ osc osc2 wave=sine frequency=432 gain=0.03
 output <id?> gain=<number>
 ```
 
-- `<id?>`: optional output id. If omitted, the id `out` is used.
-- `gain`: master gain for the output device.
+- `<id?>` defaults to `out`.
+- `gain` is clamped to [0, 1].
 
-Example from the Basic block:
-
-```flock
-output out gain=1
-```
-
-### Route lines – connect oscillators to output
+### Route lines
 
 ```flock
 [id1, id2, ...] -> targetId
 ```
 
-- Left-hand side: comma‑separated list of oscillator ids.
-- Right-hand side: output id to route into.
+Connects the listed device outputs to a target device's input. Generates one `RouteDefinition` per source.
 
-Example:
+---
+
+## Full example (Basic / Syntax draft)
 
 ```flock
+osc osc1 wave=sine frequency=80 gain=0.7
+osc osc2 wave=sine frequency=432 gain=0.03
+output out gain=1
+
 [osc1, osc2] -> out
 ```
 
-The compiler turns this minimal language into a patch of the form:
+---
+
+## Patch shape
 
 ```ts
 type CompilePatch = {
@@ -78,6 +72,63 @@ type CompilePatch = {
 };
 ```
 
-Anything that is not one of the commands above results in an `Unknown statement` diagnostic.
+> Quick mute / silence is handled at the editor + audio engine level, not by the compiler.
 
-> Note: quick mute / silence is handled at the editor + audio engine level, not by the compiler.
+---
+
+## Modular device architecture
+
+The compiler is structured so that each device type lives in its own module under `packages/compiler/src/devices/`:
+
+```
+packages/compiler/src/
+  index.ts              ← thin orchestrator: split lines, dispatch to devices
+  types.ts              ← shared types: DeviceDefinition, RouteDefinition, DeviceCompiler, …
+  diagnostics.ts        ← helper for building CompileDiagnostic values
+  utils.ts              ← clamp, parseNumber, resolveWave, …
+  devices/
+    index.ts            ← central registry: Map<keyword, DeviceCompiler>
+    osc.ts              ← compileOsc()
+    output.ts           ← compileOutput()
+    route.ts            ← compileRoutes()
+```
+
+### Key types
+
+```ts
+/** Shared context passed to every device compiler. */
+type DeviceCompileContext = {
+  lines: string[];
+  lineIndex: number;
+  diagnostics: CompileDiagnostic[];
+};
+
+/** Contract every device compiler must satisfy. */
+type DeviceCompiler = (
+  tokens: string[],
+  context: DeviceCompileContext,
+  devices: DeviceDefinition[],
+  routes: RouteDefinition[],
+) => void;
+```
+
+### Adding a new device (e.g. `lfo`)
+
+1. **Create `devices/lfo.ts`** and export `compileLfo` with signature `DeviceCompiler`.
+2. **Add `LfoParams`** (and optionally extend `DeviceType`) in `types.ts`.
+3. **Register it** in `devices/index.ts`:
+
+```ts
+import { compileLfo } from "./lfo.ts";
+
+const DEVICE_REGISTRY = new Map<string, DeviceCompiler>([
+  ["osc",    compileOsc],
+  ["output", compileOutput],
+  ["lfo",    compileLfo],   // ← new line
+]);
+```
+
+4. **Add tests** in `index.test.ts` (or a dedicated `lfo.test.ts`).
+5. **Document** the new syntax in this file.
+
+No changes to `index.ts` are needed — the registry lookup handles dispatch automatically.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { compile } from "./index.ts";
+import { getDeviceCompiler } from "./devices/index.ts";
 
 describe("osc compiler", () => {
   it("compiles a basic oscillator", () => {
@@ -49,5 +50,53 @@ describe("osc compiler", () => {
     const result = compile("foo bar");
     expect(result.ok).toBe(false);
     expect(result.diagnostics[0]?.message).toContain("Unknown statement");
+  });
+});
+
+describe("device registry", () => {
+  it("resolves osc and output compilers", () => {
+    expect(getDeviceCompiler("osc")).toBeDefined();
+    expect(getDeviceCompiler("output")).toBeDefined();
+  });
+
+  it("returns undefined for unknown keywords", () => {
+    expect(getDeviceCompiler("lfo")).toBeUndefined();
+    expect(getDeviceCompiler("unknownDevice")).toBeUndefined();
+  });
+});
+
+describe("output compiler", () => {
+  it("compiles an output device with gain", () => {
+    const result = compile("output out gain=0.8");
+    expect(result.ok).toBe(true);
+    expect(result.patch?.devices[0]).toMatchObject({
+      id: "out",
+      type: "output",
+      params: { gain: 0.8 },
+    });
+  });
+
+  it("uses default id 'out' when omitted", () => {
+    const result = compile("output");
+    expect(result.ok).toBe(true);
+    expect(result.patch?.devices[0]?.id).toBe("out");
+  });
+});
+
+describe("route compiler", () => {
+  it("compiles a single-source route", () => {
+    const source = "osc A\noutput out\n[A] -> out";
+    const result = compile(source);
+    expect(result.ok).toBe(true);
+    expect(result.patch?.routes).toEqual([
+      { from: "A.out", to: "out.in", signal: "audio" },
+    ]);
+  });
+
+  it("compiles a multi-source route", () => {
+    const source = "osc A\nosc B\noutput out\n[A, B] -> out";
+    const result = compile(source);
+    expect(result.ok).toBe(true);
+    expect(result.patch?.routes).toHaveLength(2);
   });
 });
