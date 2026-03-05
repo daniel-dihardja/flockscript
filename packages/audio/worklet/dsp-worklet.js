@@ -56,6 +56,9 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     const phase = device.phase || 0;
     let sample = 0;
     switch (device.wave) {
+      case "noise":
+        sample = Math.random() * 2 - 1;
+        break;
       case "square":
         sample = phase < Math.PI ? 1 : -1;
         break;

@@ -30,7 +30,7 @@
               "wave": {
                 "type": "string",
                 "description": "Oscillator waveform",
-                "enum": ["sine", "square", "saw", "sawtooth", "triangle"],
+                "enum": ["sine", "square", "saw", "sawtooth", "triangle", "noise"],
                 "default": "sine"
               },
               "frequency": {

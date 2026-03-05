@@ -9,6 +9,8 @@ export const WAVE_ALIASES: Record<string, OscillatorType> = {
   saw: "sawtooth",
   triangle: "triangle",
   tri: "triangle",
+  noise: "noise",
+  noi: "noise",
 };
 
 export const GAIN_TOKEN_REGEX = /^@[+-]?\d+(?:\.\d+)?$/;

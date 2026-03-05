@@ -117,10 +117,8 @@
     "sqr",
     "triangle",
     "tri",
-    "lowpass",
-    "highpass",
-    "bandpass",
-    "notch"
+    "noise",
+    "noi"
   ],
   "gainTokenPattern": "@[+-]?\\d+(?:\\.\\d+)?",
   "keywordAliases": {

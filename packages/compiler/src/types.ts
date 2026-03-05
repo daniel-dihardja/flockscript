@@ -1,4 +1,4 @@
-export type OscillatorType = "sine" | "square" | "sawtooth" | "triangle";
+export type OscillatorType = "sine" | "square" | "sawtooth" | "triangle" | "noise";
 
 export type DeviceType = "osc" | "output";
 

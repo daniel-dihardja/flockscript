@@ -61,14 +61,8 @@ const fallbackParamKeywords = [
   "frq",
   "detune",
   "pan",
-  "rate",
-  "depth",
   "gain",
   "wave",
-  "filter",
-  "q",
-  "offset",
-  "env",
 ];
 const paramKeywords =
   configuredParamKeywords.length > 0
@@ -290,13 +284,6 @@ const waveformCompletions: Completion[] = [
   type: "keyword",
 }));
 
-const fxTypeCompletions: Completion[] = ["filter", "dist", "delay"].map(
-  (label) => ({
-    label,
-    type: "keyword",
-  }),
-);
-
 const completionSource = (context: CompletionContext) => {
   const word = context.matchBefore(/[A-Za-z_-]+/);
   if (!word && !context.explicit) {
@@ -311,8 +298,6 @@ const completionSource = (context: CompletionContext) => {
   let options = keywordCompletions;
   if (prevPrev === "osc") {
     options = waveformCompletions;
-  } else if (prevPrev === "fx") {
-    options = fxTypeCompletions;
   }
 
   return {
