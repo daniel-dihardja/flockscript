@@ -30,9 +30,10 @@
                         "type": "string",
                         "enum": [
                             "shader",
+                            "feedback",
                             "screen"
                         ],
-                        "description": "Device type: 'shader' compiles a GLSL program; 'screen' is the output sink"
+                        "description": "Device type: 'shader' compiles a GLSL program; 'feedback' is a temporal accumulator; 'screen' is the output sink"
                     },
                     "params": {
                         "type": "object",
@@ -90,10 +91,44 @@
                                 "description": "CSS color used as the canvas background (screen device only)",
                                 "default": "#000000"
                             },
-                            "feedback": {
-                                "type": "boolean",
-                                "description": "When true, the previous frame is captured off-screen and exposed as uniform sampler2D u_prev_frame to the connected shader",
-                                "default": false
+                            "decay": {
+                                "type": "number",
+                                "description": "feedback device: retention of the previous frame (0–1). 1.0 = perfect freeze.",
+                                "default": 0.97,
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "inject": {
+                                "type": "number",
+                                "description": "feedback device: scales the shader alpha mask before blending (0–1).",
+                                "default": 1.0,
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "scroll_x": {
+                                "type": "number",
+                                "description": "feedback device: horizontal UV scroll applied to the prev-frame lookup each step.",
+                                "default": 0
+                            },
+                            "scroll_y": {
+                                "type": "number",
+                                "description": "feedback device: vertical UV scroll applied to the prev-frame lookup each step.",
+                                "default": 0
+                            },
+                            "warp": {
+                                "type": "number",
+                                "description": "feedback device: max UV displacement from noise-driven warp.",
+                                "default": 0
+                            },
+                            "warp_speed": {
+                                "type": "number",
+                                "description": "feedback device: speed of the warp noise pattern evolution.",
+                                "default": 1.0
+                            },
+                            "blur": {
+                                "type": "number",
+                                "description": "feedback device: soft-sample radius for the prev frame (0 = sharp).",
+                                "default": 0
                             }
                         }
                     }

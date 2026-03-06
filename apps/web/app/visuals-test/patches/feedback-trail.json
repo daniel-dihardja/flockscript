@@ -6,10 +6,6 @@
             "params": {
                 "frag": "feedbackTrail",
                 "uniforms": {
-                    "u_decay": {
-                        "type": "float",
-                        "value": 1.0
-                    },
                     "u_speed": {
                         "type": "float",
                         "value": 0.5
@@ -21,42 +17,36 @@
                     "u_inject_bright": {
                         "type": "float",
                         "value": 1.0
-                    },
-                    "u_warp": {
-                        "type": "float",
-                        "value": 0.001
-                    },
-                    "u_warp_speed": {
-                        "type": "float",
-                        "value": 1.0
-                    },
-                    "u_blur": {
-                        "type": "float",
-                        "value": 0.0
-                    },
-                    "u_scroll_x": {
-                        "type": "float",
-                        "value": 0.003
-                    },
-                    "u_scroll_y": {
-                        "type": "float",
-                        "value": 0.002
                     }
                 }
             }
         },
         {
-            "id": "display",
-            "type": "screen",
+            "id": "fb",
+            "type": "feedback",
             "params": {
-                "background": "#000000",
-                "feedback": true
+                "decay": 0.97,
+                "inject": 1.0,
+                "scroll_x": 0.003,
+                "scroll_y": 0.002,
+                "warp": 0.001,
+                "warp_speed": 1.0,
+                "blur": 0.0
             }
+        },
+        {
+            "id": "display",
+            "type": "screen"
         }
     ],
     "routes": [
         {
             "from": "trail.out",
+            "to": "fb.in",
+            "signal": "visual"
+        },
+        {
+            "from": "fb.out",
             "to": "display.in",
             "signal": "visual"
         }

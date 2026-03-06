@@ -1,76 +1,78 @@
 import { FRAG_REGISTRY, VERT_REGISTRY } from "../shaders";
 import type { ShaderDeviceDef, UniformValue } from "../types";
-
-function compileShader(
-  gl: WebGLRenderingContext,
-  type: number,
-  src: string,
-): WebGLShader {
-  const shader = gl.createShader(type)!;
-  gl.shaderSource(shader, src);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    throw new Error(gl.getShaderInfoLog(shader) ?? "Shader compile error");
-  }
-  return shader;
-}
+import {
+  linkProgram,
+  makeQuad,
+  makeFBOTarget,
+  destroyFBOTarget,
+  drawQuad,
+  type FBOTarget,
+} from "../utils/gl";
 
 /**
- * Compiles a GLSL program from the patch definition.
- * Resolves named keys against the built-in shader registry; falls back to
- * treating the string as raw inline GLSL.
+ * Compiles a GLSL program from the patch definition and renders each frame
+ * into its own off-screen texture.
+ *
+ * The output texture is consumed by the next pipeline stage — either a
+ * `FeedbackDevice` for temporal accumulation or a `ScreenDevice` directly.
+ *
+ * Named uniform keys resolved against the built-in registries; unknown strings
+ * are treated as raw inline GLSL.
  */
 export class ShaderDevice {
   readonly id: string;
   readonly program: WebGLProgram;
   private uniforms: Record<string, UniformValue>;
   private gl: WebGLRenderingContext;
+  private quad: WebGLBuffer;
+
+  // Off-screen render target — allocated lazily and resized on dimension change.
+  private fboTarget: FBOTarget | null = null;
+  private fboW = 0;
+  private fboH = 0;
 
   constructor(gl: WebGLRenderingContext, def: ShaderDeviceDef) {
     this.id = def.id;
     this.gl = gl;
     this.uniforms = def.params.uniforms ?? {};
+    this.quad = makeQuad(gl);
 
     const vertSrc = def.params.vert
       ? (VERT_REGISTRY[def.params.vert] ?? def.params.vert)
       : VERT_REGISTRY["default"]!;
     const fragSrc = FRAG_REGISTRY[def.params.frag] ?? def.params.frag;
 
-    const vert = compileShader(gl, gl.VERTEX_SHADER, vertSrc);
-    const frag = compileShader(gl, gl.FRAGMENT_SHADER, fragSrc);
-
-    const program = gl.createProgram()!;
-    gl.attachShader(program, vert);
-    gl.attachShader(program, frag);
-    gl.linkProgram(program);
-
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      throw new Error(gl.getProgramInfoLog(program) ?? "Program link error");
-    }
-
-    // Individual shader objects are no longer needed after linking.
-    gl.deleteShader(vert);
-    gl.deleteShader(frag);
-
-    this.program = program;
+    this.program = linkProgram(gl, vertSrc, fragSrc);
   }
 
   /**
-   * Activates the program and uploads all uniforms.
-   * Built-ins (u_resolution, u_time) are always written first; user-defined
-   * uniforms from the patch follow.
-   *
-   * @param prevFrameTex - When the connected screen device has `feedback: true`,
-   *   this is the texture of the previous rendered frame. It is bound to texture
-   *   unit 0 and exposed as `uniform sampler2D u_prev_frame` in the shader.
-   *   Pass `null` for non-feedback renders.
+   * Render one frame into the device's own off-screen texture and return it.
+   * The VisualEngine passes a consistent `w`/`h` for all pipeline nodes in
+   * this frame so FBO dimensions stay in sync.
    */
-  applyUniforms(
-    time: number,
-    width: number,
-    height: number,
-    prevFrameTex: WebGLTexture | null,
-  ): void {
+  renderToTexture(time: number, w: number, h: number): WebGLTexture {
+    const gl = this.gl;
+
+    // Reallocate FBO when dimensions change.
+    if (!this.fboTarget || this.fboW !== w || this.fboH !== h) {
+      if (this.fboTarget) destroyFBOTarget(gl, this.fboTarget);
+      this.fboTarget = makeFBOTarget(gl, w, h);
+      this.fboW = w;
+      this.fboH = h;
+    }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboTarget.fbo);
+    gl.viewport(0, 0, w, h);
+    this._applyUniforms(time, w, h);
+    const posLoc = gl.getAttribLocation(this.program, "a_position");
+    drawQuad(gl, this.quad, posLoc);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    return this.fboTarget.tex;
+  }
+
+  /** Activate the program and upload all uniforms (built-ins + patch-defined). */
+  private _applyUniforms(time: number, width: number, height: number): void {
     const gl = this.gl;
     gl.useProgram(this.program);
 
@@ -78,14 +80,6 @@ export class ShaderDevice {
     const timeLoc = gl.getUniformLocation(this.program, "u_time");
     if (resLoc !== null) gl.uniform2f(resLoc, width, height);
     if (timeLoc !== null) gl.uniform1f(timeLoc, time);
-
-    // Bind previous-frame texture when provided.
-    if (prevFrameTex !== null) {
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, prevFrameTex);
-      const prevLoc = gl.getUniformLocation(this.program, "u_prev_frame");
-      if (prevLoc !== null) gl.uniform1i(prevLoc, 0);
-    }
 
     for (const [name, uniform] of Object.entries(this.uniforms)) {
       const loc = gl.getUniformLocation(this.program, name);
@@ -108,6 +102,12 @@ export class ShaderDevice {
   }
 
   dispose(): void {
-    this.gl.deleteProgram(this.program);
+    const gl = this.gl;
+    gl.deleteBuffer(this.quad);
+    gl.deleteProgram(this.program);
+    if (this.fboTarget) {
+      destroyFBOTarget(gl, this.fboTarget);
+      this.fboTarget = null;
+    }
   }
 }
