@@ -14,9 +14,6 @@ type LiveEditorToolbarProps = {
   samples: string[];
   selectedSampleIndex: number;
   onSampleChange: (index: number) => void;
-  themeOptions: { id: string; label: string }[];
-  selectedThemeId: string;
-  onThemeChange: (id: string) => void;
   debugPanelOpen: boolean;
   onToggleDebug: () => void;
   onRunLine: () => void;
@@ -31,9 +28,6 @@ export function LiveEditorToolbar({
   samples,
   selectedSampleIndex,
   onSampleChange,
-  themeOptions,
-  selectedThemeId,
-  onThemeChange,
   debugPanelOpen,
   onToggleDebug,
   onRunLine,
@@ -113,20 +107,6 @@ export function LiveEditorToolbar({
             {samples.map((label, index) => (
               <option key={label} value={index}>
                 {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col text-[10px] uppercase tracking-widest text-muted-foreground">
-          Theme
-          <select
-            className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
-            value={selectedThemeId}
-            onChange={(event) => onThemeChange(event.target.value)}
-          >
-            {themeOptions.map((variant) => (
-              <option key={variant.id} value={variant.id}>
-                {variant.label}
               </option>
             ))}
           </select>
