@@ -1,0 +1,58 @@
+{
+    "devices": [
+        {
+            "id": "cells",
+            "type": "shader",
+            "params": {
+                "frag": "mycelium",
+                "uniforms": {
+                    "u_speed": {
+                        "type": "float",
+                        "value": 0.4
+                    },
+                    "u_scale": {
+                        "type": "float",
+                        "value": 4.5
+                    },
+                    "u_complexity": {
+                        "type": "float",
+                        "value": 0.35
+                    },
+                    "u_hue_shift": {
+                        "type": "float",
+                        "value": 0.0
+                    }
+                }
+            }
+        },
+        {
+            "id": "fb",
+            "type": "feedback",
+            "params": {
+                "decay": 0.93,
+                "inject": 0.8,
+                "scroll_x": 0.0,
+                "scroll_y": 0.006,
+                "warp": 0.003,
+                "warp_speed": 0.6,
+                "blur": 0.25
+            }
+        },
+        {
+            "id": "display",
+            "type": "screen"
+        }
+    ],
+    "routes": [
+        {
+            "from": "cells.out",
+            "to": "fb.in",
+            "signal": "visual"
+        },
+        {
+            "from": "fb.out",
+            "to": "display.in",
+            "signal": "visual"
+        }
+    ]
+}

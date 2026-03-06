@@ -3,6 +3,7 @@ import plasmaPatch from "./plasma.json";
 import noisePatch from "./noise.json";
 import pixelNoiseWallPatch from "./pixel-noise-wall.json";
 import feedbackTrailPatch from "./feedback-trail.json";
+import myceliumPatch from "./mycelium.json";
 
 export interface PatchExample {
   label: string;
@@ -14,4 +15,5 @@ export const EXAMPLES: PatchExample[] = [
   { label: "Noise — fBm", patch: noisePatch as VisualPatch },
   { label: "Pixel Noise Wall", patch: pixelNoiseWallPatch as VisualPatch },
   { label: "Feedback Trail", patch: feedbackTrailPatch as VisualPatch },
+  { label: "Mycelium Cascade", patch: myceliumPatch as VisualPatch },
 ];
