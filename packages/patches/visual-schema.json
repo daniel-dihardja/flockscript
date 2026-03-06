@@ -89,6 +89,11 @@
                                 "type": "string",
                                 "description": "CSS color used as the canvas background (screen device only)",
                                 "default": "#000000"
+                            },
+                            "feedback": {
+                                "type": "boolean",
+                                "description": "When true, the previous frame is captured off-screen and exposed as uniform sampler2D u_prev_frame to the connected shader",
+                                "default": false
                             }
                         }
                     }

@@ -1,0 +1,44 @@
+{
+    "devices": [
+        {
+            "id": "trail",
+            "type": "shader",
+            "params": {
+                "frag": "feedbackTrail",
+                "uniforms": {
+                    "u_decay": {
+                        "type": "float",
+                        "value": 0.97
+                    },
+                    "u_speed": {
+                        "type": "float",
+                        "value": 0.5
+                    },
+                    "u_inject_size": {
+                        "type": "float",
+                        "value": 0.12
+                    },
+                    "u_warp": {
+                        "type": "float",
+                        "value": 0.002
+                    }
+                }
+            }
+        },
+        {
+            "id": "display",
+            "type": "screen",
+            "params": {
+                "background": "#000000",
+                "feedback": true
+            }
+        }
+    ],
+    "routes": [
+        {
+            "from": "trail.out",
+            "to": "display.in",
+            "signal": "visual"
+        }
+    ]
+}

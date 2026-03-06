@@ -59,8 +59,18 @@ export class ShaderDevice {
    * Activates the program and uploads all uniforms.
    * Built-ins (u_resolution, u_time) are always written first; user-defined
    * uniforms from the patch follow.
+   *
+   * @param prevFrameTex - When the connected screen device has `feedback: true`,
+   *   this is the texture of the previous rendered frame. It is bound to texture
+   *   unit 0 and exposed as `uniform sampler2D u_prev_frame` in the shader.
+   *   Pass `null` for non-feedback renders.
    */
-  applyUniforms(time: number, width: number, height: number): void {
+  applyUniforms(
+    time: number,
+    width: number,
+    height: number,
+    prevFrameTex: WebGLTexture | null,
+  ): void {
     const gl = this.gl;
     gl.useProgram(this.program);
 
@@ -68,6 +78,14 @@ export class ShaderDevice {
     const timeLoc = gl.getUniformLocation(this.program, "u_time");
     if (resLoc !== null) gl.uniform2f(resLoc, width, height);
     if (timeLoc !== null) gl.uniform1f(timeLoc, time);
+
+    // Bind previous-frame texture when provided.
+    if (prevFrameTex !== null) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, prevFrameTex);
+      const prevLoc = gl.getUniformLocation(this.program, "u_prev_frame");
+      if (prevLoc !== null) gl.uniform1i(prevLoc, 0);
+    }
 
     for (const [name, uniform] of Object.entries(this.uniforms)) {
       const loc = gl.getUniformLocation(this.program, name);

@@ -27,7 +27,12 @@ export interface ScreenDeviceDef {
   id: string;
   type: "screen";
   params?: {
-    background?: string;
+    background?: string; /**
+     * When true, the previous frame's output is captured in an off-screen
+     * framebuffer and exposed as `uniform sampler2D u_prev_frame` to the
+     * connected shader, enabling trail / feedback effects.
+     */
+    feedback?: boolean;
   };
 }
 
