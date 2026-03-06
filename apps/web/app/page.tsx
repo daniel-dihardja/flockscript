@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { LiveEditor } from "@/components/editor/live-editor";
+import { ShaderViewer } from "@/components/shader-viewer";
 
 export default function Page() {
   const [engineStatus, setEngineStatus] = React.useState<
@@ -33,7 +34,9 @@ export default function Page() {
       <div className="h-screen w-1/2">
         <LiveEditor />
       </div>
-      <div className="h-screen w-1/2 bg-black" />
+      <div className="h-screen w-1/2 bg-black">
+        <ShaderViewer />
+      </div>
     </main>
   );
 }
