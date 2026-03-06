@@ -1,0 +1,55 @@
+{
+    "devices": [
+        {
+            "id": "pixelNoiseWall",
+            "type": "shader",
+            "params": {
+                "frag": "pixelNoiseWall",
+                "uniforms": {
+                    "u_speed": {
+                        "type": "float",
+                        "value": 0.8
+                    },
+                    "u_pixel_size": {
+                        "type": "float",
+                        "value": 8.0
+                    },
+                    "u_noise_scale": {
+                        "type": "float",
+                        "value": 18.0
+                    },
+                    "u_contrast": {
+                        "type": "float",
+                        "value": 0.08
+                    },
+                    "u_glitch": {
+                        "type": "float",
+                        "value": 0.08
+                    },
+                    "u_scan_strength": {
+                        "type": "float",
+                        "value": 0.22
+                    },
+                    "u_blink_speed": {
+                        "type": "float",
+                        "value": 1.7
+                    }
+                }
+            }
+        },
+        {
+            "id": "display",
+            "type": "screen",
+            "params": {
+                "background": "#000000"
+            }
+        }
+    ],
+    "routes": [
+        {
+            "from": "pixelNoiseWall.out",
+            "to": "display.in",
+            "signal": "visual"
+        }
+    ]
+}
