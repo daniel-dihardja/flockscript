@@ -8,7 +8,7 @@
                 "uniforms": {
                     "u_decay": {
                         "type": "float",
-                        "value": 0.97
+                        "value": 1.0
                     },
                     "u_speed": {
                         "type": "float",
@@ -18,9 +18,21 @@
                         "type": "float",
                         "value": 0.12
                     },
+                    "u_inject_bright": {
+                        "type": "float",
+                        "value": 1.0
+                    },
                     "u_warp": {
                         "type": "float",
-                        "value": 0.002
+                        "value": 0.001
+                    },
+                    "u_warp_speed": {
+                        "type": "float",
+                        "value": 1.0
+                    },
+                    "u_blur": {
+                        "type": "float",
+                        "value": 0.0
                     }
                 }
             }
