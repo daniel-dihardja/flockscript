@@ -7,9 +7,9 @@ import {
   VisualsCanvas,
   type VisualsCanvasHandle,
 } from "@/components/visuals/visuals-canvas";
-import plasmaPatch from "./patches/plasma.json";
+import { EXAMPLES } from "./patches/examples";
 
-const initialPatch = plasmaPatch as VisualPatch;
+const initialPatch = EXAMPLES[0]!.patch;
 const initialJson = JSON.stringify(initialPatch, null, 2);
 
 export default function VisualsTestPage() {
@@ -22,12 +22,16 @@ export default function VisualsTestPage() {
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-black text-white">
       {/* Left column — JSON patch editor */}
-      <div className="flex h-full w-1/2 flex-col border-r border-neutral-800">
-        <PatchEditor initialValue={initialJson} onRun={handleRun} />
+      <div className="flex h-full w-1/3 flex-col border-r border-neutral-800">
+        <PatchEditor
+          initialValue={initialJson}
+          onRun={handleRun}
+          examples={EXAMPLES}
+        />
       </div>
 
       {/* Right column — WebGL canvas */}
-      <div className="flex h-full w-1/2 items-center justify-center bg-black">
+      <div className="flex h-full w-2/3 items-center justify-center bg-black">
         <VisualsCanvas ref={canvasRef} initialPatch={initialPatch} />
       </div>
     </main>

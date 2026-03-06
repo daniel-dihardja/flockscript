@@ -1,0 +1,43 @@
+{
+    "devices": [
+        {
+            "id": "noise1",
+            "type": "shader",
+            "params": {
+                "frag": "noise",
+                "uniforms": {
+                    "u_mode": {
+                        "type": "float",
+                        "value": 3
+                    },
+                    "u_scale": {
+                        "type": "float",
+                        "value": 3.0
+                    },
+                    "u_speed": {
+                        "type": "float",
+                        "value": 0.3
+                    },
+                    "u_contrast": {
+                        "type": "float",
+                        "value": 1.2
+                    }
+                }
+            }
+        },
+        {
+            "id": "display",
+            "type": "screen",
+            "params": {
+                "background": "#000000"
+            }
+        }
+    ],
+    "routes": [
+        {
+            "from": "noise1.out",
+            "to": "display.in",
+            "signal": "visual"
+        }
+    ]
+}

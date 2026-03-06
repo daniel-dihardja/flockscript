@@ -41,20 +41,51 @@ const darkTheme = EditorView.theme(
   { dark: true },
 );
 
+export interface PatchExample {
+  label: string;
+  patch: unknown;
+}
+
 interface PatchEditorProps {
   initialValue: string;
   /** Called with the parsed JSON object when the user clicks Run or presses Cmd+Enter. */
   onRun: (parsed: unknown) => void;
+  /** Optional list of preset examples shown in the toolbar selector. */
+  examples?: PatchExample[];
 }
 
 /**
  * A CodeMirror JSON editor with a minimal toolbar that contains a single
  * "Run" button. Cmd/Ctrl+Enter also triggers Run.
  */
-export function PatchEditor({ initialValue, onRun }: PatchEditorProps) {
+export function PatchEditor({
+  initialValue,
+  onRun,
+  examples,
+}: PatchEditorProps) {
   const hostRef = React.useRef<HTMLDivElement>(null);
   const viewRef = React.useRef<EditorView | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+
+  const handleExampleSelect = React.useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const idx = Number(e.target.value);
+      const example = examples?.[idx];
+      if (!example || !viewRef.current) return;
+      const json = JSON.stringify(example.patch, null, 2);
+      viewRef.current.dispatch({
+        changes: {
+          from: 0,
+          to: viewRef.current.state.doc.length,
+          insert: json,
+        },
+      });
+      setError(null);
+      // Reset select back to placeholder
+      e.target.value = "";
+    },
+    [examples],
+  );
 
   const handleRun = React.useCallback(() => {
     const view = viewRef.current;
@@ -111,6 +142,22 @@ export function PatchEditor({ initialValue, onRun }: PatchEditorProps) {
         <span className="text-xs font-medium uppercase tracking-widest text-neutral-500">
           Visual Patch
         </span>
+        {examples && examples.length > 0 && (
+          <select
+            defaultValue=""
+            onChange={handleExampleSelect}
+            className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-300 outline-none transition-colors hover:border-neutral-500 focus:border-violet-500"
+          >
+            <option value="" disabled>
+              — Examples —
+            </option>
+            {examples.map((ex, i) => (
+              <option key={ex.label} value={i}>
+                {ex.label}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="flex-1" />
         <button
           onClick={handleRun}
