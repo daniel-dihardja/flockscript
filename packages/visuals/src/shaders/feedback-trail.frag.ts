@@ -13,6 +13,11 @@
  *   u_warp          float  Max UV displacement applied to the previous frame sample.
  *   u_warp_speed    float  How fast the warp noise pattern evolves.
  *   u_blur          float  Softness of the previous-frame sample (0.0 = sharp).
+ *   u_scroll_x      float  Horizontal UV offset applied to the prev frame each frame.
+ *                          Positive = content drifts right, negative = left.
+ *                          Typical range: -0.01 … 0.01.
+ *   u_scroll_y      float  Vertical UV offset applied to the prev frame each frame.
+ *                          Positive = content drifts up (WebGL UV origin is bottom-left).
  */
 export const FEEDBACK_TRAIL_FRAG = /* glsl */ `
 precision mediump float;
@@ -27,6 +32,8 @@ uniform float     u_inject_bright;
 uniform float     u_warp;
 uniform float     u_warp_speed;
 uniform float     u_blur;
+uniform float     u_scroll_x;
+uniform float     u_scroll_y;
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -54,7 +61,12 @@ void main() {
   // UV warp on the previous frame (noise-driven directional drift).
   float warpAngle = hash(uv + u_time * u_warp_speed * 0.01) * 6.28318;
   vec2  warpOffset = vec2(cos(warpAngle), sin(warpAngle)) * u_warp;
-  vec4  prev = samplePrev(uv + warpOffset) * u_decay;
+
+  // Directional scroll: shifts the UV lookup so the accumulated image drifts
+  // steadily each frame. u_scroll_x > 0 drifts right, u_scroll_y > 0 drifts up.
+  vec2 scrollOffset = vec2(u_scroll_x, u_scroll_y);
+
+  vec4  prev = samplePrev(uv + scrollOffset + warpOffset) * u_decay;
 
   // Moving colour blob.
   float t  = u_time * u_speed;

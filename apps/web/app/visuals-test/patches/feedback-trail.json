@@ -33,6 +33,14 @@
                     "u_blur": {
                         "type": "float",
                         "value": 0.0
+                    },
+                    "u_scroll_x": {
+                        "type": "float",
+                        "value": 0.003
+                    },
+                    "u_scroll_y": {
+                        "type": "float",
+                        "value": 0.002
                     }
                 }
             }
