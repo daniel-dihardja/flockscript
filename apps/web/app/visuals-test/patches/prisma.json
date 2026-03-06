@@ -1,0 +1,58 @@
+{
+    "devices": [
+        {
+            "id": "geo",
+            "type": "shader",
+            "params": {
+                "frag": "prisma",
+                "uniforms": {
+                    "u_speed": {
+                        "type": "float",
+                        "value": 0.5
+                    },
+                    "u_symmetry": {
+                        "type": "float",
+                        "value": 6
+                    },
+                    "u_pulse": {
+                        "type": "float",
+                        "value": 0.5
+                    },
+                    "u_hue_offset": {
+                        "type": "float",
+                        "value": 0
+                    }
+                }
+            }
+        },
+        {
+            "id": "fb",
+            "type": "feedback",
+            "params": {
+                "decay": 0.9,
+                "inject": 1,
+                "scroll_x": 0,
+                "scroll_y": 0,
+                "warp": 0.005,
+                "warp_speed": 1.5,
+                "blur": 0.2
+            }
+        },
+        {
+            "id": "display",
+            "type": "screen"
+        }
+    ],
+    "routes": [
+        {
+            "from": "geo.out",
+            "to": "fb.in",
+            "signal": "visual"
+        },
+        {
+            "from": "fb.out",
+            "to": "display.in",
+            "signal": "visual"
+        }
+    ]
+}

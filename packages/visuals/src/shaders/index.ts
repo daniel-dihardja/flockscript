@@ -4,6 +4,7 @@ import { NOISE_FRAG } from "./noise.frag";
 import { PIXEL_NOISE_WALL_FRAG } from "./pixel-noise-wall.frag";
 import { FEEDBACK_TRAIL_FRAG } from "./feedback-trail.frag";
 import { MYCELIUM_FRAG } from "./mycelium.frag";
+import { PRISMA_FRAG } from "./prisma.frag";
 
 /** Named vertex shader programs. */
 export const VERT_REGISTRY: Record<string, string> = {
@@ -17,4 +18,5 @@ export const FRAG_REGISTRY: Record<string, string> = {
   pixelNoiseWall: PIXEL_NOISE_WALL_FRAG,
   feedbackTrail: FEEDBACK_TRAIL_FRAG,
   mycelium: MYCELIUM_FRAG,
+  prisma: PRISMA_FRAG,
 };
