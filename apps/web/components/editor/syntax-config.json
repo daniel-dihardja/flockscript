@@ -2,9 +2,8 @@
   "theme": {
     "&": {
       "height": "100%",
-      "backgroundImage": "linear-gradient(160deg, #0f172a, #1e1b4b 40%, #111827)",
-      "color": "#f8fafc",
-      "transition": "background 0.6s ease"
+      "backgroundColor": "#1a1a1a",
+      "color": "#f8fafc"
     },
     ".cm-scroller": {
       "fontFamily": "'SF Mono' 'Space Grotesk', 'JetBrains Mono', 'Fira Code', monospace",
@@ -28,7 +27,7 @@
       "backgroundColor": "rgba(168, 85, 247, 0.1)"
     },
     ".cm-gutters": {
-      "backgroundColor": "rgba(15, 23, 42, 0.75)",
+      "backgroundColor": "#141414",
       "color": "#94a3b8",
       "borderRight": "1px solid rgba(168, 85, 247, 0.3)"
     },
@@ -75,8 +74,7 @@
     ".cm-dsl-sub-keyword": {},
     ".cm-dsl-last-executed": {
       "backgroundColor": "rgba(251, 146, 60, 0.3)",
-      "borderRadius": "3px",
-      "boxShadow": "0 0 10px rgba(251, 146, 60, 0.45)"
+      "padding": "4px 2px"
     }
   },
   "topLevelKeywords": ["audio"],
