@@ -1,0 +1,87 @@
+{
+    "devices": [
+        {
+            "id": "src",
+            "type": "shader",
+            "params": {
+                "frag": "auroraCathedral",
+                "uniforms": {
+                    "u_speed": {
+                        "type": "float",
+                        "value": 0.42
+                    },
+                    "u_arch_density": {
+                        "type": "float",
+                        "value": 5.0
+                    },
+                    "u_warp_amount": {
+                        "type": "float",
+                        "value": 0.28
+                    },
+                    "u_bloom": {
+                        "type": "float",
+                        "value": 1.0
+                    }
+                }
+            }
+        },
+        {
+            "id": "xform",
+            "type": "transform",
+            "params": {
+                "scale": 1.01,
+                "rotate": 0.025,
+                "offset_x": 0.0,
+                "offset_y": -0.0015
+            }
+        },
+        {
+            "id": "fb",
+            "type": "feedback",
+            "params": {
+                "decay": 0.935,
+                "inject": 0.85,
+                "scroll_x": 0.0004,
+                "scroll_y": -0.002,
+                "warp": 0.0035,
+                "warp_speed": 0.7,
+                "blur": 0.18
+            }
+        },
+        {
+            "id": "grade",
+            "type": "colorize",
+            "params": {
+                "hue_shift": 0.07,
+                "saturation": 1.35,
+                "contrast": 1.12
+            }
+        },
+        {
+            "id": "display",
+            "type": "screen"
+        }
+    ],
+    "routes": [
+        {
+            "from": "src.out",
+            "to": "xform.in",
+            "signal": "visual"
+        },
+        {
+            "from": "xform.out",
+            "to": "fb.in",
+            "signal": "visual"
+        },
+        {
+            "from": "fb.out",
+            "to": "grade.in",
+            "signal": "visual"
+        },
+        {
+            "from": "grade.out",
+            "to": "display.in",
+            "signal": "visual"
+        }
+    ]
+}

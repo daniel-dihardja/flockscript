@@ -7,6 +7,7 @@ import myceliumPatch from "./mycelium.json";
 import prismaPatch from "./prisma.json";
 import modularPrismaPatch from "./modular-prisma.json";
 import modularMyceliumPatch from "./modular-mycelium.json";
+import modularAuroraCathedralPatch from "./modular-aurora-cathedral.json";
 
 export interface PatchExample {
   label: string;
@@ -22,4 +23,8 @@ export const EXAMPLES: PatchExample[] = [
   { label: "Prisma", patch: prismaPatch as VisualPatch },
   { label: "Modular — Prisma", patch: modularPrismaPatch as VisualPatch },
   { label: "Modular — Mycelium", patch: modularMyceliumPatch as VisualPatch },
+  {
+    label: "Modular — Aurora Cathedral",
+    patch: modularAuroraCathedralPatch as VisualPatch,
+  },
 ];
