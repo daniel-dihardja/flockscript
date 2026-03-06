@@ -32,16 +32,16 @@
       "color": "#94a3b8",
       "borderRight": "1px solid rgba(168, 85, 247, 0.3)"
     },
-    ".cm-dsl-main-keyword": {
-      "color": "#fb923c",
-      "fontWeight": "700"
-    },
     ".cm-dsl-top-level-keyword": {
       "backgroundColor": "none",
       "color": "#facc15",
       "fontWeight": "700",
       "padding": "2px 4px",
       "borderRadius": "4px"
+    },
+    ".cm-dsl-main-keyword": {
+      "color": "#fb923c",
+      "fontWeight": "700"
     },
     ".cm-dsl-osc": {
       "color": "#fb923c",
@@ -51,8 +51,9 @@
       "color": "#fca5a1",
       "fontWeight": "400"
     },
-    ".cm-dsl-number": {
-      "color": "#fca5a5"
+    ".cm-dsl-param": {
+      "fontWeight": "700",
+      "color": "#38bdf8"
     },
     ".cm-dsl-name, .cm-dsl-route-source, .cm-dsl-route-target": {
       "backgroundColor": "none",
@@ -65,10 +66,13 @@
       "color": "#fbbf24",
       "fontWeight": "600"
     },
-    ".cm-dsl-param": {
-      "fontWeight": "700",
-      "color": "#38bdf8"
+    ".cm-dsl-number": {
+      "color": "#fca5a5"
     },
+    ".cm-dsl-block": {},
+    ".cm-dsl-macro": {},
+    ".cm-dsl-gain": {},
+    ".cm-dsl-sub-keyword": {},
     ".cm-dsl-last-executed": {
       "backgroundColor": "rgba(251, 146, 60, 0.3)",
       "borderRadius": "3px",
