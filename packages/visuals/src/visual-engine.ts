@@ -30,6 +30,24 @@ export class VisualEngine {
     const gl = canvas.getContext("webgl");
     if (!gl) throw new Error("WebGL not supported in this environment.");
     this.gl = gl;
+    this._buildGraph(patch);
+  }
+
+  /**
+   * Hot-reload a new patch without recreating the GL context or restarting
+   * the RAF loop. Old GPU resources are disposed before the new graph is built.
+   */
+  load(patch: VisualPatch): void {
+    for (const s of this.shaders.values()) s.dispose();
+    for (const s of this.screens.values()) s.dispose();
+    this.shaders.clear();
+    this.screens.clear();
+    this.drawPairs = [];
+    this._buildGraph(patch);
+  }
+
+  private _buildGraph(patch: VisualPatch): void {
+    const gl = this.gl;
 
     // ── Build devices ──────────────────────────────────────────────────────
     for (const def of patch.devices) {
@@ -41,7 +59,6 @@ export class VisualEngine {
     }
 
     // ── Resolve routes → draw pairs ────────────────────────────────────────
-    // Route format: "shaderId.out" → "screenId.in"
     for (const route of patch.routes) {
       if (route.signal !== "visual") continue;
       const shaderId = route.from.replace(/\.out$/, "");

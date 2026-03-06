@@ -8,7 +8,9 @@
       "@workspace/compiler": ["../../packages/compiler/src"],
       "@workspace/compiler/*": ["../../packages/compiler/src/*"],
       "@workspace/audio": ["../../packages/audio/src/index.ts"],
-      "@workspace/audio/*": ["../../packages/audio/*"]
+      "@workspace/audio/*": ["../../packages/audio/*"],
+      "@workspace/visuals": ["../../packages/visuals/src/index.ts"],
+      "@workspace/visuals/*": ["../../packages/visuals/src/*"]
     },
     "allowImportingTsExtensions": true,
     "noImplicitAny": false,
