@@ -1,8 +1,16 @@
-import { ShaderDevice, FeedbackDevice, ScreenDevice } from "./devices";
+import {
+  ShaderDevice,
+  FeedbackDevice,
+  TransformDevice,
+  ColorizeDevice,
+  ScreenDevice,
+} from "./devices";
 import type {
   VisualPatch,
   ShaderDeviceDef,
   FeedbackDeviceDef,
+  TransformDeviceDef,
+  ColorizeDeviceDef,
   ScreenDeviceDef,
 } from "./types";
 
@@ -12,6 +20,8 @@ import type {
 type PipelineNode =
   | { kind: "shader"; device: ShaderDevice }
   | { kind: "feedback"; device: FeedbackDevice; inputId: string }
+  | { kind: "transform"; device: TransformDevice; inputId: string }
+  | { kind: "colorize"; device: ColorizeDevice; inputId: string }
   | { kind: "screen"; device: ScreenDevice; inputId: string };
 
 // ─── VisualEngine ─────────────────────────────────────────────────────────────
@@ -47,6 +57,8 @@ export class VisualEngine {
   private gl: WebGLRenderingContext;
   private shaders = new Map<string, ShaderDevice>();
   private feedbacks = new Map<string, FeedbackDevice>();
+  private transforms = new Map<string, TransformDevice>();
+  private colorizes = new Map<string, ColorizeDevice>();
   private screens = new Map<string, ScreenDevice>();
   private pipeline: PipelineNode[] = [];
   private animId = 0;
@@ -82,6 +94,16 @@ export class VisualEngine {
           def.id,
           new FeedbackDevice(gl, def as FeedbackDeviceDef),
         );
+      } else if (def.type === "transform") {
+        this.transforms.set(
+          def.id,
+          new TransformDevice(gl, def as TransformDeviceDef),
+        );
+      } else if (def.type === "colorize") {
+        this.colorizes.set(
+          def.id,
+          new ColorizeDevice(gl, def as ColorizeDeviceDef),
+        );
       } else if (def.type === "screen") {
         this.screens.set(def.id, new ScreenDevice(gl, def as ScreenDeviceDef));
       }
@@ -115,6 +137,28 @@ export class VisualEngine {
         this.pipeline.push({
           kind: "feedback",
           device: this.feedbacks.get(id)!,
+          inputId,
+        });
+      } else if (this.transforms.has(id)) {
+        if (!inputId) {
+          console.warn(
+            `[VisualEngine] transform "${id}" has no upstream route`,
+          );
+          return;
+        }
+        this.pipeline.push({
+          kind: "transform",
+          device: this.transforms.get(id)!,
+          inputId,
+        });
+      } else if (this.colorizes.has(id)) {
+        if (!inputId) {
+          console.warn(`[VisualEngine] colorize "${id}" has no upstream route`);
+          return;
+        }
+        this.pipeline.push({
+          kind: "colorize",
+          device: this.colorizes.get(id)!,
           inputId,
         });
       } else if (this.screens.has(id)) {
@@ -178,6 +222,30 @@ export class VisualEngine {
             texBus.set(node.device.id, tex);
             break;
           }
+          case "transform": {
+            const inputTex = texBus.get(node.inputId);
+            if (!inputTex) {
+              console.warn(
+                `[VisualEngine] transform "${node.device.id}": no texture for "${node.inputId}"`,
+              );
+              break;
+            }
+            const tex = node.device.process(inputTex, time, w, h);
+            texBus.set(node.device.id, tex);
+            break;
+          }
+          case "colorize": {
+            const inputTex = texBus.get(node.inputId);
+            if (!inputTex) {
+              console.warn(
+                `[VisualEngine] colorize "${node.device.id}": no texture for "${node.inputId}"`,
+              );
+              break;
+            }
+            const tex = node.device.process(inputTex, time, w, h);
+            texBus.set(node.device.id, tex);
+            break;
+          }
           case "screen": {
             const tex = texBus.get(node.inputId);
             if (!tex) {
@@ -215,9 +283,13 @@ export class VisualEngine {
   private _disposeDevices(): void {
     for (const d of this.shaders.values()) d.dispose();
     for (const d of this.feedbacks.values()) d.dispose();
+    for (const d of this.transforms.values()) d.dispose();
+    for (const d of this.colorizes.values()) d.dispose();
     for (const d of this.screens.values()) d.dispose();
     this.shaders.clear();
     this.feedbacks.clear();
+    this.transforms.clear();
+    this.colorizes.clear();
     this.screens.clear();
     this.pipeline = [];
   }

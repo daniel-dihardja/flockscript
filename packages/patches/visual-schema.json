@@ -31,9 +31,11 @@
                         "enum": [
                             "shader",
                             "feedback",
+                            "transform",
+                            "colorize",
                             "screen"
                         ],
-                        "description": "Device type: 'shader' compiles a GLSL program; 'feedback' is a temporal accumulator; 'screen' is the output sink"
+                        "description": "Device type: 'shader' compiles a GLSL program; 'feedback' is a temporal accumulator; 'transform' applies UV transform; 'colorize' adjusts hue/saturation/contrast; 'screen' is the output sink"
                     },
                     "params": {
                         "type": "object",

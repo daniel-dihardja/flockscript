@@ -52,6 +52,42 @@ export interface FeedbackDeviceDef {
   };
 }
 
+/**
+ * A texture-in / texture-out device that applies a UV transform to the input.
+ * Useful for adding zoom, rotation, or offset to any upstream texture.
+ */
+export interface TransformDeviceDef {
+  id: string;
+  type: "transform";
+  params?: {
+    /** Uniform scale around the center (>1 = zoom in). @default 1.0 */
+    scale?: number;
+    /** Rotation in radians applied each frame (accumulated over time). @default 0 */
+    rotate?: number;
+    /** Horizontal UV offset per frame. @default 0 */
+    offset_x?: number;
+    /** Vertical UV offset per frame. @default 0 */
+    offset_y?: number;
+  };
+}
+
+/**
+ * A texture-in / texture-out device that adjusts colour: hue rotation,
+ * saturation scaling, and contrast.
+ */
+export interface ColorizeDeviceDef {
+  id: string;
+  type: "colorize";
+  params?: {
+    /** Hue rotation in the YIQ plane, 0–1 maps to 0–360°. @default 0 */
+    hue_shift?: number;
+    /** Saturation multiplier (0 = greyscale, 1 = unchanged, >1 = vivid). @default 1.0 */
+    saturation?: number;
+    /** Contrast multiplier applied around mid-grey. @default 1.0 */
+    contrast?: number;
+  };
+}
+
 /** A device that owns the WebGL canvas and acts as the final visual sink. */
 export interface ScreenDeviceDef {
   id: string;
@@ -61,7 +97,12 @@ export interface ScreenDeviceDef {
   };
 }
 
-export type DeviceDef = ShaderDeviceDef | FeedbackDeviceDef | ScreenDeviceDef;
+export type DeviceDef =
+  | ShaderDeviceDef
+  | FeedbackDeviceDef
+  | TransformDeviceDef
+  | ColorizeDeviceDef
+  | ScreenDeviceDef;
 
 // ─── Route definition ────────────────────────────────────────────────────────
 
