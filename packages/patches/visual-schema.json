@@ -1,0 +1,183 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://flockscript.audio/visual-schema.json",
+    "title": "Visual Patch",
+    "description": "JSON schema for the device/route descriptor that feeds the VisualEngine WebGL renderer",
+    "type": "object",
+    "required": [
+        "devices",
+        "routes"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "devices": {
+            "type": "array",
+            "description": "List of visual devices (shader programs or screen sinks)",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "type"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Unique identifier used for routing"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "shader",
+                            "screen"
+                        ],
+                        "description": "Device type: 'shader' compiles a GLSL program; 'screen' is the output sink"
+                    },
+                    "params": {
+                        "type": "object",
+                        "description": "Device-specific parameters",
+                        "additionalProperties": true,
+                        "properties": {
+                            "frag": {
+                                "type": "string",
+                                "description": "Fragment shader: a named built-in key (e.g. 'plasma') or raw inline GLSL"
+                            },
+                            "vert": {
+                                "type": "string",
+                                "description": "Vertex shader: a named built-in key or raw inline GLSL. Defaults to the fullscreen-quad vert."
+                            },
+                            "uniforms": {
+                                "type": "object",
+                                "description": "User-defined uniforms to upload each frame. u_resolution and u_time are provided automatically.",
+                                "additionalProperties": {
+                                    "type": "object",
+                                    "required": [
+                                        "type",
+                                        "value"
+                                    ],
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "enum": [
+                                                "float",
+                                                "vec2",
+                                                "vec3",
+                                                "vec4"
+                                            ]
+                                        },
+                                        "value": {
+                                            "oneOf": [
+                                                {
+                                                    "type": "number"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "number"
+                                                    },
+                                                    "minItems": 2,
+                                                    "maxItems": 4
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            },
+                            "background": {
+                                "type": "string",
+                                "description": "CSS color used as the canvas background (screen device only)",
+                                "default": "#000000"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "routes": {
+            "type": "array",
+            "description": "Connections between devices",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": [
+                    "from",
+                    "to",
+                    "signal"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "from": {
+                        "type": "string",
+                        "description": "Source device output port, e.g. 'plasma.out'"
+                    },
+                    "to": {
+                        "type": "string",
+                        "description": "Destination device input port, e.g. 'display.in'"
+                    },
+                    "signal": {
+                        "type": "string",
+                        "enum": [
+                            "visual"
+                        ],
+                        "description": "Signal type carried by the route"
+                    }
+                }
+            }
+        }
+    },
+    "examples": [
+        {
+            "devices": [
+                {
+                    "id": "plasma",
+                    "type": "shader",
+                    "params": {
+                        "frag": "plasma",
+                        "uniforms": {
+                            "u_speed": {
+                                "type": "float",
+                                "value": 0.6
+                            },
+                            "u_freq_x": {
+                                "type": "float",
+                                "value": 8.0
+                            },
+                            "u_freq_y": {
+                                "type": "float",
+                                "value": 6.0
+                            },
+                            "u_freq_diag": {
+                                "type": "float",
+                                "value": 5.0
+                            },
+                            "u_pulse_scale": {
+                                "type": "float",
+                                "value": 20.0
+                            },
+                            "u_pulse_speed": {
+                                "type": "float",
+                                "value": 3.0
+                            }
+                        }
+                    }
+                },
+                {
+                    "id": "display",
+                    "type": "screen",
+                    "params": {
+                        "background": "#000000"
+                    }
+                }
+            ],
+            "routes": [
+                {
+                    "from": "plasma.out",
+                    "to": "display.in",
+                    "signal": "visual"
+                }
+            ]
+        }
+    ]
+}

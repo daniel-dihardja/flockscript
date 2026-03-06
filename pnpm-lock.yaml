@@ -56,6 +56,9 @@ importers:
       '@workspace/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@workspace/visuals':
+        specifier: workspace:*
+        version: link:../../packages/visuals
       ajv:
         specifier: ^8.18.0
         version: 8.18.0
@@ -232,6 +235,12 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  packages/visuals:
+    devDependencies:
+      tsup:
+        specifier: ^7.0.0
+        version: 7.3.0(postcss@8.5.6)(typescript@5.9.3)
 
 packages:
 

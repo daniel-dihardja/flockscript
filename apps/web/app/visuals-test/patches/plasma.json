@@ -1,0 +1,51 @@
+{
+    "devices": [
+        {
+            "id": "plasma",
+            "type": "shader",
+            "params": {
+                "frag": "plasma",
+                "uniforms": {
+                    "u_speed": {
+                        "type": "float",
+                        "value": 0.6
+                    },
+                    "u_freq_x": {
+                        "type": "float",
+                        "value": 8.0
+                    },
+                    "u_freq_y": {
+                        "type": "float",
+                        "value": 6.0
+                    },
+                    "u_freq_diag": {
+                        "type": "float",
+                        "value": 5.0
+                    },
+                    "u_pulse_scale": {
+                        "type": "float",
+                        "value": 20.0
+                    },
+                    "u_pulse_speed": {
+                        "type": "float",
+                        "value": 3.0
+                    }
+                }
+            }
+        },
+        {
+            "id": "display",
+            "type": "screen",
+            "params": {
+                "background": "#000000"
+            }
+        }
+    ],
+    "routes": [
+        {
+            "from": "plasma.out",
+            "to": "display.in",
+            "signal": "visual"
+        }
+    ]
+}

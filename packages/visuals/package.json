@@ -1,0 +1,28 @@
+{
+    "name": "@workspace/visuals",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "JSON-driven WebGL visuals engine for FlockScript",
+    "scripts": {
+        "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean",
+        "prepare": "pnpm build"
+    },
+    "devDependencies": {
+        "tsup": "^7.0.0"
+    },
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist",
+        "patches"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "require": "./dist/index.js"
+        },
+        "./package.json": "./package.json"
+    }
+}
