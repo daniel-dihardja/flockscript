@@ -236,7 +236,7 @@ export const AgentThread = () => {
   );
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden">
       <Conversation>
         <ConversationContent>
           {messages.map((message) => (
