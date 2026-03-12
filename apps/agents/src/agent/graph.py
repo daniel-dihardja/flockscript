@@ -5,6 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from langchain_core.messages import AnyMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph

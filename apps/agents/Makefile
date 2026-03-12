@@ -1,7 +1,10 @@
-.PHONY: all format lint test tests test_watch integration_tests docker_tests help extended_tests
+.PHONY: all format lint test tests test_watch integration_tests docker_tests help extended_tests serve
 
 # Default target executed when no arguments are given to make.
 all: help
+
+serve:
+	uv run uvicorn agent.server:app --reload --host 0.0.0.0 --port 8000
 
 # Define a variable for the test file path.
 TEST_FILE ?= tests/unit_tests/
