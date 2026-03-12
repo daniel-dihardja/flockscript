@@ -20,26 +20,12 @@ import {
   MessageResponse,
 } from "@workspace/ui/components/ai-elements/message";
 import {
-  ModelSelector,
-  ModelSelectorContent,
-  ModelSelectorEmpty,
-  ModelSelectorGroup,
-  ModelSelectorInput,
-  ModelSelectorItem,
-  ModelSelectorList,
-  ModelSelectorLogo,
-  ModelSelectorLogoGroup,
-  ModelSelectorName,
-  ModelSelectorTrigger,
-} from "@workspace/ui/components/ai-elements/model-selector";
-import {
   PromptInput,
   PromptInputActionAddAttachments,
   PromptInputActionMenu,
   PromptInputActionMenuContent,
   PromptInputActionMenuTrigger,
   PromptInputBody,
-  PromptInputButton,
   PromptInputFooter,
   PromptInputHeader,
   PromptInputSubmit,
@@ -47,8 +33,7 @@ import {
   PromptInputTools,
   usePromptInputAttachments,
 } from "@workspace/ui/components/ai-elements/prompt-input";
-import { SpeechInput } from "@workspace/ui/components/ai-elements/speech-input";
-import { CheckIcon, GlobeIcon } from "lucide-react";
+
 import { useCallback, useMemo, useState } from "react";
 
 interface MessageType {
@@ -56,46 +41,6 @@ interface MessageType {
   from: "user" | "assistant";
   content: string;
 }
-
-const models = [
-  {
-    chef: "OpenAI",
-    chefSlug: "openai",
-    id: "gpt-4o",
-    name: "GPT-4o",
-    providers: ["openai", "azure"],
-  },
-  {
-    chef: "OpenAI",
-    chefSlug: "openai",
-    id: "gpt-4o-mini",
-    name: "GPT-4o Mini",
-    providers: ["openai", "azure"],
-  },
-  {
-    chef: "Anthropic",
-    chefSlug: "anthropic",
-    id: "claude-opus-4-20250514",
-    name: "Claude 4 Opus",
-    providers: ["anthropic", "azure", "google", "amazon-bedrock"],
-  },
-  {
-    chef: "Anthropic",
-    chefSlug: "anthropic",
-    id: "claude-sonnet-4-20250514",
-    name: "Claude 4 Sonnet",
-    providers: ["anthropic", "azure", "google", "amazon-bedrock"],
-  },
-  {
-    chef: "Google",
-    chefSlug: "google",
-    id: "gemini-2.0-flash-exp",
-    name: "Gemini 2.0 Flash",
-    providers: ["google"],
-  },
-];
-
-const chefs = ["OpenAI", "Anthropic", "Google"];
 
 const AttachmentItem = ({
   attachment,
@@ -143,51 +88,12 @@ const PromptInputAttachmentsDisplay = () => {
   );
 };
 
-const ModelItem = ({
-  m,
-  isSelected,
-  onSelect,
-}: {
-  m: (typeof models)[0];
-  isSelected: boolean;
-  onSelect: (id: string) => void;
-}) => {
-  const handleSelect = useCallback(() => {
-    onSelect(m.id);
-  }, [onSelect, m.id]);
-
-  return (
-    <ModelSelectorItem onSelect={handleSelect} value={m.id}>
-      <ModelSelectorLogo provider={m.chefSlug} />
-      <ModelSelectorName>{m.name}</ModelSelectorName>
-      <ModelSelectorLogoGroup>
-        {m.providers.map((provider) => (
-          <ModelSelectorLogo key={provider} provider={provider} />
-        ))}
-      </ModelSelectorLogoGroup>
-      {isSelected ? (
-        <CheckIcon className="ml-auto size-4" />
-      ) : (
-        <div className="ml-auto size-4" />
-      )}
-    </ModelSelectorItem>
-  );
-};
-
 export const AgentThread = () => {
-  const [model, setModel] = useState<string>(models[0]!.id);
-  const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const [text, setText] = useState<string>("");
-  const [useWebSearch, setUseWebSearch] = useState<boolean>(false);
   const [status, setStatus] = useState<
     "submitted" | "streaming" | "ready" | "error"
   >("ready");
   const [messages, setMessages] = useState<MessageType[]>([]);
-
-  const selectedModelData = useMemo(
-    () => models.find((m) => m.id === model),
-    [model],
-  );
 
   const handleSubmit = useCallback((message: PromptInputMessage) => {
     const hasText = Boolean(message.text);
@@ -210,25 +116,12 @@ export const AgentThread = () => {
     setStatus("ready");
   }, []);
 
-  const handleTranscriptionChange = useCallback((transcript: string) => {
-    setText((prev) => (prev ? `${prev} ${transcript}` : transcript));
-  }, []);
-
   const handleTextChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       setText(event.target.value);
     },
     [],
   );
-
-  const toggleWebSearch = useCallback(() => {
-    setUseWebSearch((prev) => !prev);
-  }, []);
-
-  const handleModelSelect = useCallback((modelId: string) => {
-    setModel(modelId);
-    setModelSelectorOpen(false);
-  }, []);
 
   const isSubmitDisabled = useMemo(
     () => !text.trim() || status === "streaming",
