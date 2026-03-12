@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.41",
+    "@ai-sdk/react": "^3.0.118",
     "@codemirror/autocomplete": "^6.20.0",
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/language": "^6.12.1",
@@ -24,6 +26,7 @@
     "@workspace/audio": "workspace:*",
     "@workspace/ui": "workspace:*",
     "@workspace/visuals": "workspace:*",
+    "ai": "^6.0.116",
     "ajv": "^8.18.0",
     "codemirror": "^6.0.2",
     "lucide-react": "^0.563.0",
@@ -31,6 +34,7 @@
     "next-themes": "^0.4.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "zod": "^3.25.76",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
