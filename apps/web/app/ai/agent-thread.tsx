@@ -95,26 +95,60 @@ export const AgentThread = () => {
   >("ready");
   const [messages, setMessages] = useState<MessageType[]>([]);
 
-  const handleSubmit = useCallback((message: PromptInputMessage) => {
-    const hasText = Boolean(message.text);
-    const hasAttachments = Boolean(message.files?.length);
+  const handleSubmit = useCallback(
+    async (message: PromptInputMessage) => {
+      const hasText = Boolean(message.text);
+      const hasAttachments = Boolean(message.files?.length);
 
-    if (!(hasText || hasAttachments)) {
-      return;
-    }
+      if (!(hasText || hasAttachments)) {
+        return;
+      }
 
-    setStatus("submitted");
-    setMessages((prev) => [
-      ...prev,
-      {
+      const userContent = message.text || "Sent with attachments";
+      const userMessage: MessageType = {
         key: `user-${Date.now()}`,
         from: "user",
-        content: message.text || "Sent with attachments",
-      },
-    ]);
-    setText("");
-    setStatus("ready");
-  }, []);
+        content: userContent,
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+      setText("");
+      setStatus("submitted");
+
+      const uiMessages = [...messages, userMessage].map((m) => ({
+        id: m.key,
+        role: m.from === "user" ? ("user" as const) : ("assistant" as const),
+        parts: [{ type: "text" as const, text: m.content }],
+      }));
+
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: uiMessages }),
+        });
+
+        if (!res.ok) {
+          setStatus("error");
+          return;
+        }
+
+        const data = (await res.json()) as { content: string };
+        setMessages((prev) => [
+          ...prev,
+          {
+            key: `assistant-${Date.now()}`,
+            from: "assistant",
+            content: data.content ?? "",
+          },
+        ]);
+        setStatus("ready");
+      } catch {
+        setStatus("error");
+      }
+    },
+    [messages],
+  );
 
   const handleTextChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -124,7 +158,7 @@ export const AgentThread = () => {
   );
 
   const isSubmitDisabled = useMemo(
-    () => !text.trim() || status === "streaming",
+    () => !text.trim() || status === "submitted",
     [text, status],
   );
 
