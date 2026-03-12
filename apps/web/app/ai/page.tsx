@@ -2,7 +2,7 @@ import { AgentThread } from "./agent-thread";
 
 export default function Page() {
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="dark flex h-screen overflow-hidden bg-background text-foreground">
       <div className="w-1/3 border-r">
         <AgentThread />
       </div>
