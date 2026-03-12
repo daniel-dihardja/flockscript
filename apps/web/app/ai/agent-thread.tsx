@@ -89,7 +89,11 @@ const PromptInputAttachmentsDisplay = () => {
   );
 };
 
-export const AgentThread = () => {
+export const AgentThread = ({
+  onPatch,
+}: {
+  onPatch?: (json: string) => void;
+}) => {
   const [text, setText] = useState<string>("");
   const [status, setStatus] = useState<
     "submitted" | "streaming" | "ready" | "error"
@@ -155,14 +159,20 @@ export const AgentThread = () => {
             if (!line.startsWith("data: ")) continue;
             const payload = line.slice(6);
             if (payload === "[DONE]") break;
-            const { token } = JSON.parse(payload) as { token: string };
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.key === assistantKey
-                  ? { ...m, content: m.content + token }
-                  : m,
-              ),
-            );
+            const msg = JSON.parse(payload) as
+              | { type: "token"; token: string }
+              | { type: "patch"; data: string };
+            if (msg.type === "token") {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.key === assistantKey
+                    ? { ...m, content: m.content + msg.token }
+                    : m,
+                ),
+              );
+            } else if (msg.type === "patch") {
+              onPatch?.(JSON.stringify(JSON.parse(msg.data), null, 2));
+            }
           }
         }
 

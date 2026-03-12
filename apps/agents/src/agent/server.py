@@ -46,6 +46,26 @@ async def invoke(request: InvokeRequest) -> InvokeResponse:
     return InvokeResponse(messages=messages)
 
 
+def _coerce_patch_output(output: object) -> str:
+    """Extract a JSON string from a LangChain ToolMessage or raw value."""
+    if output is None:
+        return ""
+    content = getattr(output, "content", output)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict) and isinstance(item.get("text"), str):
+                parts.append(item["text"])
+        return "".join(parts) if parts else json.dumps(content, default=str)
+    if isinstance(content, dict):
+        return json.dumps(content, default=str)
+    return str(content)
+
+
 @app.post("/stream")
 async def stream(request: InvokeRequest) -> StreamingResponse:
     """Stream token chunks from the agent as Server-Sent Events."""
@@ -60,7 +80,11 @@ async def stream(request: InvokeRequest) -> StreamingResponse:
                 and event["data"]["chunk"].content
             ):
                 token = event["data"]["chunk"].content
-                yield f"data: {json.dumps({'token': token})}\n\n"
+                yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
+            elif event["event"] == "on_tool_end" and event["name"] == "create_patch":
+                raw_output = event.get("data", {}).get("output", "")
+                patch_json = _coerce_patch_output(raw_output)
+                yield f"data: {json.dumps({'type': 'patch', 'data': patch_json})}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
