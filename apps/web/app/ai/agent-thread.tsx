@@ -265,58 +265,6 @@ export const AgentThread = () => {
                   <PromptInputActionAddAttachments />
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
-              <SpeechInput
-                className="shrink-0"
-                onTranscriptionChange={handleTranscriptionChange}
-                size="icon-sm"
-                variant="ghost"
-              />
-              <PromptInputButton
-                onClick={toggleWebSearch}
-                variant={useWebSearch ? "default" : "ghost"}
-              >
-                <GlobeIcon size={16} />
-                <span>Search</span>
-              </PromptInputButton>
-              <ModelSelector
-                onOpenChange={setModelSelectorOpen}
-                open={modelSelectorOpen}
-              >
-                <ModelSelectorTrigger asChild>
-                  <PromptInputButton>
-                    {selectedModelData?.chefSlug && (
-                      <ModelSelectorLogo
-                        provider={selectedModelData.chefSlug}
-                      />
-                    )}
-                    {selectedModelData?.name && (
-                      <ModelSelectorName>
-                        {selectedModelData.name}
-                      </ModelSelectorName>
-                    )}
-                  </PromptInputButton>
-                </ModelSelectorTrigger>
-                <ModelSelectorContent>
-                  <ModelSelectorInput placeholder="Search models..." />
-                  <ModelSelectorList>
-                    <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
-                    {chefs.map((chef) => (
-                      <ModelSelectorGroup heading={chef} key={chef}>
-                        {models
-                          .filter((m) => m.chef === chef)
-                          .map((m) => (
-                            <ModelItem
-                              isSelected={model === m.id}
-                              key={m.id}
-                              m={m}
-                              onSelect={handleModelSelect}
-                            />
-                          ))}
-                      </ModelSelectorGroup>
-                    ))}
-                  </ModelSelectorList>
-                </ModelSelectorContent>
-              </ModelSelector>
             </PromptInputTools>
             <PromptInputSubmit disabled={isSubmitDisabled} status={status} />
           </PromptInputFooter>
