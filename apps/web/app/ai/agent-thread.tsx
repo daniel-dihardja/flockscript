@@ -181,7 +181,7 @@ export const AgentThread = ({
         setStatus("error");
       }
     },
-    [messages],
+    [messages, onPatch],
   );
 
   const handleTextChange = useCallback(
