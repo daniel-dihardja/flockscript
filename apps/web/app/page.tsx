@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import * as React from "react";
 import { LiveEditor } from "@/components/editor/live-editor";
@@ -34,9 +34,7 @@ export default function Page() {
       <div className="h-screen w-1/2">
         <LiveEditor />
       </div>
-      <div className="h-screen w-1/2 bg-black">
-        <ShaderViewer />
-      </div>
+      <div className="h-screen w-1/2 bg-black">{/* <ShaderViewer /> */}</div>
     </main>
   );
 }
