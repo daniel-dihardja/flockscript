@@ -1,4 +1,5 @@
 import { AgentThread } from "./agent-thread";
+import { JsonEditor } from "./json-editor";
 
 export default function Page() {
   return (
@@ -6,8 +7,8 @@ export default function Page() {
       <div className="w-1/3 border-r">
         <AgentThread />
       </div>
-      <div className="flex w-2/3 items-center justify-center text-muted-foreground">
-        <p>Select an agent to get started</p>
+      <div className="w-2/3">
+        <JsonEditor />
       </div>
     </div>
   );
