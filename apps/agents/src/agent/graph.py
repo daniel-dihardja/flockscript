@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Annotated, Any, Dict, List
 
 from dotenv import load_dotenv
 
@@ -12,6 +12,7 @@ load_dotenv()
 from langchain_core.messages import AnyMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph
+from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
 from agent.patch import create_patch
@@ -27,14 +28,16 @@ Patch rules:
 - Valid waveforms: sine, square, saw, sawtooth, triangle, noise.
 - Frequency range: 20–20000 Hz. Gain range: 0–1.
 
-For all other questions, respond conversationally without calling any tool."""
+For all other questions, respond conversationally without calling any tool.
+
+After calling `create_patch`, always follow up with a brief, friendly description of the patch you just created — what it does, what devices are used, and how they are connected."""
 
 
 @dataclass
 class State:
     """Graph state holding the conversation messages."""
 
-    messages: List[AnyMessage] = field(default_factory=list)
+    messages: Annotated[List[AnyMessage], add_messages] = field(default_factory=list)
 
 
 tools = [create_patch]
@@ -46,7 +49,7 @@ async def call_model(state: State) -> Dict[str, Any]:
     """Pass the messages through the LLM and append the response."""
     messages = [SystemMessage(content=SYSTEM_PROMPT)] + state.messages
     response = await llm_with_tools.ainvoke(messages)
-    return {"messages": state.messages + [response]}
+    return {"messages": [response]}
 
 
 def should_use_tools(state: State) -> str:
@@ -64,6 +67,6 @@ graph = (
     .add_node("tools", ToolNode(tools))
     .add_edge("__start__", "call_model")
     .add_conditional_edges("call_model", should_use_tools)
-    .add_edge("tools", "__end__")
+    .add_edge("tools", "call_model")
     .compile(name="Patch Agent Graph")
 )
