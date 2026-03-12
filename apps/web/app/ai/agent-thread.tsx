@@ -34,6 +34,7 @@ import {
   usePromptInputAttachments,
 } from "@workspace/ui/components/ai-elements/prompt-input";
 
+import { Spinner } from "@workspace/ui/components/spinner";
 import { useCallback, useMemo, useState } from "react";
 
 interface MessageType {
@@ -158,7 +159,7 @@ export const AgentThread = () => {
   );
 
   const isSubmitDisabled = useMemo(
-    () => !text.trim() || status === "submitted",
+    () => !text.trim() || status === "streaming",
     [text, status],
   );
 
@@ -173,6 +174,11 @@ export const AgentThread = () => {
               </MessageContent>
             </Message>
           ))}
+          {status === "submitted" && (
+            <Message from="assistant">
+              <Spinner />
+            </Message>
+          )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
