@@ -2,15 +2,6 @@ import type { UIMessage } from "ai";
 
 export const maxDuration = 30;
 
-interface AgentMessage {
-  role: string;
-  content: string;
-}
-
-interface AgentResponse {
-  messages: AgentMessage[];
-}
-
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
@@ -35,7 +26,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const agentRes = await fetch(`${agentsUrl}/invoke`, {
+  const agentRes = await fetch(`${agentsUrl}/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: text }),
@@ -46,8 +37,11 @@ export async function POST(req: Request) {
     return Response.json({ error: detail }, { status: agentRes.status });
   }
 
-  const data: AgentResponse = await agentRes.json();
-  const aiMessage = data.messages.at(-1);
-
-  return Response.json({ content: aiMessage?.content ?? "" });
+  return new Response(agentRes.body, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }

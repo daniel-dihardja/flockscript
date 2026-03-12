@@ -134,15 +134,38 @@ export const AgentThread = () => {
           return;
         }
 
-        const data = (await res.json()) as { content: string };
+        const assistantKey = `assistant-${Date.now()}`;
         setMessages((prev) => [
           ...prev,
-          {
-            key: `assistant-${Date.now()}`,
-            from: "assistant",
-            content: data.content ?? "",
-          },
+          { key: assistantKey, from: "assistant", content: "" },
         ]);
+        setStatus("streaming");
+
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const payload = line.slice(6);
+            if (payload === "[DONE]") break;
+            const { token } = JSON.parse(payload) as { token: string };
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.key === assistantKey
+                  ? { ...m, content: m.content + token }
+                  : m,
+              ),
+            );
+          }
+        }
+
         setStatus("ready");
       } catch {
         setStatus("error");
@@ -159,7 +182,7 @@ export const AgentThread = () => {
   );
 
   const isSubmitDisabled = useMemo(
-    () => !text.trim() || status === "streaming",
+    () => !text.trim() || status === "submitted" || status === "streaming",
     [text, status],
   );
 
