@@ -1,0 +1,56 @@
+{
+    "devices": [
+        {
+            "id": "osc1",
+            "type": "osc",
+            "params": {
+                "wave": "sawtooth",
+                "frequency": 55,
+                "gain": 0.4,
+                "depth": null
+            }
+        },
+        {
+            "id": "osc2",
+            "type": "osc",
+            "params": {
+                "wave": "sawtooth",
+                "frequency": 55.5,
+                "gain": 0.4,
+                "depth": null
+            }
+        },
+        {
+            "id": "lfo1",
+            "type": "lfo",
+            "params": {
+                "wave": "sine",
+                "frequency": 0.02,
+                "gain": null,
+                "depth": 0.25
+            }
+        },
+        {
+            "id": "out",
+            "type": "output",
+            "params": null
+        }
+    ],
+    "routes": [
+        {
+            "from": "osc1.out",
+            "to": "out.in",
+            "signal": "audio"
+        },
+        {
+            "from": "osc2.out",
+            "to": "out.in",
+            "signal": "audio"
+        },
+        {
+            "from": "lfo1.out",
+            "to": "osc1.frequency",
+            "signal": "mod"
+        }
+    ]
+}
