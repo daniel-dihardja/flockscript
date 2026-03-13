@@ -215,6 +215,9 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         );
       } else if (device.type === "output") {
         entry.gain = Number(params.gain) || 1.0;
+      } else if (device.type === "channel") {
+        entry.gain = params.gain != null ? Number(params.gain) : 1.0;
+        entry.pan = params.pan != null ? Number(params.pan) : 0;
       }
       this.devices.set(device.id, entry);
     });
@@ -406,6 +409,23 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         envelopeOutputs.set(id, envIn * envValue);
       }
 
+      // Process channels: sum incoming audio sources and apply channel gain
+      const channelOutputs = new Map();
+      for (const [id, device] of this.devices) {
+        if (device.type !== "channel") continue;
+        let sum = 0;
+        for (const route of this.routes) {
+          if (route.signal !== "audio" || route.to !== id) continue;
+          const src =
+            oscOutputs.get(route.from) ??
+            filterOutputs.get(route.from) ??
+            eqOutputs.get(route.from) ??
+            envelopeOutputs.get(route.from);
+          if (src !== undefined) sum += src;
+        }
+        channelOutputs.set(id, sum * (device.gain ?? 1));
+      }
+
       // Accumulate output: direct osc→output and filter→output routes
       let left = 0;
       let right = 0;
@@ -440,6 +460,13 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         if (envSample !== undefined) {
           left += envSample * gain;
           right += envSample * gain;
+          continue;
+        }
+
+        const channelSample = channelOutputs.get(route.from);
+        if (channelSample !== undefined) {
+          left += channelSample * gain;
+          right += channelSample * gain;
         }
       }
       leftChannel[i] = left;

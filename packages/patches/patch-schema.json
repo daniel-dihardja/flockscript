@@ -33,7 +33,8 @@
               "eq",
               "envelope",
               "sequencer",
-              "output"
+              "output",
+              "channel"
             ]
           },
           "params": {

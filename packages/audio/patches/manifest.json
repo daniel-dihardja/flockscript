@@ -34,6 +34,11 @@
       "name": "EQ - 3 Band",
       "category": "EQ",
       "file": "eq/eq-3band.json"
+    },
+    {
+      "name": "Channel - Basic Mix",
+      "category": "Channel",
+      "file": "channel/channel-basic.json"
     }
   ]
 }
