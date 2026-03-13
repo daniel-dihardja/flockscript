@@ -1,0 +1,69 @@
+{
+    "devices": [
+        {
+            "id": "seq1",
+            "type": "sequencer",
+            "params": {
+                "steps": [
+                    110,
+                    165,
+                    220,
+                    165,
+                    110,
+                    220,
+                    165,
+                    110
+                ],
+                "rate": 4
+            }
+        },
+        {
+            "id": "osc1",
+            "type": "osc",
+            "params": {
+                "wave": "sawtooth",
+                "frequency": 110,
+                "gain": 0.8
+            }
+        },
+        {
+            "id": "env1",
+            "type": "envelope",
+            "params": {
+                "attack": 0.01,
+                "decay": 0.08,
+                "sustain": 0.4,
+                "release": 0.15
+            }
+        },
+        {
+            "id": "out",
+            "type": "output",
+            "params": {
+                "gain": 1
+            }
+        }
+    ],
+    "routes": [
+        {
+            "from": "seq1.out",
+            "to": "osc1.frequency",
+            "signal": "seq"
+        },
+        {
+            "from": "seq1.out",
+            "to": "env1.gate",
+            "signal": "seq"
+        },
+        {
+            "from": "osc1.out",
+            "to": "env1.in",
+            "signal": "audio"
+        },
+        {
+            "from": "env1.out",
+            "to": "out.in",
+            "signal": "audio"
+        }
+    ]
+}

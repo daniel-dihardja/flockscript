@@ -31,6 +31,7 @@
               "lfo",
               "filter",
               "envelope",
+              "sequencer",
               "output"
             ]
           },
@@ -119,6 +120,21 @@
                 "description": "Envelope release time in seconds",
                 "minimum": 0,
                 "default": 0.3
+              },
+              "steps": {
+                "type": "array",
+                "description": "Sequencer step frequencies in Hz",
+                "items": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "minItems": 1
+              },
+              "rate": {
+                "type": "number",
+                "description": "Sequencer step rate in steps per second",
+                "minimum": 0.01,
+                "default": 4
               }
             },
             "additionalProperties": true
@@ -152,7 +168,8 @@
             "description": "Signal type carried by the route",
             "enum": [
               "audio",
-              "mod"
+              "mod",
+              "seq"
             ]
           }
         },

@@ -13,21 +13,30 @@ type ManifestEntry = {
 const initialPatch = {
   devices: [
     {
-      id: "osc1",
-      type: "osc",
+      id: "seq1",
+      type: "sequencer",
       params: {
-        wave: "sine",
-        frequency: 80,
-        gain: 0.7,
+        steps: [110, 165, 220, 165, 110, 220, 165, 110],
+        rate: 4,
       },
     },
     {
-      id: "osc2",
+      id: "osc1",
       type: "osc",
       params: {
-        wave: "sine",
-        frequency: 432,
-        gain: 0.03,
+        wave: "sawtooth",
+        frequency: 110,
+        gain: 0.8,
+      },
+    },
+    {
+      id: "env1",
+      type: "envelope",
+      params: {
+        attack: 0.01,
+        decay: 0.08,
+        sustain: 0.4,
+        release: 0.15,
       },
     },
     {
@@ -40,12 +49,22 @@ const initialPatch = {
   ],
   routes: [
     {
+      from: "seq1.out",
+      to: "osc1.frequency",
+      signal: "seq",
+    },
+    {
+      from: "seq1.out",
+      to: "env1.gate",
+      signal: "seq",
+    },
+    {
       from: "osc1.out",
-      to: "out.in",
+      to: "env1.in",
       signal: "audio",
     },
     {
-      from: "osc2.out",
+      from: "env1.out",
       to: "out.in",
       signal: "audio",
     },
@@ -62,9 +81,9 @@ type EngineDebugStatus = {
 
 export default function AudioTestPage() {
   const [selectedCategory, setSelectedCategory] =
-    useState<string>("Single sounds");
+    useState<string>("Sequencer");
   const [selectedPatch, setSelectedPatch] =
-    useState<string>("QA 02 - Sine Tone");
+    useState<string>("Sequencer - Basic");
   const [editorValue, setEditorValue] = useState<string>(
     JSON.stringify(initialPatch, null, 2),
   );

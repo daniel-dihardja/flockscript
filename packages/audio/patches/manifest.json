@@ -11,6 +11,11 @@
       "file": "envelope/envelope-adsr.json"
     },
     {
+      "name": "Sequencer - Basic",
+      "category": "Sequencer",
+      "file": "sequencer/sequencer-basic.json"
+    },
+    {
       "name": "LFO Vibrato",
       "category": "LFO",
       "file": "lfo/lfo-vibrato.json"

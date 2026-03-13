@@ -118,6 +118,13 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         entry.state = "attack";
         entry.value = 0;
         entry.releaseStartValue = 0;
+      } else if (device.type === "sequencer") {
+        entry.steps = Array.isArray(params.steps)
+          ? params.steps.map(Number)
+          : [220, 330, 440, 330];
+        entry.rate = Number(params.rate) || 4;
+        entry.currentStep = 0;
+        entry.sampleClock = 0;
       } else if (device.type === "output") {
         entry.gain = Number(params.gain) || 1.0;
       }
@@ -129,7 +136,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         if (!route?.from || !route?.to) return null;
         const from = route.from.split(".")[0];
         const signal = route.signal || "audio";
-        if (signal === "mod") {
+        if (signal === "mod" || signal === "seq") {
           const dotIndex = route.to.indexOf(".");
           const toDevice =
             dotIndex >= 0 ? route.to.slice(0, dotIndex) : route.to;
@@ -209,6 +216,31 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     const leftChannel = output[0];
     const rightChannel = output[1] || output[0];
     for (let i = 0; i < leftChannel.length; i += 1) {
+      // Sequencer pre-pass: advance step clock, write frequency/gate to targets
+      for (const [, device] of this.devices) {
+        if (device.type !== "sequencer") continue;
+        const samplesPerStep = this.sampleRate / device.rate;
+        device.sampleClock += 1;
+        if (device.sampleClock >= samplesPerStep) {
+          device.sampleClock -= samplesPerStep;
+          device.currentStep = (device.currentStep + 1) % device.steps.length;
+          const freq = device.steps[device.currentStep];
+          for (const route of this.routes) {
+            if (route.signal !== "seq" || route.from !== device.id) continue;
+            const target = this.devices.get(route.toDevice);
+            if (!target) continue;
+            if (route.toParam === "frequency" && freq != null) {
+              target.frequency = freq;
+              target.baseFrequency = freq;
+            } else if (route.toParam === "gate" && target.type === "envelope") {
+              target.releaseStartValue = target.value;
+              target.state = "attack";
+              target.value = 0;
+            }
+          }
+        }
+      }
+
       // LFO mod pre-pass: apply modulation before audio rendering
       for (const route of this.routes) {
         if (route.signal !== "mod") continue;
