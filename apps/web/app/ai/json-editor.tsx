@@ -6,6 +6,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { basicSetup } from "codemirror";
 import { useEffect, useRef } from "react";
+import { usePatch } from "./patch-provider";
 
 const editorTheme = EditorView.theme({
   "&": {
@@ -36,12 +37,8 @@ const editorTheme = EditorView.theme({
   ".cm-activeLine": { backgroundColor: "hsl(var(--muted) / 0.3)" },
 });
 
-interface JsonEditorProps {
-  value?: string;
-  onChange?: (value: string) => void;
-}
-
-export function JsonEditor({ value = "{}", onChange }: JsonEditorProps) {
+export function JsonEditor() {
+  const { patch: value, setPatch: onChange } = usePatch();
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 

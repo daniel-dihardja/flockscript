@@ -1,21 +1,20 @@
 "use client";
 
-import { useState } from "react";
-
 import { AgentThread } from "./agent-thread";
 import { JsonEditor } from "./json-editor";
+import { PatchProvider } from "./patch-provider";
 
 export default function Page() {
-  const [patch, setPatch] = useState<string>("{}");
-
   return (
-    <div className="dark flex h-screen overflow-hidden bg-background text-foreground">
-      <div className="w-1/4 border-r">
-        <AgentThread onPatch={setPatch} />
+    <PatchProvider>
+      <div className="dark flex h-screen overflow-hidden bg-background text-foreground">
+        <div className="w-1/4 border-r">
+          <AgentThread />
+        </div>
+        <div className="w-3/4">
+          <JsonEditor />
+        </div>
       </div>
-      <div className="w-3/4">
-        <JsonEditor value={patch} onChange={setPatch} />
-      </div>
-    </div>
+    </PatchProvider>
   );
 }

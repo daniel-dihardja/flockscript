@@ -36,6 +36,7 @@ import {
 
 import { Spinner } from "@workspace/ui/components/spinner";
 import { useCallback, useMemo, useState } from "react";
+import { usePatch } from "./patch-provider";
 
 interface MessageType {
   key: string;
@@ -89,11 +90,8 @@ const PromptInputAttachmentsDisplay = () => {
   );
 };
 
-export const AgentThread = ({
-  onPatch,
-}: {
-  onPatch?: (json: string) => void;
-}) => {
+export const AgentThread = () => {
+  const { setPatch } = usePatch();
   const [text, setText] = useState<string>("");
   const [status, setStatus] = useState<
     "submitted" | "streaming" | "ready" | "error"
@@ -171,7 +169,7 @@ export const AgentThread = ({
                 ),
               );
             } else if (msg.type === "patch") {
-              onPatch?.(JSON.stringify(JSON.parse(msg.data), null, 2));
+              setPatch(JSON.stringify(JSON.parse(msg.data), null, 2));
             }
           }
         }
@@ -181,7 +179,7 @@ export const AgentThread = ({
         setStatus("error");
       }
     },
-    [messages, onPatch],
+    [messages, setPatch],
   );
 
   const handleTextChange = useCallback(
