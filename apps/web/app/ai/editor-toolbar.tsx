@@ -24,6 +24,7 @@ export function EditorToolbar() {
     workletReady,
     initEngine,
     sendPatch,
+    silence,
   } = usePatch();
 
   return (
@@ -41,6 +42,13 @@ export function EditorToolbar() {
         onClick={sendPatch}
       >
         Send Patch
+      </button>
+      <button
+        type="button"
+        className="rounded border border-border px-3 py-1 text-xs transition hover:bg-muted"
+        onClick={silence}
+      >
+        Silence
       </button>
 
       <div className="flex items-center gap-1.5">

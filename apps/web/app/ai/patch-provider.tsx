@@ -23,6 +23,7 @@ interface PatchContextValue {
   workletReady: boolean;
   initEngine: () => Promise<void>;
   sendPatch: () => Promise<void>;
+  silence: () => void;
 }
 
 const PatchContext = createContext<PatchContextValue | null>(null);
@@ -36,6 +37,7 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
   const [workletReady, setWorkletReady] = useState(false);
   const engineRef = useRef<{
     resume: () => Promise<void>;
+    silence: () => void;
     getDebugStatus: () => {
       contextState: string;
       sampleRate: number;
@@ -77,8 +79,11 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
     }
   }, [initEngine, patch]);
 
+  const silence = useCallback(() => {
+    engineRef.current?.silence();
+  }, []);
+
   useEffect(() => {
-    if (!engineReady) return;
     const tick = () => {
       const s = engineRef.current?.getDebugStatus?.();
       if (s) {
@@ -104,6 +109,7 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
         workletReady,
         initEngine,
         sendPatch,
+        silence,
       }}
     >
       {children}
