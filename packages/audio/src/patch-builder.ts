@@ -41,9 +41,16 @@ class PatchBuilder {
     // Normalize LLM output: drop null params so schema validation passes
     const normalized: SyntaxPatch = {
       ...patchData,
-      devices: (patchData.devices ?? []).map((d) =>
-        d.params == null ? { id: d.id, type: d.type } : d,
-      ),
+      devices: (patchData.devices ?? []).map((d) => {
+        if (d.params == null) return { id: d.id, type: d.type };
+        // Strip null/undefined param values (Pydantic Optional fields serialized as null)
+        const cleanParams = Object.fromEntries(
+          Object.entries(d.params).filter(([, v]) => v != null),
+        );
+        return Object.keys(cleanParams).length === 0
+          ? { id: d.id, type: d.type }
+          : { ...d, params: cleanParams };
+      }),
     };
 
     const isValid = validatePatch(normalized);

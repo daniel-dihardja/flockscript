@@ -19,13 +19,22 @@ class Params(BaseModel):
     depth: Optional[float] = Field(
         default=None, description="LFO modulation depth (0–1)"
     )
+    filterType: Optional[Literal["lowpass", "highpass"]] = Field(
+        default=None, description="Filter mode: lowpass or highpass"
+    )
+    cutoff: Optional[float] = Field(
+        default=None, description="Filter cutoff frequency in Hz (20–20000)"
+    )
+    q: Optional[float] = Field(
+        default=None, description="Filter resonance/Q factor (0.001–30)"
+    )
 
 
 class Device(BaseModel):
     """A signal generator or sink in the patch."""
 
     id: Optional[str] = None
-    type: Literal["osc", "lfo", "output"]
+    type: Literal["osc", "lfo", "filter", "output"]
     params: Optional[Params] = None
 
 

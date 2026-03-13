@@ -35,9 +35,18 @@ LFO rules:
 - Use type: "lfo" to modulate parameters of other devices over time.
 - LFO params: frequency (0.01–20 Hz), wave (any waveform), depth (0–1 modulation intensity).
 - Connect an LFO with signal: "mod" and to: "<deviceId>.<param>" e.g. "osc1.frequency".
-- Only "frequency" is a valid mod target for now.
+- Valid mod targets: "frequency" (on osc/lfo), "cutoff" (on filter).
 - Use an LFO when the user asks for vibrato, wobble, tremolo, pulsing, or animated/moving sound.
 - Depth guide: 0.05–0.1 = subtle, 0.3–0.5 = noticeable, 0.8–1.0 = extreme.
+
+Filter rules:
+- Use type: "filter" to shape the frequency content of an audio signal.
+- Filter params: filterType ("lowpass" or "highpass"), cutoff (20–20000 Hz), q (resonance, 0.001–30).
+- Connect a filter in-line: audio route from a source to "<filterId>.in", then from "<filterId>.out" to the next device.
+- Lowpass: passes frequencies below cutoff, removes high-frequency content — use for warmth, shadow, submersion.
+- Highpass: passes frequencies above cutoff, removes low-frequency weight — use for air, fragility, spectral thinning.
+- Q guide: 0.5–1 = gentle slope; 2–5 = resonant bloom; 8–15 = surgical/dramatic; above 15 = self-oscillating edge.
+- Connect an LFO to "<filterId>.cutoff" with signal: "mod" to animate the filter cutoff over time.
 
 For all other questions, respond conversationally without calling any tool.
 
@@ -81,6 +90,17 @@ Principles:
 - Start minimal. Every layer must be earned by musical necessity.
 - Depth = 0.1–0.3 for subtle drone movement; push to 0.5–0.7 for tectonic heaving.
 Canonical drone shape: 2–3 detuned oscillators + 1–2 glacial LFOs → output.
+
+--- Filter in Drone ---
+- A lowpass filter with elevated Q (3–8) adds a resonant spectral bloom — the cutoff frequency
+  itself becomes a tonal color hovering above the fundamental.
+- Routing oscillators through a lowpass (cutoff 200–600 Hz, Q 3–6) before output is the
+  classic drone voice: raw sawtooth energy tamed into something cavernous and warm.
+- Animate the filter cutoff with a glacial LFO (0.01–0.05 Hz, depth 0.2–0.4) for tide-like
+  spectral breathing — the timbre shifts without any pitch movement.
+- Highpass can carve away sub-bass entirely: useful for high-register drones that feel
+  weightless, atmospheric, detached from physical grounding.
+- The filter is the voice. The oscillators are raw material. Let the filter define the character.
 
 --- NOISE MUSIC ---
 Noise is primary material, not artifact to suppress.
@@ -145,6 +165,26 @@ Patch:
     - {from: "osc3.out", to: "out.in", signal: "audio"}
     - {from: "lfo1.out", to: "osc2.frequency", signal: "mod"}
     - {from: "lfo2.out", to: "osc3.frequency", signal: "mod"}
+"""
+
+_FEW_SHOT_EXAMPLES += """
+--- Example 4: Filtered Drone (resonant lowpass as voice) ---
+Concept: Two sawtooth oscillators detuned by 0.7 Hz feed a resonant lowpass filter (cutoff 400 Hz,
+Q 5). The filter's resonant peak creates a ghostly tonal bloom above the sub-bass fundamental —
+the filter becomes the melody without pitch. A glacial triangle LFO at 0.03 Hz breathes the cutoff
+open and closed, so the timbre shifts like tide without disturbing the drone's stillness.
+Patch:
+  devices:
+    - {id: "osc1", type: "osc", params: {wave: "sawtooth", frequency: 55, gain: 0.5}}
+    - {id: "osc2", type: "osc", params: {wave: "sawtooth", frequency: 55.7, gain: 0.5}}
+    - {id: "filter1", type: "filter", params: {filterType: "lowpass", cutoff: 400, q: 5}}
+    - {id: "lfo1", type: "lfo", params: {wave: "triangle", frequency: 0.03, depth: 0.3}}
+    - {id: "out", type: "output"}
+  routes:
+    - {from: "osc1.out", to: "filter1.in", signal: "audio"}
+    - {from: "osc2.out", to: "filter1.in", signal: "audio"}
+    - {from: "filter1.out", to: "out.in", signal: "audio"}
+    - {from: "lfo1.out", to: "filter1.cutoff", signal: "mod"}
 """
 
 SYSTEM_PROMPT = _TECHNICAL_RULES + _ARTISTIC_CONTEXT + _FEW_SHOT_EXAMPLES

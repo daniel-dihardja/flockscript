@@ -85,6 +85,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       } else if (device.type === "filter") {
         entry.filterType = params.filterType || "lowpass";
         entry.cutoff = Number(params.cutoff) || 1000;
+        entry.baseCutoff = entry.cutoff;
         entry.q = Number(params.q) || 1.0;
         entry.x1 = 0;
         entry.x2 = 0;
@@ -164,6 +165,14 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         if (route.toParam === "frequency" && target.baseFrequency != null) {
           target.frequency =
             target.baseFrequency * (1 + lfoValue * (lfo.depth ?? 0.5));
+        } else if (route.toParam === "cutoff" && target.baseCutoff != null) {
+          target.cutoff =
+            target.baseCutoff * (1 + lfoValue * (lfo.depth ?? 0.5));
+          target.coeffs = this.computeBiquadCoeffs(
+            target.filterType,
+            target.cutoff,
+            target.q,
+          );
         }
       }
 
