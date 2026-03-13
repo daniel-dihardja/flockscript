@@ -5,18 +5,9 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
-  const lastUserMessage = [...messages]
-    .reverse()
-    .find((m) => m.role === "user");
-
-  if (!lastUserMessage) {
-    return Response.json({ error: "No user message found" }, { status: 400 });
+  if (!messages.length) {
+    return Response.json({ error: "No messages provided" }, { status: 400 });
   }
-
-  const text = lastUserMessage.parts
-    .filter((p) => p.type === "text")
-    .map((p) => (p as { type: "text"; text: string }).text)
-    .join(" ");
 
   const agentsUrl = process.env.AGENTS_URL;
   if (!agentsUrl) {
@@ -26,10 +17,18 @@ export async function POST(req: Request) {
     );
   }
 
+  const serialized = messages.map((m) => ({
+    role: m.role === "user" ? "user" : "assistant",
+    content: m.parts
+      .filter((p) => p.type === "text")
+      .map((p) => (p as { type: "text"; text: string }).text)
+      .join(" "),
+  }));
+
   const agentRes = await fetch(`${agentsUrl}/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: text }),
+    body: JSON.stringify({ messages: serialized }),
   });
 
   if (!agentRes.ok) {

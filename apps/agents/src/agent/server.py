@@ -9,7 +9,7 @@ from typing import List
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import AnyMessage, HumanMessage
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from pydantic import BaseModel
 
 load_dotenv()
@@ -19,8 +19,14 @@ from agent.graph import graph  # noqa: E402 — import after dotenv load
 app = FastAPI(title="Hello World Agent")
 
 
+class MessageIn(BaseModel):
+    role: str
+    content: str
+
+
 class InvokeRequest(BaseModel):
-    message: str
+    message: str = ""
+    messages: List[MessageIn] = []
 
 
 class MessageOut(BaseModel):
@@ -32,10 +38,23 @@ class InvokeResponse(BaseModel):
     messages: List[MessageOut]
 
 
+def _build_messages(request: InvokeRequest) -> list[AnyMessage]:
+    """Convert request payload into LangChain message objects."""
+    if request.messages:
+        msgs: list[AnyMessage] = []
+        for m in request.messages:
+            if m.role == "user":
+                msgs.append(HumanMessage(content=m.content))
+            else:
+                msgs.append(AIMessage(content=m.content))
+        return msgs
+    return [HumanMessage(content=request.message)]
+
+
 @app.post("/invoke", response_model=InvokeResponse)
 async def invoke(request: InvokeRequest) -> InvokeResponse:
     """Invoke the agent with a user message and return all messages."""
-    result = await graph.ainvoke({"messages": [HumanMessage(content=request.message)]})
+    result = await graph.ainvoke({"messages": _build_messages(request)})
     messages = [
         MessageOut(
             role=getattr(msg, "type", type(msg).__name__),
@@ -72,7 +91,7 @@ async def stream(request: InvokeRequest) -> StreamingResponse:
 
     async def event_generator():
         async for event in graph.astream_events(
-            {"messages": [HumanMessage(content=request.message)]},
+            {"messages": _build_messages(request)},
             version="v2",
         ):
             if (

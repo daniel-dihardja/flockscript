@@ -91,7 +91,7 @@ const PromptInputAttachmentsDisplay = () => {
 };
 
 export const AgentThread = () => {
-  const { setPatch } = usePatch();
+  const { patch, setPatch } = usePatch();
   const [text, setText] = useState<string>("");
   const [status, setStatus] = useState<
     "submitted" | "streaming" | "ready" | "error"
@@ -118,10 +118,24 @@ export const AgentThread = () => {
       setText("");
       setStatus("submitted");
 
-      const uiMessages = [...messages, userMessage].map((m) => ({
+      // Append the current patch state so the agent can refine it iteratively
+      const currentPatch = patch && patch !== "{}" ? patch : null;
+      const lastContent = currentPatch
+        ? `${userContent}\n\n[Current patch state:\n${currentPatch}\n]`
+        : userContent;
+
+      const uiMessages = [...messages, userMessage].map((m, i, arr) => ({
         id: m.key,
         role: m.from === "user" ? ("user" as const) : ("assistant" as const),
-        parts: [{ type: "text" as const, text: m.content }],
+        parts: [
+          {
+            type: "text" as const,
+            text:
+              i === arr.length - 1 && m.from === "user"
+                ? lastContent
+                : m.content,
+          },
+        ],
       }));
 
       try {
@@ -179,7 +193,7 @@ export const AgentThread = () => {
         setStatus("error");
       }
     },
-    [messages, setPatch],
+    [messages, patch, setPatch],
   );
 
   const handleTextChange = useCallback(
