@@ -34,7 +34,12 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       };
       if (device.type === "osc") {
         entry.frequency = Number(params.frequency) || 440;
+        entry.baseFrequency = Number(params.frequency) || 440;
         entry.gain = Number(params.gain) || 0.5;
+        entry.wave = (params.wave || "sine").toLowerCase();
+      } else if (device.type === "lfo") {
+        entry.frequency = Number(params.frequency) || 1;
+        entry.depth = Number(params.depth) ?? 0.5;
         entry.wave = (params.wave || "sine").toLowerCase();
       } else if (device.type === "output") {
         entry.gain = Number(params.gain) || 1.0;
@@ -46,8 +51,16 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       .map((route) => {
         if (!route?.from || !route?.to) return null;
         const from = route.from.split(".")[0];
+        const signal = route.signal || "audio";
+        if (signal === "mod") {
+          const dotIndex = route.to.indexOf(".");
+          const toDevice =
+            dotIndex >= 0 ? route.to.slice(0, dotIndex) : route.to;
+          const toParam = dotIndex >= 0 ? route.to.slice(dotIndex + 1) : "";
+          return { from, toDevice, toParam, signal };
+        }
         const to = route.to.split(".")[0];
-        return { from, to, signal: route.signal || "audio" };
+        return { from, to, signal };
       })
       .filter(Boolean);
   }
@@ -78,6 +91,32 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     return sample * (device.gain || 0);
   }
 
+  renderLfoSample(device) {
+    const phase = device.phase || 0;
+    let sample = 0;
+    switch (device.wave) {
+      case "noise":
+        sample = Math.random() * 2 - 1;
+        break;
+      case "square":
+        sample = phase < Math.PI ? 1 : -1;
+        break;
+      case "sawtooth":
+        sample = 2 * (phase / TWO_PI) - 1;
+        break;
+      case "triangle":
+        sample = 2 * Math.abs(2 * (phase / TWO_PI) - 1) - 1;
+        break;
+      case "sine":
+      default:
+        sample = Math.sin(phase);
+        break;
+    }
+    const increment = (TWO_PI * (device.frequency || 1)) / this.sampleRate;
+    device.phase = (phase + increment) % TWO_PI;
+    return sample; // [-1, 1], depth applied at modulation target
+  }
+
   process(_, outputs) {
     const output = outputs[0];
     if (!output || !output.length) {
@@ -86,6 +125,20 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     const leftChannel = output[0];
     const rightChannel = output[1] || output[0];
     for (let i = 0; i < leftChannel.length; i += 1) {
+      // LFO mod pre-pass: apply modulation before audio rendering
+      for (const route of this.routes) {
+        if (route.signal !== "mod") continue;
+        const lfo = this.devices.get(route.from);
+        if (!lfo || lfo.type !== "lfo") continue;
+        const target = this.devices.get(route.toDevice);
+        if (!target) continue;
+        const lfoValue = this.renderLfoSample(lfo);
+        if (route.toParam === "frequency" && target.baseFrequency != null) {
+          target.frequency =
+            target.baseFrequency * (1 + lfoValue * (lfo.depth ?? 0.5));
+        }
+      }
+
       let left = 0;
       let right = 0;
       for (const route of this.routes) {

@@ -4,7 +4,10 @@
   "title": "Audio Patch",
   "description": "JSON schema for the minimal device/route syntax that feeds the new worklet engine",
   "type": "object",
-  "required": ["devices", "routes"],
+  "required": [
+    "devices",
+    "routes"
+  ],
   "properties": {
     "devices": {
       "type": "array",
@@ -12,7 +15,9 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["type"],
+        "required": [
+          "type"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -21,7 +26,11 @@
           "type": {
             "type": "string",
             "description": "Device type selector",
-            "enum": ["osc", "output"]
+            "enum": [
+              "osc",
+              "lfo",
+              "output"
+            ]
           },
           "params": {
             "type": "object",
@@ -30,19 +39,33 @@
               "wave": {
                 "type": "string",
                 "description": "Oscillator waveform",
-                "enum": ["sine", "square", "saw", "sawtooth", "triangle", "noise"],
+                "enum": [
+                  "sine",
+                  "square",
+                  "saw",
+                  "sawtooth",
+                  "triangle",
+                  "noise"
+                ],
                 "default": "sine"
               },
               "frequency": {
                 "type": "number",
                 "description": "Oscillator frequency in Hz",
-                "minimum": 20,
+                "minimum": 0.01,
                 "maximum": 20000,
                 "default": 440
               },
               "gain": {
                 "type": "number",
                 "description": "Linear gain (0-1)",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 0.5
+              },
+              "depth": {
+                "type": "number",
+                "description": "LFO modulation depth (0-1)",
                 "minimum": 0,
                 "maximum": 1,
                 "default": 0.5
@@ -60,7 +83,11 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["from", "to", "signal"],
+        "required": [
+          "from",
+          "to",
+          "signal"
+        ],
         "properties": {
           "from": {
             "type": "string",
@@ -73,7 +100,10 @@
           "signal": {
             "type": "string",
             "description": "Signal type carried by the route",
-            "enum": ["audio"]
+            "enum": [
+              "audio",
+              "mod"
+            ]
           }
         },
         "additionalProperties": false

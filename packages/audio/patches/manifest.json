@@ -4,6 +4,11 @@
       "name": "Syntax Draft Example",
       "category": "Syntax",
       "file": "syntax/syntax-example.json"
+    },
+    {
+      "name": "LFO Vibrato",
+      "category": "LFO",
+      "file": "lfo/lfo-vibrato.json"
     }
   ]
 }

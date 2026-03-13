@@ -2,7 +2,7 @@ import Ajv, { ErrorObject } from "ajv";
 import audioEngine from "./audio-engine";
 import patchSchema from "../../patches/patch-schema.json";
 
-type DeviceType = "osc" | "output";
+type DeviceType = "osc" | "lfo" | "output";
 
 type SyntaxDevice = {
   id?: string;
@@ -40,7 +40,9 @@ class PatchBuilder {
 
     const isValid = validatePatch(patchData);
     if (!isValid) {
-      throw new Error(`Patch validation failed: ${formatErrors(validatePatch.errors)}`);
+      throw new Error(
+        `Patch validation failed: ${formatErrors(validatePatch.errors)}`,
+      );
     }
 
     const devices = patchData.devices ?? [];

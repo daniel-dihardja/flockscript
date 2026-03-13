@@ -1,0 +1,41 @@
+{
+    "devices": [
+        {
+            "id": "lfo1",
+            "type": "lfo",
+            "params": {
+                "frequency": 2,
+                "wave": "sine",
+                "depth": 0.3
+            }
+        },
+        {
+            "id": "osc1",
+            "type": "osc",
+            "params": {
+                "wave": "sine",
+                "frequency": 440,
+                "gain": 0.5
+            }
+        },
+        {
+            "id": "out",
+            "type": "output",
+            "params": {
+                "gain": 1
+            }
+        }
+    ],
+    "routes": [
+        {
+            "from": "lfo1.out",
+            "to": "osc1.frequency",
+            "signal": "mod"
+        },
+        {
+            "from": "osc1.out",
+            "to": "out.in",
+            "signal": "audio"
+        }
+    ]
+}
