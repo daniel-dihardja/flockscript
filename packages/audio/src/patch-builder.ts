@@ -21,7 +21,7 @@ type SyntaxPatch = {
   routes: SyntaxRoute[];
 };
 
-const ajv = new Ajv({ allErrors: true });
+const ajv = new Ajv({ allErrors: true, coerceTypes: true });
 const validatePatch = ajv.compile(patchSchema as Record<string, unknown>);
 
 const formatErrors = (errors: ErrorObject[] | null | undefined) =>
@@ -38,15 +38,23 @@ class PatchBuilder {
       throw new Error("Audio engine is not ready");
     }
 
-    const isValid = validatePatch(patchData);
+    // Normalize LLM output: drop null params so schema validation passes
+    const normalized: SyntaxPatch = {
+      ...patchData,
+      devices: (patchData.devices ?? []).map((d) =>
+        d.params == null ? { id: d.id, type: d.type } : d,
+      ),
+    };
+
+    const isValid = validatePatch(normalized);
     if (!isValid) {
       throw new Error(
         `Patch validation failed: ${formatErrors(validatePatch.errors)}`,
       );
     }
 
-    const devices = patchData.devices ?? [];
-    const routes = patchData.routes ?? [];
+    const devices = normalized.devices ?? [];
+    const routes = normalized.routes ?? [];
 
     audioEngine.sendPatch({ devices, routes });
   }

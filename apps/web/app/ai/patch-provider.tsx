@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import type PatchBuilderType from "@workspace/audio/src/patch-builder";
+
 export type EngineStatus = "idle" | "initializing" | "ready" | "error";
 
 interface PatchContextValue {
@@ -20,6 +22,7 @@ interface PatchContextValue {
   sampleRate: number;
   workletReady: boolean;
   initEngine: () => Promise<void>;
+  sendPatch: () => Promise<void>;
 }
 
 const PatchContext = createContext<PatchContextValue | null>(null);
@@ -39,6 +42,7 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
       workletReady: boolean;
     };
   } | null>(null);
+  const builderRef = useRef<InstanceType<typeof PatchBuilderType> | null>(null);
 
   const initEngine = useCallback(async () => {
     if (engineRef.current) {
@@ -47,9 +51,10 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
     }
     setEngineStatus("initializing");
     try {
-      const { audioEngine } = await import("@workspace/audio");
+      const { audioEngine, PatchBuilder } = await import("@workspace/audio");
       await audioEngine.init();
       engineRef.current = audioEngine;
+      builderRef.current = new PatchBuilder();
       setEngineStatus("ready");
       setEngineReady(true);
     } catch (err) {
@@ -57,6 +62,20 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
       setEngineStatus("error");
     }
   }, []);
+
+  const sendPatch = useCallback(async () => {
+    try {
+      if (!engineRef.current) {
+        await initEngine();
+      }
+      if (!builderRef.current) return;
+      const parsed = JSON.parse(patch);
+      builderRef.current.build(parsed);
+      await engineRef.current?.resume();
+    } catch (err) {
+      console.error("Failed to send patch", err);
+    }
+  }, [initEngine, patch]);
 
   useEffect(() => {
     if (!engineReady) return;
@@ -84,6 +103,7 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
         sampleRate,
         workletReady,
         initEngine,
+        sendPatch,
       }}
     >
       {children}

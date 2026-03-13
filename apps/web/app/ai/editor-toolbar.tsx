@@ -17,8 +17,14 @@ const statusLabel: Record<EngineStatus, string> = {
 };
 
 export function EditorToolbar() {
-  const { engineStatus, contextState, sampleRate, workletReady, initEngine } =
-    usePatch();
+  const {
+    engineStatus,
+    contextState,
+    sampleRate,
+    workletReady,
+    initEngine,
+    sendPatch,
+  } = usePatch();
 
   return (
     <div className="flex items-center gap-4 border-b bg-background px-4 py-2 text-xs text-muted-foreground">
@@ -28,6 +34,13 @@ export function EditorToolbar() {
         onClick={initEngine}
       >
         {engineStatus === "idle" ? "Start Engine" : "Resume"}
+      </button>
+      <button
+        type="button"
+        className="rounded border border-border px-3 py-1 text-xs transition hover:bg-muted"
+        onClick={sendPatch}
+      >
+        Send Patch
       </button>
 
       <div className="flex items-center gap-1.5">

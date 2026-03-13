@@ -38,9 +38,11 @@ const editorTheme = EditorView.theme({
 });
 
 export function JsonEditor() {
-  const { patch: value, setPatch: onChange } = usePatch();
+  const { patch: value, setPatch: onChange, sendPatch } = usePatch();
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const sendPatchRef = useRef(sendPatch);
+  sendPatchRef.current = sendPatch;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -55,7 +57,17 @@ export function JsonEditor() {
       doc: value,
       extensions: [
         basicSetup,
-        keymap.of([...defaultKeymap, indentWithTab]),
+        keymap.of([
+          ...defaultKeymap,
+          indentWithTab,
+          {
+            key: "Mod-Enter",
+            run: () => {
+              sendPatchRef.current();
+              return true;
+            },
+          },
+        ]),
         json(),
         editorTheme,
         updateListener,
