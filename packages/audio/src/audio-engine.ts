@@ -17,7 +17,9 @@ class AudioEngine {
       return this.audioContext;
     }
 
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    this.audioContext = new (
+      window.AudioContext || window.webkitAudioContext
+    )();
     await this.loadWorklet();
     this.isRunning = true;
     return this.audioContext;
@@ -40,7 +42,8 @@ class AudioEngine {
       await this.audioContext.audioWorklet.addModule(workletUrl);
       this.workletNode = new AudioWorkletNode(this.audioContext, "dsp-worklet");
       this.workletNode.connect(this.audioContext.destination);
-      this.workletNode.port.onmessage = (event) => this.handleWorkletMessage(event);
+      this.workletNode.port.onmessage = (event) =>
+        this.handleWorkletMessage(event);
       this.workletNode.port.postMessage({ type: "ping" });
     } catch (error) {
       console.warn("[Worklet] Failed to load worklet module:", error);
@@ -64,6 +67,14 @@ class AudioEngine {
     this.workletNode.port.postMessage({ type: "setPatch", patch });
   }
 
+  triggerEnvelope(deviceId: string) {
+    this.workletNode?.port.postMessage({ type: "trigger", deviceId });
+  }
+
+  releaseEnvelope(deviceId: string) {
+    this.workletNode?.port.postMessage({ type: "release", deviceId });
+  }
+
   silence() {
     if (!this.audioContext || !this.isRunning) {
       return;
@@ -80,7 +91,6 @@ class AudioEngine {
       workletReady: this.workletReady,
     };
   }
-
 }
 
 const audioEngine = new AudioEngine();

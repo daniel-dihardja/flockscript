@@ -16,6 +16,20 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       if (payload.type === "setPatch") {
         this.applyPatch(payload.patch);
       }
+      if (payload.type === "trigger") {
+        const device = this.devices.get(payload.deviceId);
+        if (device?.type === "envelope") {
+          device.state = "attack";
+          device.value = 0;
+        }
+      }
+      if (payload.type === "release") {
+        const device = this.devices.get(payload.deviceId);
+        if (device?.type === "envelope") {
+          device.releaseStartValue = device.value;
+          device.state = "release";
+        }
+      }
     };
   }
 
@@ -96,6 +110,14 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
           entry.cutoff,
           entry.q,
         );
+      } else if (device.type === "envelope") {
+        entry.attack = Number(params.attack) || 0.01;
+        entry.decay = Number(params.decay) || 0.1;
+        entry.sustain = params.sustain != null ? Number(params.sustain) : 0.7;
+        entry.release = Number(params.release) || 0.3;
+        entry.state = "attack";
+        entry.value = 0;
+        entry.releaseStartValue = 0;
       } else if (device.type === "output") {
         entry.gain = Number(params.gain) || 1.0;
       }
@@ -118,6 +140,39 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         return { from, to, signal };
       })
       .filter(Boolean);
+  }
+
+  advanceEnvelope(device) {
+    const dt = 1 / this.sampleRate;
+    switch (device.state) {
+      case "attack":
+        device.value += dt / device.attack;
+        if (device.value >= 1) {
+          device.value = 1;
+          device.state = "decay";
+        }
+        break;
+      case "decay":
+        device.value -= (dt * (1 - device.sustain)) / device.decay;
+        if (device.value <= device.sustain) {
+          device.value = device.sustain;
+          device.state = "sustain";
+        }
+        break;
+      case "sustain":
+        device.value = device.sustain;
+        break;
+      case "release":
+        device.value -= (dt * device.releaseStartValue) / device.release;
+        if (device.value <= 0) {
+          device.value = 0;
+          device.state = "idle";
+        }
+        break;
+      default:
+        device.value = 0;
+    }
+    return device.value;
   }
 
   renderWaveSample(device, applyGain = false) {
@@ -197,6 +252,21 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         filterOutputs.set(id, this.applyBiquad(device, filterIn));
       }
 
+      // Process envelopes: advance ADSR state, multiply incoming audio by envelope value
+      const envelopeOutputs = new Map();
+      for (const [id, device] of this.devices) {
+        if (device.type !== "envelope") continue;
+        const envValue = this.advanceEnvelope(device);
+        let envIn = 0;
+        for (const route of this.routes) {
+          if (route.signal !== "audio" || route.to !== id) continue;
+          const src =
+            oscOutputs.get(route.from) ?? filterOutputs.get(route.from);
+          if (src !== undefined) envIn += src;
+        }
+        envelopeOutputs.set(id, envIn * envValue);
+      }
+
       // Accumulate output: direct osc→output and filter→output routes
       let left = 0;
       let right = 0;
@@ -217,6 +287,13 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         if (filterSample !== undefined) {
           left += filterSample * gain;
           right += filterSample * gain;
+          continue;
+        }
+
+        const envSample = envelopeOutputs.get(route.from);
+        if (envSample !== undefined) {
+          left += envSample * gain;
+          right += envSample * gain;
         }
       }
       leftChannel[i] = left;

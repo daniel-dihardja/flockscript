@@ -30,6 +30,7 @@
               "osc",
               "lfo",
               "filter",
+              "envelope",
               "output"
             ]
           },
@@ -93,6 +94,31 @@
                 "minimum": 0.001,
                 "maximum": 30,
                 "default": 1
+              },
+              "attack": {
+                "type": "number",
+                "description": "Envelope attack time in seconds",
+                "minimum": 0,
+                "default": 0.01
+              },
+              "decay": {
+                "type": "number",
+                "description": "Envelope decay time in seconds",
+                "minimum": 0,
+                "default": 0.1
+              },
+              "sustain": {
+                "type": "number",
+                "description": "Envelope sustain level (0-1)",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 0.7
+              },
+              "release": {
+                "type": "number",
+                "description": "Envelope release time in seconds",
+                "minimum": 0,
+                "default": 0.3
               }
             },
             "additionalProperties": true

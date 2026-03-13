@@ -6,6 +6,11 @@
       "file": "syntax/syntax-example.json"
     },
     {
+      "name": "Envelope - ADSR",
+      "category": "Envelope",
+      "file": "envelope/envelope-adsr.json"
+    },
+    {
       "name": "LFO Vibrato",
       "category": "LFO",
       "file": "lfo/lfo-vibrato.json"

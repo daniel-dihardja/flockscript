@@ -1,0 +1,42 @@
+{
+    "devices": [
+        {
+            "id": "osc1",
+            "type": "osc",
+            "params": {
+                "wave": "sawtooth",
+                "frequency": 220,
+                "gain": 0.8
+            }
+        },
+        {
+            "id": "env1",
+            "type": "envelope",
+            "params": {
+                "attack": 0.05,
+                "decay": 0.15,
+                "sustain": 0.5,
+                "release": 0.6
+            }
+        },
+        {
+            "id": "out",
+            "type": "output",
+            "params": {
+                "gain": 1
+            }
+        }
+    ],
+    "routes": [
+        {
+            "from": "osc1.out",
+            "to": "env1.in",
+            "signal": "audio"
+        },
+        {
+            "from": "env1.out",
+            "to": "out.in",
+            "signal": "audio"
+        }
+    ]
+}
