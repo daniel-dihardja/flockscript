@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain_core.messages import AnyMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AnyMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph
 from langgraph.graph.message import add_messages
@@ -22,8 +22,12 @@ _TECHNICAL_RULES = """
 
 You are an audio synthesis assistant that helps users design audio patches.
 
-When a user asks you to create, build, or design an audio patch, oscillator setup, or signal routing,
-you MUST call the `create_patch` tool with the appropriate devices and routes.
+When a user asks you to create, build, design, or modify an audio patch — including requests to add,
+remove, or change any device (e.g. "add a filter", "add eq", "remove the LFO", "change the frequency") —
+you MUST call the `create_patch` tool. Always emit the COMPLETE patch with ALL devices and routes,
+even when the user only asks for a small change.
+IMPORTANT: Never write patch JSON or device lists as plain text. The ONLY valid way to output a patch
+is by calling the `create_patch` tool.
 
 Patch rules:
 - Every patch needs at least one source device (type: "osc") and one sink (type: "output").
@@ -47,6 +51,26 @@ Filter rules:
 - Highpass: passes frequencies above cutoff, removes low-frequency weight — use for air, fragility, spectral thinning.
 - Q guide: 0.5–1 = gentle slope; 2–5 = resonant bloom; 8–15 = surgical/dramatic; above 15 = self-oscillating edge.
 - Connect an LFO to "<filterId>.cutoff" with signal: "mod" to animate the filter cutoff over time.
+
+EQ rules:
+- Use type: "eq" for tonal sculpting — when the user asks for warmth, brightness, mud removal, presence, airiness, harshness, or body.
+- EQ is a 3-band processor: low shelf, mid peaking band, high shelf — all three bands always present, set unused bands to 0 dB gain.
+- EQ params:
+    lowFreq (20–500 Hz): low shelf frequency. lowGain (-20 to +20 dB): boost/cut below lowFreq.
+    midFreq (200–8000 Hz): mid peak center frequency. midGain (-20 to +20 dB): boost/cut at midFreq. midQ (0.1–10): bandwidth — higher Q = narrower/more surgical cut or boost.
+    highFreq (2000–20000 Hz): high shelf frequency. highGain (-20 to +20 dB): boost/cut above highFreq.
+- Connect EQ in-line exactly like a filter: audio route into "<eqId>.in", then from "<eqId>.out" to the next device.
+- EQ vs filter: use "filter" for dramatic tone-shaping (fully cutting a frequency range); use "eq" for musical, proportional corrections and character adjustments.
+- Gain guide (dB): ±1–2 = transparent; ±3–5 = clearly audible; ±6–10 = pronounced character; ±12–20 = extreme/surgical.
+- midQ guide: 0.5–1 = wide, musical; 1.5–3 = focused presence cut/boost; 4–8 = narrow notch or peak; 8–10 = surgical removal.
+- Artistic use cases:
+    Remove mud: lowGain -4 to -8, lowFreq 150–250 Hz.
+    Add warmth: lowGain +3 to +6, lowFreq 100–200 Hz.
+    Cut honk/nasality: midGain -4 to -8, midFreq 400–800 Hz, midQ 2–4.
+    Add presence/definition: midGain +2 to +5, midFreq 2000–4000 Hz, midQ 1–2.
+    Add air/brilliance: highGain +3 to +8, highFreq 8000–12000 Hz.
+    Thin/reduce harshness: highGain -3 to -8, highFreq 5000–8000 Hz.
+- Stack EQ with filter for complex tonal design: use a lowpass or highpass filter for structural filtering, then EQ for character.
 
 Envelope rules:
 - Use type: "envelope" to shape the amplitude of an audio signal over time.
@@ -112,6 +136,34 @@ Principles:
 - Depth = 0.1–0.3 for subtle drone movement; push to 0.5–0.7 for tectonic heaving.
 Canonical drone shape: 2–3 detuned oscillators + 1–2 glacial LFOs → output.
 
+--- DRONE DESIGN PROCESS ---
+Before choosing devices, reason through these in order:
+1. FUNDAMENTAL: What Hz grounds this piece?
+   - 40–80 Hz: sub-bass, felt more than heard, physical and tectonic
+   - 80–200 Hz: full body presence, the weight of being
+   - 200+ Hz: dissolution, atmosphere, detachment from ground
+2. WAVEFORM: What ideology does this piece need?
+   - sawtooth = full harmonic series, analog warmth, raw material
+   - sine = purity, reduction to essence, sterile or transcendent
+   - triangle = organic compromise, neither raw nor bare
+3. BEATING: Detune a second oscillator by X Hz. X IS the movement rate of the piece.
+   - 0.1–0.3 Hz: tidal, one shift every 3–10 seconds — geological time
+   - 0.5–1 Hz: breathing scale, heartbeat-adjacent
+   - 1–3 Hz: perceptible shimmer, restless energy
+   The beating is the composition. Choose X deliberately.
+4. NECESSITY TEST: Stop here. Two detuned oscillators into output is a complete drone.
+   Ask before adding each subsequent device:
+   - Filter: only if the waveform is too raw or the spectrum needs shaping
+   - LFO: only if the beating alone is not enough movement AND a second rate of change
+     serves the piece — not as decoration
+   - A third oscillator: only if a specific harmonic interval (octave, fifth) is required
+5. GAIN STAGING: combined source gain MUST NOT exceed 0.8.
+   - 2 sources: 0.35–0.4 each
+   - 3 sources: 0.25–0.3 each
+   Never compensate for too many sources by lowering gain — remove the source instead.
+6. Resist every addition. The minimal version is the default. Complexity must be justified
+   by musical necessity, not by the desire to use available devices.
+
 --- Filter in Drone ---
 - A lowpass filter with elevated Q (3–8) adds a resonant spectral bloom — the cutoff frequency
   itself becomes a tonal color hovering above the fundamental.
@@ -154,6 +206,19 @@ _FEW_SHOT_EXAMPLES = """
 === FEW-SHOT PATCH EXAMPLES ===
 
 These are concrete reference patches. Study their structure before designing new ones.
+
+--- Example 0: Irreducible Drone (beating only, no LFO) ---
+Concept: Two sawtooth oscillators. The 0.7 Hz detune produces one throb every 1.4 seconds —
+slower than a resting heartbeat. Nothing moves except the physics of interference. No LFO,
+no filter, no modulation. This is enough. This is a complete drone.
+Patch:
+  devices:
+    - {id: "osc1", type: "osc", params: {wave: "sawtooth", frequency: 68, gain: 0.38}}
+    - {id: "osc2", type: "osc", params: {wave: "sawtooth", frequency: 68.7, gain: 0.38}}
+    - {id: "out", type: "output"}
+  routes:
+    - {from: "osc1.out", to: "out.in", signal: "audio"}
+    - {from: "osc2.out", to: "out.in", signal: "audio"}
 
 --- Example 1: Sustained Drone (detuning + glacial LFO) ---
 Concept: Two sawtooth oscillators tuned 0.5 Hz apart create interference beating. A glacial LFO
@@ -274,23 +339,55 @@ class State:
 
 
 tools = [create_patch]
-llm = ChatOpenAI(model="gpt-4o-mini")
+llm = ChatOpenAI(model="gpt-4o")
 llm_with_tools = llm.bind_tools(tools)
 
 
 async def call_model(state: State) -> Dict[str, Any]:
     """Pass the messages through the LLM and append the response."""
     messages = [SystemMessage(content=SYSTEM_PROMPT)] + state.messages
-    response = await llm_with_tools.ainvoke(messages)
+
+    # If create_patch already ran this turn, invoke without tools so the LLM
+    # cannot generate another tool call that would be silently dropped by the
+    # router, causing confusing apology or error text in the response.
+    last_human_idx = max(
+        (i for i, m in enumerate(state.messages) if isinstance(m, HumanMessage)),
+        default=-1,
+    )
+    patch_already_ran = any(
+        isinstance(m, ToolMessage) and m.name == "create_patch"
+        for m in state.messages[last_human_idx + 1 :]
+    )
+    model = llm if patch_already_ran else llm_with_tools
+    response = await model.ainvoke(messages)
     return {"messages": [response]}
 
 
 def should_use_tools(state: State) -> str:
-    """Route to tool node if the last message has tool calls."""
+    """Route to tool node if the last message has tool calls.
+
+    Guards against infinite loops: if create_patch already ran since the last
+    human message, stop even if the LLM is trying to call it again.
+    """
     last = state.messages[-1]
-    if hasattr(last, "tool_calls") and last.tool_calls:
-        return "tools"
-    return "__end__"
+    if not (hasattr(last, "tool_calls") and last.tool_calls):
+        return "__end__"
+
+    # Find the index of the last human message
+    last_human_idx = max(
+        (i for i, m in enumerate(state.messages) if isinstance(m, HumanMessage)),
+        default=-1,
+    )
+
+    # If create_patch already produced a ToolMessage in this turn, stop
+    already_ran = any(
+        isinstance(m, ToolMessage) and m.name == "create_patch"
+        for m in state.messages[last_human_idx + 1 :]
+    )
+    if already_ran:
+        return "__end__"
+
+    return "tools"
 
 
 # Define the graph

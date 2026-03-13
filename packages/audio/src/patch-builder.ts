@@ -2,7 +2,14 @@ import Ajv, { ErrorObject } from "ajv";
 import audioEngine from "./audio-engine";
 import patchSchema from "../../patches/patch-schema.json";
 
-type DeviceType = "osc" | "lfo" | "filter" | "output";
+type DeviceType =
+  | "osc"
+  | "lfo"
+  | "filter"
+  | "eq"
+  | "envelope"
+  | "sequencer"
+  | "output";
 
 type SyntaxDevice = {
   id?: string;

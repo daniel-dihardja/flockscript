@@ -74,6 +74,68 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     return y;
   }
 
+  // Separate state object version used by multi-stage EQ
+  applyBiquadState(state, coeffs, x) {
+    const { b0, b1, b2, a1, a2 } = coeffs;
+    const y =
+      b0 * x + b1 * state.x1 + b2 * state.x2 - a1 * state.y1 - a2 * state.y2;
+    state.x2 = state.x1;
+    state.x1 = x;
+    state.y2 = state.y1;
+    state.y1 = y;
+    return y;
+  }
+
+  // Low/high shelf coefficients (RBJ Audio EQ Cookbook, S = 1)
+  computeShelfCoeffs(type, freq, gainDb) {
+    const A = Math.pow(10, gainDb / 40);
+    const w0 = (TWO_PI * freq) / this.sampleRate;
+    const cosw0 = Math.cos(w0);
+    // With shelf slope S=1: alpha = sin(w0)/sqrt(2)
+    const alphaS = Math.sin(w0) / Math.SQRT2;
+    const sqA = Math.sqrt(A);
+    let b0, b1, b2, a0, a1, a2;
+    if (type === "highshelf") {
+      b0 = A * (A + 1 + (A - 1) * cosw0 + 2 * sqA * alphaS);
+      b1 = -2 * A * (A - 1 + (A + 1) * cosw0);
+      b2 = A * (A + 1 + (A - 1) * cosw0 - 2 * sqA * alphaS);
+      a0 = A + 1 - (A - 1) * cosw0 + 2 * sqA * alphaS;
+      a1 = 2 * (A - 1 - (A + 1) * cosw0);
+      a2 = A + 1 - (A - 1) * cosw0 - 2 * sqA * alphaS;
+    } else {
+      // lowshelf
+      b0 = A * (A + 1 - (A - 1) * cosw0 + 2 * sqA * alphaS);
+      b1 = 2 * A * (A - 1 - (A + 1) * cosw0);
+      b2 = A * (A + 1 - (A - 1) * cosw0 - 2 * sqA * alphaS);
+      a0 = A + 1 + (A - 1) * cosw0 + 2 * sqA * alphaS;
+      a1 = -2 * (A - 1 + (A + 1) * cosw0);
+      a2 = A + 1 + (A - 1) * cosw0 - 2 * sqA * alphaS;
+    }
+    return {
+      b0: b0 / a0,
+      b1: b1 / a0,
+      b2: b2 / a0,
+      a1: a1 / a0,
+      a2: a2 / a0,
+    };
+  }
+
+  // Peaking EQ band coefficients (RBJ Audio EQ Cookbook)
+  computePeakCoeffs(freq, gainDb, q) {
+    const A = Math.pow(10, gainDb / 40);
+    const w0 = (TWO_PI * freq) / this.sampleRate;
+    const alpha = Math.sin(w0) / (2 * q);
+    const cosw0 = Math.cos(w0);
+    const a0 = 1 + alpha / A;
+    return {
+      b0: (1 + alpha * A) / a0,
+      b1: (-2 * cosw0) / a0,
+      b2: (1 - alpha * A) / a0,
+      a1: (-2 * cosw0) / a0,
+      a2: (1 - alpha / A) / a0,
+    };
+  }
+
   applyPatch(patch) {
     this.devices.clear();
     (patch?.devices || []).forEach((device) => {
@@ -125,6 +187,32 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         entry.rate = Number(params.rate) || 4;
         entry.currentStep = 0;
         entry.sampleClock = 0;
+      } else if (device.type === "eq") {
+        entry.lowFreq = Number(params.lowFreq) || 200;
+        entry.lowGain = params.lowGain != null ? Number(params.lowGain) : 0;
+        entry.midFreq = Number(params.midFreq) || 1000;
+        entry.midGain = params.midGain != null ? Number(params.midGain) : 0;
+        entry.midQ = Number(params.midQ) || 1.0;
+        entry.highFreq = Number(params.highFreq) || 4000;
+        entry.highGain = params.highGain != null ? Number(params.highGain) : 0;
+        entry.lowState = { x1: 0, x2: 0, y1: 0, y2: 0 };
+        entry.midState = { x1: 0, x2: 0, y1: 0, y2: 0 };
+        entry.highState = { x1: 0, x2: 0, y1: 0, y2: 0 };
+        entry.lowCoeffs = this.computeShelfCoeffs(
+          "lowshelf",
+          entry.lowFreq,
+          entry.lowGain,
+        );
+        entry.midCoeffs = this.computePeakCoeffs(
+          entry.midFreq,
+          entry.midGain,
+          entry.midQ,
+        );
+        entry.highCoeffs = this.computeShelfCoeffs(
+          "highshelf",
+          entry.highFreq,
+          entry.highGain,
+        );
       } else if (device.type === "output") {
         entry.gain = Number(params.gain) || 1.0;
       }
@@ -284,6 +372,23 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         filterOutputs.set(id, this.applyBiquad(device, filterIn));
       }
 
+      // Process EQ: accumulate inputs, apply 3-stage biquad (low shelf, peak, high shelf)
+      const eqOutputs = new Map();
+      for (const [id, device] of this.devices) {
+        if (device.type !== "eq") continue;
+        let eqIn = 0;
+        for (const route of this.routes) {
+          if (route.signal !== "audio" || route.to !== id) continue;
+          const src =
+            oscOutputs.get(route.from) ?? filterOutputs.get(route.from);
+          if (src !== undefined) eqIn += src;
+        }
+        let s = this.applyBiquadState(device.lowState, device.lowCoeffs, eqIn);
+        s = this.applyBiquadState(device.midState, device.midCoeffs, s);
+        s = this.applyBiquadState(device.highState, device.highCoeffs, s);
+        eqOutputs.set(id, s);
+      }
+
       // Process envelopes: advance ADSR state, multiply incoming audio by envelope value
       const envelopeOutputs = new Map();
       for (const [id, device] of this.devices) {
@@ -293,7 +398,9 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         for (const route of this.routes) {
           if (route.signal !== "audio" || route.to !== id) continue;
           const src =
-            oscOutputs.get(route.from) ?? filterOutputs.get(route.from);
+            oscOutputs.get(route.from) ??
+            filterOutputs.get(route.from) ??
+            eqOutputs.get(route.from);
           if (src !== undefined) envIn += src;
         }
         envelopeOutputs.set(id, envIn * envValue);
@@ -319,6 +426,13 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         if (filterSample !== undefined) {
           left += filterSample * gain;
           right += filterSample * gain;
+          continue;
+        }
+
+        const eqSample = eqOutputs.get(route.from);
+        if (eqSample !== undefined) {
+          left += eqSample * gain;
+          right += eqSample * gain;
           continue;
         }
 

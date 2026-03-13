@@ -29,6 +29,11 @@
       "name": "Filter - High Pass",
       "category": "Filter",
       "file": "filter/filter-highpass.json"
+    },
+    {
+      "name": "EQ - 3 Band",
+      "category": "EQ",
+      "file": "eq/eq-3band.json"
     }
   ]
 }

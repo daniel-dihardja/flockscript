@@ -1,0 +1,45 @@
+{
+    "devices": [
+        {
+            "id": "osc1",
+            "type": "osc",
+            "params": {
+                "wave": "sawtooth",
+                "frequency": 110,
+                "gain": 0.8
+            }
+        },
+        {
+            "id": "eq1",
+            "type": "eq",
+            "params": {
+                "lowFreq": 200,
+                "lowGain": -6,
+                "midFreq": 800,
+                "midGain": 4,
+                "midQ": 1.5,
+                "highFreq": 5000,
+                "highGain": 3
+            }
+        },
+        {
+            "id": "out",
+            "type": "output",
+            "params": {
+                "gain": 1
+            }
+        }
+    ],
+    "routes": [
+        {
+            "from": "osc1.out",
+            "to": "eq1.in",
+            "signal": "audio"
+        },
+        {
+            "from": "eq1.out",
+            "to": "out.in",
+            "signal": "audio"
+        }
+    ]
+}
