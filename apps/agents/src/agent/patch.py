@@ -16,24 +16,31 @@ class Params(BaseModel):
     ] = None
     frequency: Optional[float] = None
     gain: Optional[float] = None
+    depth: Optional[float] = Field(
+        default=None, description="LFO modulation depth (0–1)"
+    )
 
 
 class Device(BaseModel):
     """A signal generator or sink in the patch."""
 
     id: Optional[str] = None
-    type: Literal["osc", "output"]
+    type: Literal["osc", "lfo", "output"]
     params: Optional[Params] = None
 
 
 class Route(BaseModel):
-    """A connection between two devices."""
+    """A connection between two devices.
+
+    For audio routes, 'to' is '<id>.in' (e.g. 'out.in').
+    For mod routes, 'to' is '<deviceId>.<param>' (e.g. 'osc1.frequency').
+    """
 
     model_config = ConfigDict(populate_by_name=True)
 
     from_: str = Field(alias="from")
     to: str
-    signal: Literal["audio"]
+    signal: Literal["audio", "mod"]
 
 
 class Patch(BaseModel):

@@ -10,10 +10,10 @@ export default function Page() {
 
   return (
     <div className="dark flex h-screen overflow-hidden bg-background text-foreground">
-      <div className="w-1/3 border-r">
+      <div className="w-1/4 border-r">
         <AgentThread onPatch={setPatch} />
       </div>
-      <div className="w-2/3">
+      <div className="w-3/4">
         <JsonEditor value={patch} onChange={setPatch} />
       </div>
     </div>

@@ -26,7 +26,15 @@ Patch rules:
 - Every patch needs at least one source device (type: "osc") and one sink (type: "output").
 - Routes connect devices using the format "<id>.out" -> "<id>.in".
 - Valid waveforms: sine, square, saw, sawtooth, triangle, noise.
-- Frequency range: 20–20000 Hz. Gain range: 0–1.
+- Frequency range: 0.01–20000 Hz (0.01–20 Hz for LFOs, 20–20000 Hz for oscillators). Gain range: 0–1.
+
+LFO rules:
+- Use type: "lfo" to modulate parameters of other devices over time.
+- LFO params: frequency (0.01–20 Hz), wave (any waveform), depth (0–1 modulation intensity).
+- Connect an LFO with signal: "mod" and to: "<deviceId>.<param>" e.g. "osc1.frequency".
+- Only "frequency" is a valid mod target for now.
+- Use an LFO when the user asks for vibrato, wobble, tremolo, pulsing, or animated/moving sound.
+- Depth guide: 0.05–0.1 = subtle, 0.3–0.5 = noticeable, 0.8–1.0 = extreme.
 
 For all other questions, respond conversationally without calling any tool.
 
