@@ -9,6 +9,16 @@
       "name": "LFO Vibrato",
       "category": "LFO",
       "file": "lfo/lfo-vibrato.json"
+    },
+    {
+      "name": "Filter - Low Pass",
+      "category": "Filter",
+      "file": "filter/filter-lowpass.json"
+    },
+    {
+      "name": "Filter - High Pass",
+      "category": "Filter",
+      "file": "filter/filter-highpass.json"
     }
   ]
 }

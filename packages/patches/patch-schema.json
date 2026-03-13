@@ -29,6 +29,7 @@
             "enum": [
               "osc",
               "lfo",
+              "filter",
               "output"
             ]
           },
@@ -69,6 +70,29 @@
                 "minimum": 0,
                 "maximum": 1,
                 "default": 0.5
+              },
+              "filterType": {
+                "type": "string",
+                "description": "Filter mode",
+                "enum": [
+                  "lowpass",
+                  "highpass"
+                ],
+                "default": "lowpass"
+              },
+              "cutoff": {
+                "type": "number",
+                "description": "Filter cutoff frequency in Hz",
+                "minimum": 20,
+                "maximum": 20000,
+                "default": 1000
+              },
+              "q": {
+                "type": "number",
+                "description": "Filter resonance (Q factor)",
+                "minimum": 0.001,
+                "maximum": 30,
+                "default": 1
               }
             },
             "additionalProperties": true

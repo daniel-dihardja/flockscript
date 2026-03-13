@@ -1,0 +1,41 @@
+{
+    "devices": [
+        {
+            "id": "osc1",
+            "type": "osc",
+            "params": {
+                "wave": "sawtooth",
+                "frequency": 110,
+                "gain": 0.8
+            }
+        },
+        {
+            "id": "filter1",
+            "type": "filter",
+            "params": {
+                "filterType": "lowpass",
+                "cutoff": 800,
+                "q": 4
+            }
+        },
+        {
+            "id": "out",
+            "type": "output",
+            "params": {
+                "gain": 1
+            }
+        }
+    ],
+    "routes": [
+        {
+            "from": "osc1.out",
+            "to": "filter1.in",
+            "signal": "audio"
+        },
+        {
+            "from": "filter1.out",
+            "to": "out.in",
+            "signal": "audio"
+        }
+    ]
+}
