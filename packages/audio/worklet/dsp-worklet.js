@@ -65,33 +65,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       .filter(Boolean);
   }
 
-  renderOscSample(device) {
-    const phase = device.phase || 0;
-    let sample = 0;
-    switch (device.wave) {
-      case "noise":
-        sample = Math.random() * 2 - 1;
-        break;
-      case "square":
-        sample = phase < Math.PI ? 1 : -1;
-        break;
-      case "sawtooth":
-        sample = 2 * (phase / TWO_PI) - 1;
-        break;
-      case "triangle":
-        sample = 2 * Math.abs(2 * (phase / TWO_PI) - 1) - 1;
-        break;
-      case "sine":
-      default:
-        sample = Math.sin(phase);
-        break;
-    }
-    const increment = (TWO_PI * (device.frequency || 440)) / this.sampleRate;
-    device.phase = (phase + increment) % TWO_PI;
-    return sample * (device.gain || 0);
-  }
-
-  renderLfoSample(device) {
+  renderWaveSample(device, applyGain = false) {
     const phase = device.phase || 0;
     let sample = 0;
     switch (device.wave) {
@@ -114,7 +88,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     }
     const increment = (TWO_PI * (device.frequency || 1)) / this.sampleRate;
     device.phase = (phase + increment) % TWO_PI;
-    return sample; // [-1, 1], depth applied at modulation target
+    return applyGain ? sample * (device.gain || 0) : sample;
   }
 
   process(_, outputs) {
@@ -132,7 +106,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         if (!lfo || lfo.type !== "lfo") continue;
         const target = this.devices.get(route.toDevice);
         if (!target) continue;
-        const lfoValue = this.renderLfoSample(lfo);
+        const lfoValue = this.renderWaveSample(lfo);
         if (route.toParam === "frequency" && target.baseFrequency != null) {
           target.frequency =
             target.baseFrequency * (1 + lfoValue * (lfo.depth ?? 0.5));
@@ -150,7 +124,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         if (!source || source.type !== "osc" || !destination) {
           continue;
         }
-        const contribution = this.renderOscSample(source);
+        const contribution = this.renderWaveSample(source, true);
         const gain = destination.gain ?? 1;
         left += contribution * gain;
         right += contribution * gain;
