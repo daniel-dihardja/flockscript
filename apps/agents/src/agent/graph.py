@@ -48,6 +48,27 @@ Filter rules:
 - Q guide: 0.5–1 = gentle slope; 2–5 = resonant bloom; 8–15 = surgical/dramatic; above 15 = self-oscillating edge.
 - Connect an LFO to "<filterId>.cutoff" with signal: "mod" to animate the filter cutoff over time.
 
+Envelope rules:
+- Use type: "envelope" to shape the amplitude of an audio signal over time.
+- Envelope params: attack (0–5s), decay (0–5s), sustain (0–1 amplitude level), release (0–10s).
+- Connect the envelope in-line: audio route from a source to "<envId>.in", then "<envId>.out" to the next device.
+- Fire the envelope with a gate: signal: "seq" from a sequencer to "<envId>.gate".
+- Without a gate the envelope does nothing — it MUST be triggered by a sequencer.
+- ADSR guide:
+  - Percussive (kick/hit): attack 0.001–0.01, decay 0.05–0.15, sustain 0, release 0.05–0.1
+  - Pluck: attack 0.001–0.005, decay 0.1–0.2, sustain 0.1–0.3, release 0.1–0.3
+  - Pad/swell: attack 0.3–1.5, decay 0.2–0.5, sustain 0.6–0.9, release 0.5–2.0
+
+Sequencer rules:
+- Use type: "sequencer" to step through a list of frequencies over time.
+- Sequencer params: steps (array of Hz values), rate (steps per second).
+- A sequencer ALWAYS requires TWO routes per step cycle:
+    1. {from: "seq1.out", to: "osc1.frequency", signal: "seq"}  — drives pitch
+    2. {from: "seq1.out", to: "env1.gate",       signal: "seq"}  — triggers the envelope
+- ALWAYS pair a sequencer with an envelope — without one, notes bleed together with no shaping.
+- Rate guide: 1–4 = slow/melodic; 4–8 = rhythmic; 8–16 = fast/driving.
+- Use repeated pitches (all steps the same Hz) for a rhythmic pulse without melody.
+
 For all other questions, respond conversationally without calling any tool.
 
 After calling `create_patch`, always follow up with a brief, poetic description of the patch — what it does, what it evokes, and how the devices work together.
@@ -101,6 +122,22 @@ Canonical drone shape: 2–3 detuned oscillators + 1–2 glacial LFOs → output
 - Highpass can carve away sub-bass entirely: useful for high-register drones that feel
   weightless, atmospheric, detached from physical grounding.
 - The filter is the voice. The oscillators are raw material. Let the filter define the character.
+
+--- RHYTHM & SEQUENCED MUSIC ---
+The sequencer is a clock. The envelope is a sculptor. Together they define whether a pattern
+feels mechanical, alive, or dissolved into texture.
+
+- Percussive / beat: attack near-zero (0.001–0.01s), decay short (0.05–0.15s), sustain 0,
+  release shorter than one step duration. The sound exists only at the gate moment — silence
+  between hits IS the rhythm. Repetition and gap create pulse.
+- Melodic sequence: moderate attack (0.01–0.05s), medium release (0.2–0.5s) — notes breathe
+  into each other, evoking melody without bleeding. The pitch change between steps is felt.
+- Background / ambient texture: long attack (0.3–1.5s), high sustain (0.7–0.9), long release
+  (0.8–2.0s) — steps blur into a slowly shifting harmonic field. Not a sequence of events,
+  but a continuously mutating tone. Pair with a lowpass filter to soften step edges further.
+- Rate is dramatic: rate 1 = meditative drift; rate 4 = purposeful pulse; rate 8–16 = machine.
+  The relationship between rate and envelope release determines how much consecutive notes
+  overlap — this is the primary timbral control in sequenced music.
 
 --- NOISE MUSIC ---
 Noise is primary material, not artifact to suppress.
@@ -185,6 +222,45 @@ Patch:
     - {from: "osc2.out", to: "filter1.in", signal: "audio"}
     - {from: "filter1.out", to: "out.in", signal: "audio"}
     - {from: "lfo1.out", to: "filter1.cutoff", signal: "mod"}
+"""
+
+_FEW_SHOT_EXAMPLES += """
+--- Example 5: Percussive Sequence (beat / rhythmic pulse) ---
+Concept: An 8-step sequencer at rate 4 drives a sawtooth through a sharp envelope — near-zero
+attack, fast decay, zero sustain. Each gate fires a hit and immediately releases. The silence
+between steps is the rhythm. Two "seq" routes are mandatory: one to pitch, one to gate.
+Patch:
+  devices:
+    - {id: "seq1", type: "sequencer", params: {steps: [110, 165, 220, 165, 110, 220, 165, 110], rate: 4}}
+    - {id: "osc1", type: "osc",       params: {wave: "sawtooth", frequency: 110, gain: 0.8}}
+    - {id: "env1", type: "envelope",  params: {attack: 0.005, decay: 0.1, sustain: 0, release: 0.08}}
+    - {id: "out",  type: "output"}
+  routes:
+    - {from: "seq1.out", to: "osc1.frequency", signal: "seq"}
+    - {from: "seq1.out", to: "env1.gate",       signal: "seq"}
+    - {from: "osc1.out", to: "env1.in",         signal: "audio"}
+    - {from: "env1.out", to: "out.in",           signal: "audio"}
+"""
+
+_FEW_SHOT_EXAMPLES += """
+--- Example 6: Flowing Background Sequence (slow envelope, blurred notes) ---
+Concept: A 4-step sequencer at rate 1 creates a slow harmonic loop. Long attack and high sustain
+blur consecutive notes into a continuously shifting harmonic field — not a sequence of events,
+but a moving texture. A lowpass filter softens the step edges further. Both "seq" routes remain
+mandatory even when the envelope is slow.
+Patch:
+  devices:
+    - {id: "seq1",    type: "sequencer", params: {steps: [110, 165, 220, 165], rate: 1}}
+    - {id: "osc1",    type: "osc",       params: {wave: "triangle", frequency: 110, gain: 0.7}}
+    - {id: "env1",    type: "envelope",  params: {attack: 0.8, decay: 0.2, sustain: 0.85, release: 1.5}}
+    - {id: "filter1", type: "filter",    params: {filterType: "lowpass", cutoff: 800, q: 2}}
+    - {id: "out",     type: "output"}
+  routes:
+    - {from: "seq1.out",    to: "osc1.frequency", signal: "seq"}
+    - {from: "seq1.out",    to: "env1.gate",       signal: "seq"}
+    - {from: "osc1.out",    to: "env1.in",         signal: "audio"}
+    - {from: "env1.out",    to: "filter1.in",       signal: "audio"}
+    - {from: "filter1.out", to: "out.in",           signal: "audio"}
 """
 
 SYSTEM_PROMPT = _TECHNICAL_RULES + _ARTISTIC_CONTEXT + _FEW_SHOT_EXAMPLES
