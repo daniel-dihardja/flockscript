@@ -209,4 +209,5 @@ class AudioEngine {
 }
 
 const audioEngine = new AudioEngine();
+export type { AudioEngine };
 export default audioEngine;
