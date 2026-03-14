@@ -100,14 +100,19 @@ Sequencer rules:
 
 Channel rules:
 - Use type: "channel" to group multiple audio sources into a single named bus before routing to output or further processing.
-- Channel params: gain (0–1, default 1.0), pan (reserved for future use, default 0).
+- Channel params: gain (0–1, default 1.0), pan (-1 to 1, default 0).
 - Route any number of sources into a channel: {from: "<sourceId>.out", to: "<channelId>.in", signal: "audio"}.
 - Route the channel to its destination: {from: "<channelId>.out", to: "<destinationId>.in", signal: "audio"}.
 - The channel sums all incoming audio and applies its gain — use this to control the level of an entire group independently.
+- A channel output can be routed into any effect (filter, eq, envelope) — the routing engine resolves the correct processing order automatically.
+  Example: [osc1, osc2] → ch1 → filter1 → out  (filter applied to the summed channel mix)
+- Return track pattern: route a channel into a second channel (the "return") to apply shared effects to a mix send.
+  Example: osc1 → ch1 → out (dry), ch1 → ret → eq1 → out (wet/return)
 - Use channels when:
     - Multiple oscillators or processed signals belong to the same "voice" or timbral group and should share a common gain level.
     - You want to mix two or more distinct patch groups (e.g. a bass group and a texture group) into a single output at different relative levels.
     - Gain staging across many sources would be hard to manage individually — one channel gain controls the whole group.
+    - You want to apply an effect to an entire group of sources at once.
 - Channels are not required for simple patches. Only add a channel when grouping genuinely improves mix control or clarity.
 - Gain staging with channels: if two channels feed one output, each channel gain 0.5–0.7 prevents clipping. Per-source gains feeding a channel still follow the normal rules (0.3–0.4 each for 2–3 sources).
 
