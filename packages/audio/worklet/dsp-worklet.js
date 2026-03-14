@@ -371,28 +371,16 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       }
 
       // Render each osc once per sample to avoid phase double-advance.
-      // Uses Faust WASM (band-limited) when the instance is loaded; falls back
-      // to the JS oscillator during the async initialisation window.
       this.oscOutputs.clear();
       for (const [id, device] of this.devices) {
         if (device.type !== "osc") continue;
         const fi = this.faustInstancesById.get(id);
-        if (fi) {
-          fi.f32[fi.freqByteOffset / 4] = device.frequency;
-          fi.f32[fi.gainByteOffset / 4] = device.gain;
-          fi.f32[fi.waveByteOffset / 4] = device.waveIndex ?? 0;
-          fi.exp.compute(0, 1, 0, fi.outputsPtr);
-          this.oscOutputs.set(id, fi.f32[fi.outBuf0 / 4]);
-        } else {
-          // Faust instance not yet loaded — fall back to anti-aliased JS oscillator
-          if (!device._warnedFallback) {
-            console.warn(
-              `[DSPWorklet] osc "${id}" using JS fallback — Faust instance not yet loaded`,
-            );
-            device._warnedFallback = true;
-          }
-          this.oscOutputs.set(id, this.renderWaveSample(device, true));
-        }
+        if (!fi) continue;
+        fi.f32[fi.freqByteOffset / 4] = device.frequency;
+        fi.f32[fi.gainByteOffset / 4] = device.gain;
+        fi.f32[fi.waveByteOffset / 4] = device.waveIndex ?? 0;
+        fi.exp.compute(0, 1, 0, fi.outputsPtr);
+        this.oscOutputs.set(id, fi.f32[fi.outBuf0 / 4]);
       }
 
       // Process filters via Faust WASM — compute one sample at a time
