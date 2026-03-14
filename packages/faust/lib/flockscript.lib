@@ -1,0 +1,10 @@
+// flockscript.lib — shared DSP utilities for FlockScript Faust devices
+//
+// Import in any device with:
+//   import("flockscript.lib");
+
+// Clamp a signal to [-1, 1]
+hardclip(x) = max(-1, min(1, x));
+
+// Linear gain (0–1) applied to a stereo pair
+stereoGain(g, l, r) = l * g, r * g;

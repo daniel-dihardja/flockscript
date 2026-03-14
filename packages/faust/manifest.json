@@ -1,0 +1,29 @@
+{
+    "devices": [
+        {
+            "name": "bitcrusher",
+            "wasm": "public/bitcrusher.wasm",
+            "json": "public/bitcrusher.json"
+        },
+        {
+            "name": "gain",
+            "wasm": "public/gain.wasm",
+            "json": "public/gain.json"
+        },
+        {
+            "name": "lowpass",
+            "wasm": "public/lowpass.wasm",
+            "json": "public/lowpass.json"
+        },
+        {
+            "name": "reverb",
+            "wasm": "public/reverb.wasm",
+            "json": "public/reverb.json"
+        },
+        {
+            "name": "ringmod",
+            "wasm": "public/ringmod.wasm",
+            "json": "public/ringmod.json"
+        }
+    ]
+}
