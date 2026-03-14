@@ -27,6 +27,7 @@
     "@workspace/audio": "workspace:*",
     "@workspace/ui": "workspace:*",
     "@workspace/visuals": "workspace:*",
+    "@xyflow/react": "^12.10.1",
     "ai": "^6.0.116",
     "ajv": "^8.18.0",
     "codemirror": "^6.0.2",
