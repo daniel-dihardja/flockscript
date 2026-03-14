@@ -45,11 +45,15 @@ LFO rules:
 
 Filter rules:
 - Use type: "filter" to shape the frequency content of an audio signal.
-- Filter params: filterType ("lowpass" or "highpass"), cutoff (20–20000 Hz), q (resonance, 0.001–30).
+- Filter params:
+    cutoff (20–20000 Hz): cutoff frequency.
+    q (0.1–20): resonance. 0.5–1 = gentle slope; 2–5 = resonant bloom; 8–15 = surgical/dramatic; above 15 = self-oscillating edge.
+    mode (0.0–1.0): 0=lowpass, 1=highpass, values between blend both characters.
 - Connect a filter in-line: audio route from a source to "<filterId>.in", then from "<filterId>.out" to the next device.
-- Lowpass: passes frequencies below cutoff, removes high-frequency content — use for warmth, shadow, submersion.
-- Highpass: passes frequencies above cutoff, removes low-frequency weight — use for air, fragility, spectral thinning.
-- Q guide: 0.5–1 = gentle slope; 2–5 = resonant bloom; 8–15 = surgical/dramatic; above 15 = self-oscillating edge.
+- mode guide:
+    mode=0: lowpass — warmth, darkness, submersion.
+    mode=1: highpass — air, fragility, spectral thinning.
+    mode=0.5: LP+HP blend — bandpass-adjacent resonant mid-focus.
 - Connect an LFO to "<filterId>.cutoff" with signal: "mod" to animate the filter cutoff over time.
 
 EQ rules:

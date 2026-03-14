@@ -13,9 +13,9 @@
             "id": "filter1",
             "type": "filter",
             "params": {
-                "filterType": "lowpass",
                 "cutoff": 800,
-                "q": 4
+                "q": 4,
+                "mode": 0
             }
         },
         {

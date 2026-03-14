@@ -55,14 +55,14 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
   }
 
   _instantiateFaustDevice(name, buffer, instanceId) {
-    // Param byte offsets derived from the compiled JSON for each device.
-    // filter.json: mode=0, q=4, cutoff=16
+    // Param byte offsets derived from the compiled WASM for each device.
+    // filter: mode=0, cutoff=20, q=36  (verified by memory probe)
     // eq.json:     highFreq=12, highGain=128, lowFreq=20, lowGain=52,
     //              midFreq=16, midGain=76, midQ=80
     // osc.json:    gain=262144, wave=262148, freq=262172
     //   (Faust 2.83.1 places the DSP struct at 0x40000 in linear memory)
     const PARAM_OFFSETS = {
-      filter: { modeByteOffset: 0, qByteOffset: 4, cutoffByteOffset: 16 },
+      filter: { modeByteOffset: 0, cutoffByteOffset: 20, qByteOffset: 36 },
       eq: {
         lowFreq: 20,
         lowGain: 52,
@@ -87,6 +87,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         _powf: Math.pow,
         _sinf: Math.sin,
         _tanf: Math.tan,
+        _tanhf: Math.tanh,
       },
     };
     WebAssembly.instantiate(buffer, importObject)
@@ -173,8 +174,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         entry.depth = Number(params.depth) ?? 0.5;
         entry.wave = (params.wave || "sine").toLowerCase();
       } else if (device.type === "filter") {
-        entry.filterType = params.filterType || "lowpass";
-        entry.mode = entry.filterType === "highpass" ? 1 : 0;
+        entry.mode = Number(params.mode) || 0;
         entry.cutoff = Number(params.cutoff) || 1000;
         entry.baseCutoff = entry.cutoff;
         entry.q = Number(params.q) || 1.0;

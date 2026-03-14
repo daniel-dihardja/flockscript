@@ -75,15 +75,6 @@
                 "maximum": 1,
                 "default": 0.5
               },
-              "filterType": {
-                "type": "string",
-                "description": "Filter mode",
-                "enum": [
-                  "lowpass",
-                  "highpass"
-                ],
-                "default": "lowpass"
-              },
               "cutoff": {
                 "type": "number",
                 "description": "Filter cutoff frequency in Hz",
@@ -94,9 +85,16 @@
               "q": {
                 "type": "number",
                 "description": "Filter resonance (Q factor)",
-                "minimum": 0.001,
-                "maximum": 30,
+                "minimum": 0.1,
+                "maximum": 20,
                 "default": 1
+              },
+              "mode": {
+                "type": "number",
+                "description": "Filter character: 0=lowpass, 1=highpass, 0.5=blend",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 0
               },
               "attack": {
                 "type": "number",
@@ -263,9 +261,9 @@
               "properties": {
                 "params": {
                   "properties": {
-                    "filterType": {},
                     "cutoff": {},
-                    "q": {}
+                    "q": {},
+                    "mode": {}
                   },
                   "additionalProperties": false
                 }
