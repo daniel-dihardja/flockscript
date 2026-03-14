@@ -33,6 +33,9 @@ const editorTheme = EditorView.theme({
     borderRight: "1px solid hsl(var(--border))",
     color: "hsl(var(--muted-foreground))",
   },
+  ".cm-lineNumbers .cm-gutterElement": {
+    color: "#6b7280",
+  },
   ".cm-activeLineGutter": { backgroundColor: "transparent" },
   ".cm-activeLine": { backgroundColor: "hsl(var(--muted) / 0.3)" },
 });
