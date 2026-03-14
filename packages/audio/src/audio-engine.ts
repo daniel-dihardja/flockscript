@@ -11,6 +11,8 @@ class AudioEngine {
   useWorklet = true;
   isRunning = false;
   private oscWasmBuffer: ArrayBuffer | null = null;
+  private filterWasmBuffer: ArrayBuffer | null = null;
+  private eqWasmBuffer: ArrayBuffer | null = null;
 
   async init() {
     if (this.audioContext) {
@@ -57,14 +59,6 @@ class AudioEngine {
     if (payload?.type === "status") {
       if (payload.message === "worklet-ready") {
         this.workletReady = true;
-        void this.loadFaustDevice(
-          "filter",
-          new URL("../public/faust/filter.wasm", import.meta.url),
-        );
-        void this.loadFaustDevice(
-          "eq",
-          new URL("../public/faust/eq.wasm", import.meta.url),
-        );
       }
     }
   }
@@ -90,6 +84,8 @@ class AudioEngine {
     }
     this.workletNode.port.postMessage({ type: "setPatch", patch });
     void this.loadOscInstances(patch);
+    void this.loadFilterInstances(patch);
+    void this.loadEqInstances(patch);
   }
 
   private async loadOscInstances(patch: unknown) {
@@ -121,6 +117,68 @@ class AudioEngine {
       }
     } catch (err) {
       console.warn("[AudioEngine] Failed to load Faust osc instances:", err);
+    }
+  }
+
+  private async loadFilterInstances(patch: unknown) {
+    if (!this.workletNode) return;
+    const devices = (patch as { devices?: { id: string; type: string }[] })
+      ?.devices;
+    if (!Array.isArray(devices)) return;
+    const targets = devices.filter((d) => d?.type === "filter" && d?.id);
+    if (targets.length === 0) return;
+    try {
+      if (!this.filterWasmBuffer) {
+        const resp = await fetch(
+          new URL("../public/faust/filter.wasm", import.meta.url),
+        );
+        this.filterWasmBuffer = await resp.arrayBuffer();
+      }
+      for (const device of targets) {
+        const buf = this.filterWasmBuffer.slice();
+        this.workletNode.port.postMessage(
+          {
+            type: "loadFaustDevice",
+            name: "filter",
+            instanceId: device.id,
+            buffer: buf,
+          },
+          [buf],
+        );
+      }
+    } catch (err) {
+      console.warn("[AudioEngine] Failed to load Faust filter instances:", err);
+    }
+  }
+
+  private async loadEqInstances(patch: unknown) {
+    if (!this.workletNode) return;
+    const devices = (patch as { devices?: { id: string; type: string }[] })
+      ?.devices;
+    if (!Array.isArray(devices)) return;
+    const targets = devices.filter((d) => d?.type === "eq" && d?.id);
+    if (targets.length === 0) return;
+    try {
+      if (!this.eqWasmBuffer) {
+        const resp = await fetch(
+          new URL("../public/faust/eq.wasm", import.meta.url),
+        );
+        this.eqWasmBuffer = await resp.arrayBuffer();
+      }
+      for (const device of targets) {
+        const buf = this.eqWasmBuffer.slice();
+        this.workletNode.port.postMessage(
+          {
+            type: "loadFaustDevice",
+            name: "eq",
+            instanceId: device.id,
+            buffer: buf,
+          },
+          [buf],
+        );
+      }
+    } catch (err) {
+      console.warn("[AudioEngine] Failed to load Faust eq instances:", err);
     }
   }
 

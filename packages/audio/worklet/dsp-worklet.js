@@ -132,7 +132,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         };
         if (instanceId) {
           this.faustInstancesById.set(instanceId, entry);
-          console.log(`[DSPWorklet] Faust osc ready: ${instanceId}`);
+          console.log(`[DSPWorklet] Faust ${name} ready: ${instanceId}`);
         } else {
           this.faustInstances.set(name, entry);
           console.log(`[DSPWorklet] Faust ${name} ready (shared)`);
@@ -399,7 +399,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       this.filterOutputs.clear();
       for (const [id, device] of this.devices) {
         if (device.type !== "filter") continue;
-        const fi = this.faustInstances.get("filter");
+        const fi = this.faustInstancesById.get(id);
         if (!fi) continue;
         let filterIn = 0;
         for (const route of this.routes) {
@@ -437,7 +437,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       this.eqOutputs.clear();
       for (const [id, device] of this.devices) {
         if (device.type !== "eq") continue;
-        const fi = this.faustInstances.get("eq");
+        const fi = this.faustInstancesById.get(id);
         if (!fi) continue;
         let eqIn = 0;
         for (const route of this.routes) {
