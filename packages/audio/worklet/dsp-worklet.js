@@ -12,6 +12,15 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     // Keyed by device instance ID (e.g. "osc1", "osc2"). Per-instance WASM
     // — required for osc because each instance has independent phase state.
     this.faustInstancesById = new Map();
+    // Pre-allocated per-sample output Maps — cleared each sample to avoid GC on the audio thread
+    this.oscOutputs = new Map();
+    this.filterOutputs = new Map();
+    this.channelOutputs = new Map();
+    this.eqOutputs = new Map();
+    this.envelopeOutputs = new Map();
+    // DC blocker state: [left, right]
+    this.dcBlockX = [0, 0];
+    this.dcBlockY = [0, 0];
     this.port.onmessage = (event) => {
       const payload = event.data;
       if (!payload) return;
@@ -26,7 +35,6 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         const device = this.devices.get(payload.deviceId);
         if (device?.type === "envelope") {
           device.state = "attack";
-          device.value = 0;
         }
       }
       if (payload.type === "release") {
@@ -107,10 +115,14 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         i32[outputsPtr / 4] = outBuf0;
         i32[outputsPtr / 4 + 1] = outBuf1;
 
+        // Cache a typed-array view on the memory buffer — avoids allocating a new
+        // Float32Array wrapper every sample inside the render loop.
+        const f32 = new Float32Array(memory.buffer);
         const offsets = PARAM_OFFSETS[name] || {};
         const entry = {
           exp,
           memory,
+          f32,
           inputBuf,
           outBuf0,
           inputsPtr,
@@ -179,6 +191,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
           ? params.steps.map(Number)
           : [220, 330, 440, 330];
         entry.rate = Number(params.rate) || 4;
+        entry.samplesPerStep = this.sampleRate / entry.rate;
         entry.currentStep = 0;
         entry.sampleClock = 0;
       } else if (device.type === "eq") {
@@ -217,60 +230,88 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
   }
 
   advanceEnvelope(device) {
+    // Exponential RC-style curves: reaches ~99.9% of target within the specified time.
+    // Coefficient = 1 - exp(-ln(1000) * dt / time), where ln(1000) ≈ 6.908.
     const dt = 1 / this.sampleRate;
     switch (device.state) {
-      case "attack":
-        device.value += dt / device.attack;
-        if (device.value >= 1) {
+      case "attack": {
+        const coeff = 1 - Math.exp((-6.908 * dt) / device.attack);
+        device.value += (1 - device.value) * coeff;
+        if (device.value >= 0.999) {
           device.value = 1;
           device.state = "decay";
         }
         break;
-      case "decay":
-        device.value -= (dt * (1 - device.sustain)) / device.decay;
-        if (device.value <= device.sustain) {
+      }
+      case "decay": {
+        const coeff = 1 - Math.exp((-6.908 * dt) / device.decay);
+        device.value += (device.sustain - device.value) * coeff;
+        if (Math.abs(device.value - device.sustain) < 0.001) {
           device.value = device.sustain;
           device.state = "sustain";
         }
         break;
+      }
       case "sustain":
         device.value = device.sustain;
         break;
-      case "release":
-        device.value -= (dt * device.releaseStartValue) / device.release;
-        if (device.value <= 0) {
+      case "release": {
+        const coeff = 1 - Math.exp((-6.908 * dt) / device.release);
+        device.value -= device.value * coeff;
+        if (device.value < 0.001) {
           device.value = 0;
           device.state = "idle";
         }
         break;
+      }
       default:
         device.value = 0;
     }
     return device.value;
   }
 
+  // PolyBLEP residual for anti-aliasing waveform discontinuities (JS fallback only).
+  // t: normalised phase in [0, 1)  dt: normalised phase increment per sample.
+  polyBlep(t, dt) {
+    if (t < dt) {
+      const n = t / dt;
+      return n + n - n * n - 1;
+    }
+    if (t > 1 - dt) {
+      const n = (t - 1) / dt;
+      return n * n + n + n + 1;
+    }
+    return 0;
+  }
+
   renderWaveSample(device, applyGain = false) {
     const phase = device.phase || 0;
+    const increment = (TWO_PI * (device.frequency || 1)) / this.sampleRate;
+    const t = phase / TWO_PI;
+    const dt = increment / TWO_PI;
     let sample = 0;
     switch (device.wave) {
       case "noise":
         sample = Math.random() * 2 - 1;
         break;
-      case "square":
+      case "square": {
         sample = phase < Math.PI ? 1 : -1;
+        sample += this.polyBlep(t, dt);
+        sample -= this.polyBlep((t + 0.5) % 1, dt);
         break;
+      }
       case "sawtooth":
-        sample = 2 * (phase / TWO_PI) - 1;
+        sample = 2 * t - 1;
+        sample -= this.polyBlep(t, dt);
         break;
       case "triangle":
-        sample = 2 * Math.abs(2 * (phase / TWO_PI) - 1) - 1;
+        sample = 2 * Math.abs(2 * t - 1) - 1;
         break;
       case "sine":
       default:
         sample = Math.sin(phase);
         break;
     }
-    const increment = (TWO_PI * (device.frequency || 1)) / this.sampleRate;
     device.phase = (phase + increment) % TWO_PI;
     return applyGain ? sample * (device.gain || 0) : sample;
   }
@@ -286,10 +327,9 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       // Sequencer pre-pass: advance step clock, write frequency/gate to targets
       for (const [, device] of this.devices) {
         if (device.type !== "sequencer") continue;
-        const samplesPerStep = this.sampleRate / device.rate;
         device.sampleClock += 1;
-        if (device.sampleClock >= samplesPerStep) {
-          device.sampleClock -= samplesPerStep;
+        if (device.sampleClock >= device.samplesPerStep) {
+          device.sampleClock -= device.samplesPerStep;
           device.currentStep = (device.currentStep + 1) % device.steps.length;
           const freq = device.steps[device.currentStep];
           for (const route of this.routes) {
@@ -302,20 +342,25 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
             } else if (route.toParam === "gate" && target.type === "envelope") {
               target.releaseStartValue = target.value;
               target.state = "attack";
-              target.value = 0;
             }
           }
         }
       }
 
-      // LFO mod pre-pass: apply modulation before audio rendering
+      // LFO mod pre-pass: compute each LFO value once, then apply to all targets.
+      // Computing per-route would advance phase multiple times for multi-target LFOs.
+      const lfoValues = new Map();
+      for (const [id, device] of this.devices) {
+        if (device.type === "lfo")
+          lfoValues.set(id, this.renderWaveSample(device));
+      }
       for (const route of this.routes) {
         if (route.signal !== "mod") continue;
         const lfo = this.devices.get(route.from);
         if (!lfo || lfo.type !== "lfo") continue;
         const target = this.devices.get(route.toDevice);
         if (!target) continue;
-        const lfoValue = this.renderWaveSample(lfo);
+        const lfoValue = lfoValues.get(route.from) ?? 0;
         if (route.toParam === "frequency" && target.baseFrequency != null) {
           target.frequency =
             target.baseFrequency * (1 + lfoValue * (lfo.depth ?? 0.5));
@@ -328,31 +373,30 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       // Render each osc once per sample to avoid phase double-advance.
       // Uses Faust WASM (band-limited) when the instance is loaded; falls back
       // to the JS oscillator during the async initialisation window.
-      const oscOutputs = new Map();
+      this.oscOutputs.clear();
       for (const [id, device] of this.devices) {
         if (device.type !== "osc") continue;
         const fi = this.faustInstancesById.get(id);
         if (fi) {
-          const f32 = new Float32Array(fi.memory.buffer);
-          f32[fi.freqByteOffset / 4] = device.frequency;
-          f32[fi.gainByteOffset / 4] = device.gain;
-          f32[fi.waveByteOffset / 4] = device.waveIndex ?? 0;
+          fi.f32[fi.freqByteOffset / 4] = device.frequency;
+          fi.f32[fi.gainByteOffset / 4] = device.gain;
+          fi.f32[fi.waveByteOffset / 4] = device.waveIndex ?? 0;
           fi.exp.compute(0, 1, 0, fi.outputsPtr);
-          oscOutputs.set(id, f32[fi.outBuf0 / 4]);
+          this.oscOutputs.set(id, fi.f32[fi.outBuf0 / 4]);
         } else {
-          // Faust instance not yet loaded — fall back to aliasing JS oscillator
+          // Faust instance not yet loaded — fall back to anti-aliased JS oscillator
           if (!device._warnedFallback) {
             console.warn(
               `[DSPWorklet] osc "${id}" using JS fallback — Faust instance not yet loaded`,
             );
             device._warnedFallback = true;
           }
-          oscOutputs.set(id, this.renderWaveSample(device, true));
+          this.oscOutputs.set(id, this.renderWaveSample(device, true));
         }
       }
 
       // Process filters via Faust WASM — compute one sample at a time
-      const filterOutputs = new Map();
+      this.filterOutputs.clear();
       for (const [id, device] of this.devices) {
         if (device.type !== "filter") continue;
         const fi = this.faustInstances.get("filter");
@@ -360,37 +404,37 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         let filterIn = 0;
         for (const route of this.routes) {
           if (route.signal !== "audio" || route.to !== id) continue;
-          const src = oscOutputs.get(route.from);
+          const src = this.oscOutputs.get(route.from);
           if (src !== undefined) filterIn += src;
         }
-        const f32 = new Float32Array(fi.memory.buffer);
         // Set params each sample — LFO may have updated device.cutoff this iteration
-        f32[fi.modeByteOffset / 4] = device.mode;
-        f32[fi.qByteOffset / 4] = device.q;
-        f32[fi.cutoffByteOffset / 4] = device.cutoff;
+        fi.f32[fi.modeByteOffset / 4] = device.mode;
+        fi.f32[fi.qByteOffset / 4] = device.q;
+        fi.f32[fi.cutoffByteOffset / 4] = device.cutoff;
         // Write input sample, run DSP for count=1, read scalar output
-        f32[fi.inputBuf / 4] = filterIn;
+        fi.f32[fi.inputBuf / 4] = filterIn;
         fi.exp.compute(0, 1, fi.inputsPtr, fi.outputsPtr);
-        filterOutputs.set(id, f32[fi.outBuf0 / 4]);
+        this.filterOutputs.set(id, fi.f32[fi.outBuf0 / 4]);
       }
 
       // Process channels: sum osc/filter inputs and apply channel gain.
       // Channels are resolved before EQ and envelope so they can feed downstream stages.
-      const channelOutputs = new Map();
+      this.channelOutputs.clear();
       for (const [id, device] of this.devices) {
         if (device.type !== "channel") continue;
         let sum = 0;
         for (const route of this.routes) {
           if (route.signal !== "audio" || route.to !== id) continue;
           const src =
-            oscOutputs.get(route.from) ?? filterOutputs.get(route.from);
+            this.oscOutputs.get(route.from) ??
+            this.filterOutputs.get(route.from);
           if (src !== undefined) sum += src;
         }
-        channelOutputs.set(id, sum * (device.gain ?? 1));
+        this.channelOutputs.set(id, sum * (device.gain ?? 1));
       }
 
       // Process EQ via Faust WASM — compute one sample at a time
-      const eqOutputs = new Map();
+      this.eqOutputs.clear();
       for (const [id, device] of this.devices) {
         if (device.type !== "eq") continue;
         const fi = this.faustInstances.get("eq");
@@ -399,26 +443,25 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         for (const route of this.routes) {
           if (route.signal !== "audio" || route.to !== id) continue;
           const src =
-            oscOutputs.get(route.from) ??
-            filterOutputs.get(route.from) ??
-            channelOutputs.get(route.from);
+            this.oscOutputs.get(route.from) ??
+            this.filterOutputs.get(route.from) ??
+            this.channelOutputs.get(route.from);
           if (src !== undefined) eqIn += src;
         }
-        const f32 = new Float32Array(fi.memory.buffer);
-        f32[fi.paramOffsets.lowFreq / 4] = device.lowFreq;
-        f32[fi.paramOffsets.lowGain / 4] = device.lowGain;
-        f32[fi.paramOffsets.midFreq / 4] = device.midFreq;
-        f32[fi.paramOffsets.midGain / 4] = device.midGain;
-        f32[fi.paramOffsets.midQ / 4] = device.midQ;
-        f32[fi.paramOffsets.highFreq / 4] = device.highFreq;
-        f32[fi.paramOffsets.highGain / 4] = device.highGain;
-        f32[fi.inputBuf / 4] = eqIn;
+        fi.f32[fi.paramOffsets.lowFreq / 4] = device.lowFreq;
+        fi.f32[fi.paramOffsets.lowGain / 4] = device.lowGain;
+        fi.f32[fi.paramOffsets.midFreq / 4] = device.midFreq;
+        fi.f32[fi.paramOffsets.midGain / 4] = device.midGain;
+        fi.f32[fi.paramOffsets.midQ / 4] = device.midQ;
+        fi.f32[fi.paramOffsets.highFreq / 4] = device.highFreq;
+        fi.f32[fi.paramOffsets.highGain / 4] = device.highGain;
+        fi.f32[fi.inputBuf / 4] = eqIn;
         fi.exp.compute(0, 1, fi.inputsPtr, fi.outputsPtr);
-        eqOutputs.set(id, f32[fi.outBuf0 / 4]);
+        this.eqOutputs.set(id, fi.f32[fi.outBuf0 / 4]);
       }
 
       // Process envelopes: advance ADSR state, multiply incoming audio by envelope value
-      const envelopeOutputs = new Map();
+      this.envelopeOutputs.clear();
       for (const [id, device] of this.devices) {
         if (device.type !== "envelope") continue;
         const envValue = this.advanceEnvelope(device);
@@ -426,16 +469,16 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         for (const route of this.routes) {
           if (route.signal !== "audio" || route.to !== id) continue;
           const src =
-            oscOutputs.get(route.from) ??
-            filterOutputs.get(route.from) ??
-            channelOutputs.get(route.from) ??
-            eqOutputs.get(route.from);
+            this.oscOutputs.get(route.from) ??
+            this.filterOutputs.get(route.from) ??
+            this.channelOutputs.get(route.from) ??
+            this.eqOutputs.get(route.from);
           if (src !== undefined) envIn += src;
         }
-        envelopeOutputs.set(id, envIn * envValue);
+        this.envelopeOutputs.set(id, envIn * envValue);
       }
 
-      // Accumulate output: direct osc→output and filter→output routes
+      // Accumulate output: resolve all routes to the output device
       let left = 0;
       let right = 0;
       for (const route of this.routes) {
@@ -444,42 +487,53 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         if (!destination || destination.type !== "output") continue;
         const gain = destination.gain ?? 1;
 
-        const oscSample = oscOutputs.get(route.from);
+        const oscSample = this.oscOutputs.get(route.from);
         if (oscSample !== undefined) {
           left += oscSample * gain;
           right += oscSample * gain;
           continue;
         }
 
-        const filterSample = filterOutputs.get(route.from);
+        const filterSample = this.filterOutputs.get(route.from);
         if (filterSample !== undefined) {
           left += filterSample * gain;
           right += filterSample * gain;
           continue;
         }
 
-        const eqSample = eqOutputs.get(route.from);
+        const eqSample = this.eqOutputs.get(route.from);
         if (eqSample !== undefined) {
           left += eqSample * gain;
           right += eqSample * gain;
           continue;
         }
 
-        const envSample = envelopeOutputs.get(route.from);
+        const envSample = this.envelopeOutputs.get(route.from);
         if (envSample !== undefined) {
           left += envSample * gain;
           right += envSample * gain;
           continue;
         }
 
-        const channelSample = channelOutputs.get(route.from);
+        const channelSample = this.channelOutputs.get(route.from);
         if (channelSample !== undefined) {
-          left += channelSample * gain;
-          right += channelSample * gain;
+          // Constant-power panning: pan ∈ [-1, 1] → angle ∈ [0, π/2]
+          const ch = this.devices.get(route.from);
+          const angle = (((ch?.pan ?? 0) + 1) * Math.PI) / 4;
+          left += channelSample * Math.cos(angle) * gain;
+          right += channelSample * Math.sin(angle) * gain;
         }
       }
-      leftChannel[i] = left;
-      rightChannel[i] = right;
+      // DC blocker (first-order IIR) — removes offset accumulation from filter+LFO chains
+      const dcLeft = left - this.dcBlockX[0] + 0.995 * this.dcBlockY[0];
+      this.dcBlockX[0] = left;
+      this.dcBlockY[0] = dcLeft;
+      const dcRight = right - this.dcBlockX[1] + 0.995 * this.dcBlockY[1];
+      this.dcBlockX[1] = right;
+      this.dcBlockY[1] = dcRight;
+      // tanh soft limiter — approaches ±1 asymptotically, preventing hard digital clipping
+      leftChannel[i] = Math.tanh(dcLeft);
+      rightChannel[i] = Math.tanh(dcRight);
     }
     return true;
   }

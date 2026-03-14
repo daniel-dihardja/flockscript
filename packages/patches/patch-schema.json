@@ -186,6 +186,13 @@
                 "minimum": -20,
                 "maximum": 20,
                 "default": 0
+              },
+              "pan": {
+                "type": "number",
+                "description": "Stereo pan position (-1 full left, 0 centre, +1 full right)",
+                "minimum": -1,
+                "maximum": 1,
+                "default": 0
               }
             },
             "additionalProperties": true
@@ -357,6 +364,29 @@
                 "params": {
                   "properties": {
                     "gain": {}
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "channel"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "params": {
+                  "properties": {
+                    "gain": {},
+                    "pan": {}
                   },
                   "additionalProperties": false
                 }
