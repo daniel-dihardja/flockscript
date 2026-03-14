@@ -1,34 +1,19 @@
 {
     "devices": [
         {
-            "name": "bitcrusher",
-            "wasm": "public/bitcrusher.wasm",
-            "json": "public/bitcrusher.json"
-        },
-        {
-            "name": "gain",
-            "wasm": "public/gain.wasm",
-            "json": "public/gain.json"
-        },
-        {
             "name": "filter",
             "wasm": "public/filter.wasm",
             "json": "public/filter.json"
         },
         {
-            "name": "reverb",
-            "wasm": "public/reverb.wasm",
-            "json": "public/reverb.json"
-        },
-        {
-            "name": "ringmod",
-            "wasm": "public/ringmod.wasm",
-            "json": "public/ringmod.json"
-        },
-        {
             "name": "eq",
             "wasm": "public/eq.wasm",
             "json": "public/eq.json"
+        },
+        {
+            "name": "osc",
+            "wasm": "public/osc.wasm",
+            "json": "public/osc.json"
         }
     ]
 }

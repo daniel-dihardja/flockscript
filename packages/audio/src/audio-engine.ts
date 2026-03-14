@@ -10,6 +10,7 @@ class AudioEngine {
   workletReady = false;
   useWorklet = true;
   isRunning = false;
+  private oscWasmBuffer: ArrayBuffer | null = null;
 
   async init() {
     if (this.audioContext) {
@@ -88,6 +89,39 @@ class AudioEngine {
       return;
     }
     this.workletNode.port.postMessage({ type: "setPatch", patch });
+    void this.loadOscInstances(patch);
+  }
+
+  private async loadOscInstances(patch: unknown) {
+    if (!this.workletNode) return;
+    const devices = (patch as { devices?: { id: string; type: string }[] })
+      ?.devices;
+    if (!Array.isArray(devices)) return;
+    const oscDevices = devices.filter((d) => d?.type === "osc" && d?.id);
+    if (oscDevices.length === 0) return;
+    try {
+      if (!this.oscWasmBuffer) {
+        const resp = await fetch(
+          new URL("../public/faust/osc.wasm", import.meta.url),
+        );
+        this.oscWasmBuffer = await resp.arrayBuffer();
+      }
+      for (const device of oscDevices) {
+        // Each postMessage transfer detaches the buffer, so slice a fresh copy per instance.
+        const buf = this.oscWasmBuffer.slice();
+        this.workletNode.port.postMessage(
+          {
+            type: "loadFaustDevice",
+            name: "osc",
+            instanceId: device.id,
+            buffer: buf,
+          },
+          [buf],
+        );
+      }
+    } catch (err) {
+      console.warn("[AudioEngine] Failed to load Faust osc instances:", err);
+    }
   }
 
   triggerEnvelope(deviceId: string) {

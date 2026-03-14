@@ -6,9 +6,12 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     this.sampleRate = sampleRate;
     this.devices = new Map();
     this.routes = [];
-    // Keyed by device name (e.g. "filter"). Each entry holds the WASM exports
-    // and pre-allocated buffer pointers for block-oriented compute() calls.
+    // Keyed by device type name (e.g. "filter", "eq"). Shared instances —
+    // one per type, used by all devices of that type in the patch.
     this.faustInstances = new Map();
+    // Keyed by device instance ID (e.g. "osc1", "osc2"). Per-instance WASM
+    // — required for osc because each instance has independent phase state.
+    this.faustInstancesById = new Map();
     this.port.onmessage = (event) => {
       const payload = event.data;
       if (!payload) return;
@@ -34,16 +37,22 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         }
       }
       if (payload.type === "loadFaustDevice") {
-        this._instantiateFaustDevice(payload.name, payload.buffer);
+        this._instantiateFaustDevice(
+          payload.name,
+          payload.buffer,
+          payload.instanceId,
+        );
       }
     };
   }
 
-  _instantiateFaustDevice(name, buffer) {
+  _instantiateFaustDevice(name, buffer, instanceId) {
     // Param byte offsets derived from the compiled JSON for each device.
     // filter.json: mode=0, q=4, cutoff=16
     // eq.json:     highFreq=12, highGain=128, lowFreq=20, lowGain=52,
     //              midFreq=16, midGain=76, midQ=80
+    // osc.json:    gain=262144, wave=262148, freq=262172
+    //   (Faust 2.83.1 places the DSP struct at 0x40000 in linear memory)
     const PARAM_OFFSETS = {
       filter: { modeByteOffset: 0, qByteOffset: 4, cutoffByteOffset: 16 },
       eq: {
@@ -54,6 +63,11 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         midQ: 80,
         highFreq: 12,
         highGain: 128,
+      },
+      osc: {
+        gainByteOffset: 262144,
+        waveByteOffset: 262148,
+        freqByteOffset: 262172,
       },
     };
 
@@ -94,7 +108,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         i32[outputsPtr / 4 + 1] = outBuf1;
 
         const offsets = PARAM_OFFSETS[name] || {};
-        this.faustInstances.set(name, {
+        const entry = {
           exp,
           memory,
           inputBuf,
@@ -103,11 +117,16 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
           outputsPtr,
           ...offsets,
           paramOffsets: offsets,
-        });
+        };
+        if (instanceId) {
+          this.faustInstancesById.set(instanceId, entry);
+        } else {
+          this.faustInstances.set(name, entry);
+        }
       })
       .catch((err) => {
         console.error(
-          `[DSPWorklet] Failed to instantiate Faust device "${name}":`,
+          `[DSPWorklet] Failed to instantiate Faust device "${name}" (${instanceId ?? "shared"}):`,
           err,
         );
       });
@@ -131,6 +150,10 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         entry.baseFrequency = Number(params.frequency) || 440;
         entry.gain = Number(params.gain) || 0.5;
         entry.wave = (params.wave || "sine").toLowerCase();
+        entry.waveIndex =
+          { sine: 0, sawtooth: 1, square: 2, triangle: 3, noise: 4 }[
+            entry.wave
+          ] ?? 0;
       } else if (device.type === "lfo") {
         entry.frequency = Number(params.frequency) || 1;
         entry.depth = Number(params.depth) ?? 0.5;
@@ -300,10 +323,22 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         }
       }
 
-      // Render each osc once per sample to avoid phase double-advance
+      // Render each osc once per sample to avoid phase double-advance.
+      // Uses Faust WASM (band-limited) when the instance is loaded; falls back
+      // to the JS oscillator during the async initialisation window.
       const oscOutputs = new Map();
       for (const [id, device] of this.devices) {
-        if (device.type === "osc") {
+        if (device.type !== "osc") continue;
+        const fi = this.faustInstancesById.get(id);
+        if (fi) {
+          const f32 = new Float32Array(fi.memory.buffer);
+          f32[fi.freqByteOffset / 4] = device.frequency;
+          f32[fi.gainByteOffset / 4] = device.gain;
+          f32[fi.waveByteOffset / 4] = device.waveIndex ?? 0;
+          fi.exp.compute(0, 1, 0, fi.outputsPtr);
+          oscOutputs.set(id, f32[fi.outBuf0 / 4]);
+        } else {
+          // Faust instance not yet loaded — fall back to aliasing JS oscillator
           oscOutputs.set(id, this.renderWaveSample(device, true));
         }
       }

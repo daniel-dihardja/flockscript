@@ -3,7 +3,7 @@ DSP_DIR   = devices
 OUT_DIR   = public
 
 # Add a new device name here to include it in the build
-DEVICES   = filter eq
+DEVICES   = filter eq osc
 
 .PHONY: all clean compile $(DEVICES)
 
