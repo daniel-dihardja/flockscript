@@ -56,7 +56,7 @@ export function EditorToolbar() {
         <span>{statusLabel[engineStatus]}</span>
       </div>
 
-      {engineStatus === "ready" && (
+      {/* {engineStatus === "ready" && (
         <>
           <span className="text-border">|</span>
           <span>
@@ -76,7 +76,7 @@ export function EditorToolbar() {
             </span>
           </span>
         </>
-      )}
+      )} */}
     </div>
   );
 }

@@ -7,6 +7,7 @@ declare global {
 class AudioEngine {
   audioContext: AudioContext | null = null;
   workletNode: AudioWorkletNode | null = null;
+  analyserNode: AnalyserNode | null = null;
   workletReady = false;
   useWorklet = true;
   isRunning = false;
@@ -44,7 +45,10 @@ class AudioEngine {
       const workletUrl = new URL("../worklet/dsp-worklet.js", import.meta.url);
       await this.audioContext.audioWorklet.addModule(workletUrl);
       this.workletNode = new AudioWorkletNode(this.audioContext, "dsp-worklet");
-      this.workletNode.connect(this.audioContext.destination);
+      this.analyserNode = this.audioContext.createAnalyser();
+      this.analyserNode.fftSize = 2048;
+      this.workletNode.connect(this.analyserNode);
+      this.analyserNode.connect(this.audioContext.destination);
       this.workletNode.port.onmessage = (event) =>
         this.handleWorkletMessage(event);
       this.workletNode.port.postMessage({ type: "ping" });
