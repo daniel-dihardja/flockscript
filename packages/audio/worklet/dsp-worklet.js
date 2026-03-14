@@ -40,110 +40,77 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
   }
 
   _instantiateFaustDevice(name, buffer) {
+    // Param byte offsets derived from the compiled JSON for each device.
+    // filter.json: mode=0, q=4, cutoff=16
+    // eq.json:     highFreq=12, highGain=128, lowFreq=20, lowGain=52,
+    //              midFreq=16, midGain=76, midQ=80
+    const PARAM_OFFSETS = {
+      filter: { modeByteOffset: 0, qByteOffset: 4, cutoffByteOffset: 16 },
+      eq: {
+        lowFreq: 20,
+        lowGain: 52,
+        midFreq: 16,
+        midGain: 76,
+        midQ: 80,
+        highFreq: 12,
+        highGain: 128,
+      },
+    };
+
     // wasm-ib format imports: linear memory + single-precision math host functions
     const memory = new WebAssembly.Memory({ initial: 32 });
     const importObject = {
       env: {
         memory,
         _powf: Math.pow,
+        _sinf: Math.sin,
         _tanf: Math.tan,
       },
     };
-    WebAssembly.instantiate(buffer, importObject).then(({ instance }) => {
-      const exp = instance.exports;
-      exp.init(0, this.sampleRate);
+    WebAssembly.instantiate(buffer, importObject)
+      .then(({ instance }) => {
+        const exp = instance.exports;
+        exp.init(0, this.sampleRate);
 
-      // wasm-ib has no malloc export — lay out buffers manually in the imported
-      // linear memory at a fixed offset safely past the DSP struct (which sits
-      // at offset 0 and is at most a few hundred bytes for a biquad filter).
-      //
-      // Layout (byte offsets from 1024):
-      //   1024: inputsPtr  — int32[1] pointing to inputBuf
-      //   1028: outputsPtr — int32[2] pointing to outBuf0, outBuf1
-      //   1040: inputBuf   — float32 input sample slot
-      //   1044: outBuf0    — float32 output channel 0
-      //   1048: outBuf1    — float32 output channel 1
-      const inputsPtr  = 1024;
-      const outputsPtr = 1028;
-      const inputBuf   = 1040;
-      const outBuf0    = 1044;
-      const outBuf1    = 1048;
+        // wasm-ib has no malloc export — lay out buffers manually in the imported
+        // linear memory at a fixed offset safely past the DSP struct (which sits
+        // at offset 0; the largest struct so far is eq at 152 bytes).
+        //
+        // Layout (byte offsets from 1024):
+        //   1024: inputsPtr  — int32[1] pointing to inputBuf
+        //   1028: outputsPtr — int32[2] pointing to outBuf0, outBuf1
+        //   1040: inputBuf   — float32 input sample slot
+        //   1044: outBuf0    — float32 output channel 0
+        //   1048: outBuf1    — float32 output channel 1
+        const inputsPtr = 1024;
+        const outputsPtr = 1028;
+        const inputBuf = 1040;
+        const outBuf0 = 1044;
+        const outBuf1 = 1048;
 
-      const i32 = new Int32Array(memory.buffer);
-      i32[inputsPtr  / 4]     = inputBuf;
-      i32[outputsPtr / 4]     = outBuf0;
-      i32[outputsPtr / 4 + 1] = outBuf1;
+        const i32 = new Int32Array(memory.buffer);
+        i32[inputsPtr / 4] = inputBuf;
+        i32[outputsPtr / 4] = outBuf0;
+        i32[outputsPtr / 4 + 1] = outBuf1;
 
-      // Param byte offsets from filter.json: mode=0, q=4, cutoff=16
-      this.faustInstances.set(name, {
-        exp, memory, inputBuf, outBuf0, inputsPtr, outputsPtr,
-        modeByteOffset: 0, qByteOffset: 4, cutoffByteOffset: 16,
+        const offsets = PARAM_OFFSETS[name] || {};
+        this.faustInstances.set(name, {
+          exp,
+          memory,
+          inputBuf,
+          outBuf0,
+          inputsPtr,
+          outputsPtr,
+          ...offsets,
+          paramOffsets: offsets,
+        });
+      })
+      .catch((err) => {
+        console.error(
+          `[DSPWorklet] Failed to instantiate Faust device "${name}":`,
+          err,
+        );
       });
-    }).catch((err) => {
-      console.error(`[DSPWorklet] Failed to instantiate Faust device "${name}":`, err);
-    });
-  }
-
-  // Separate state object version used by multi-stage EQ
-  applyBiquadState(state, coeffs, x) {
-    const { b0, b1, b2, a1, a2 } = coeffs;
-    const y =
-      b0 * x + b1 * state.x1 + b2 * state.x2 - a1 * state.y1 - a2 * state.y2;
-    state.x2 = state.x1;
-    state.x1 = x;
-    state.y2 = state.y1;
-    state.y1 = y;
-    return y;
-  }
-
-  // Low/high shelf coefficients (RBJ Audio EQ Cookbook, S = 1)
-  computeShelfCoeffs(type, freq, gainDb) {
-    const A = Math.pow(10, gainDb / 40);
-    const w0 = (TWO_PI * freq) / this.sampleRate;
-    const cosw0 = Math.cos(w0);
-    // With shelf slope S=1: alpha = sin(w0)/sqrt(2)
-    const alphaS = Math.sin(w0) / Math.SQRT2;
-    const sqA = Math.sqrt(A);
-    let b0, b1, b2, a0, a1, a2;
-    if (type === "highshelf") {
-      b0 = A * (A + 1 + (A - 1) * cosw0 + 2 * sqA * alphaS);
-      b1 = -2 * A * (A - 1 + (A + 1) * cosw0);
-      b2 = A * (A + 1 + (A - 1) * cosw0 - 2 * sqA * alphaS);
-      a0 = A + 1 - (A - 1) * cosw0 + 2 * sqA * alphaS;
-      a1 = 2 * (A - 1 - (A + 1) * cosw0);
-      a2 = A + 1 - (A - 1) * cosw0 - 2 * sqA * alphaS;
-    } else {
-      // lowshelf
-      b0 = A * (A + 1 - (A - 1) * cosw0 + 2 * sqA * alphaS);
-      b1 = 2 * A * (A - 1 - (A + 1) * cosw0);
-      b2 = A * (A + 1 - (A - 1) * cosw0 - 2 * sqA * alphaS);
-      a0 = A + 1 + (A - 1) * cosw0 + 2 * sqA * alphaS;
-      a1 = -2 * (A - 1 + (A + 1) * cosw0);
-      a2 = A + 1 + (A - 1) * cosw0 - 2 * sqA * alphaS;
-    }
-    return {
-      b0: b0 / a0,
-      b1: b1 / a0,
-      b2: b2 / a0,
-      a1: a1 / a0,
-      a2: a2 / a0,
-    };
-  }
-
-  // Peaking EQ band coefficients (RBJ Audio EQ Cookbook)
-  computePeakCoeffs(freq, gainDb, q) {
-    const A = Math.pow(10, gainDb / 40);
-    const w0 = (TWO_PI * freq) / this.sampleRate;
-    const alpha = Math.sin(w0) / (2 * q);
-    const cosw0 = Math.cos(w0);
-    const a0 = 1 + alpha / A;
-    return {
-      b0: (1 + alpha * A) / a0,
-      b1: (-2 * cosw0) / a0,
-      b2: (1 - alpha * A) / a0,
-      a1: (-2 * cosw0) / a0,
-      a2: (1 - alpha / A) / a0,
-    };
   }
 
   applyPatch(patch) {
@@ -197,24 +164,6 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         entry.midQ = Number(params.midQ) || 1.0;
         entry.highFreq = Number(params.highFreq) || 4000;
         entry.highGain = params.highGain != null ? Number(params.highGain) : 0;
-        entry.lowState = { x1: 0, x2: 0, y1: 0, y2: 0 };
-        entry.midState = { x1: 0, x2: 0, y1: 0, y2: 0 };
-        entry.highState = { x1: 0, x2: 0, y1: 0, y2: 0 };
-        entry.lowCoeffs = this.computeShelfCoeffs(
-          "lowshelf",
-          entry.lowFreq,
-          entry.lowGain,
-        );
-        entry.midCoeffs = this.computePeakCoeffs(
-          entry.midFreq,
-          entry.midGain,
-          entry.midQ,
-        );
-        entry.highCoeffs = this.computeShelfCoeffs(
-          "highshelf",
-          entry.highFreq,
-          entry.highGain,
-        );
       } else if (device.type === "output") {
         entry.gain = Number(params.gain) || 1.0;
       } else if (device.type === "channel") {
@@ -373,8 +322,8 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         }
         const f32 = new Float32Array(fi.memory.buffer);
         // Set params each sample — LFO may have updated device.cutoff this iteration
-        f32[fi.modeByteOffset   / 4] = device.mode;
-        f32[fi.qByteOffset      / 4] = device.q;
+        f32[fi.modeByteOffset / 4] = device.mode;
+        f32[fi.qByteOffset / 4] = device.q;
         f32[fi.cutoffByteOffset / 4] = device.cutoff;
         // Write input sample, run DSP for count=1, read scalar output
         f32[fi.inputBuf / 4] = filterIn;
@@ -397,10 +346,12 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         channelOutputs.set(id, sum * (device.gain ?? 1));
       }
 
-      // Process EQ: accumulate inputs, apply 3-stage biquad (low shelf, peak, high shelf)
+      // Process EQ via Faust WASM — compute one sample at a time
       const eqOutputs = new Map();
       for (const [id, device] of this.devices) {
         if (device.type !== "eq") continue;
+        const fi = this.faustInstances.get("eq");
+        if (!fi) continue;
         let eqIn = 0;
         for (const route of this.routes) {
           if (route.signal !== "audio" || route.to !== id) continue;
@@ -410,10 +361,17 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
             channelOutputs.get(route.from);
           if (src !== undefined) eqIn += src;
         }
-        let s = this.applyBiquadState(device.lowState, device.lowCoeffs, eqIn);
-        s = this.applyBiquadState(device.midState, device.midCoeffs, s);
-        s = this.applyBiquadState(device.highState, device.highCoeffs, s);
-        eqOutputs.set(id, s);
+        const f32 = new Float32Array(fi.memory.buffer);
+        f32[fi.paramOffsets.lowFreq / 4] = device.lowFreq;
+        f32[fi.paramOffsets.lowGain / 4] = device.lowGain;
+        f32[fi.paramOffsets.midFreq / 4] = device.midFreq;
+        f32[fi.paramOffsets.midGain / 4] = device.midGain;
+        f32[fi.paramOffsets.midQ / 4] = device.midQ;
+        f32[fi.paramOffsets.highFreq / 4] = device.highFreq;
+        f32[fi.paramOffsets.highGain / 4] = device.highGain;
+        f32[fi.inputBuf / 4] = eqIn;
+        fi.exp.compute(0, 1, fi.inputsPtr, fi.outputsPtr);
+        eqOutputs.set(id, f32[fi.outBuf0 / 4]);
       }
 
       // Process envelopes: advance ADSR state, multiply incoming audio by envelope value

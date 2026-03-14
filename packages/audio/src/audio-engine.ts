@@ -60,6 +60,10 @@ class AudioEngine {
           "filter",
           new URL("../public/faust/filter.wasm", import.meta.url),
         );
+        void this.loadFaustDevice(
+          "eq",
+          new URL("../public/faust/eq.wasm", import.meta.url),
+        );
       }
     }
   }

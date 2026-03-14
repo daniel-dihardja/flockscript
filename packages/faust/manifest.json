@@ -24,6 +24,11 @@
             "name": "ringmod",
             "wasm": "public/ringmod.wasm",
             "json": "public/ringmod.json"
+        },
+        {
+            "name": "eq",
+            "wasm": "public/eq.wasm",
+            "json": "public/eq.json"
         }
     ]
 }
