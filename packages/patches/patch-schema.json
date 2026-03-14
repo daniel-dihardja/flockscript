@@ -91,10 +91,17 @@
               },
               "mode": {
                 "type": "number",
-                "description": "Filter character: 0=lowpass, 1=highpass, 0.5=blend",
+                "description": "Filter mode: 0=lowpass, 1=bandpass, 2=highpass (continuous crossfade)",
                 "minimum": 0,
-                "maximum": 1,
+                "maximum": 2,
                 "default": 0
+              },
+              "drive": {
+                "type": "number",
+                "description": "Input drive/saturation amount — higher values add analog warmth and harmonic distortion",
+                "minimum": 1,
+                "maximum": 8,
+                "default": 1
               },
               "attack": {
                 "type": "number",
@@ -263,7 +270,8 @@
                   "properties": {
                     "cutoff": {},
                     "q": {},
-                    "mode": {}
+                    "mode": {},
+                    "drive": {}
                   },
                   "additionalProperties": false
                 }
