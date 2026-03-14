@@ -55,14 +55,19 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
   }
 
   _instantiateFaustDevice(name, buffer, instanceId) {
-    // Param byte offsets derived from the compiled JSON for each device.
-    // filter.json: mode=0, q=4, cutoff=16
+    // Param byte offsets derived from the compiled WASM for each device.
+    // filter.json: mode=12, drive=28, q=48, cutoff=64  (from compiled filter.json UI index fields)
     // eq.json:     highFreq=12, highGain=128, lowFreq=20, lowGain=52,
     //              midFreq=16, midGain=76, midQ=80
     // osc.json:    gain=262144, wave=262148, freq=262172
     //   (Faust 2.83.1 places the DSP struct at 0x40000 in linear memory)
     const PARAM_OFFSETS = {
-      filter: { modeByteOffset: 0, qByteOffset: 4, cutoffByteOffset: 16 },
+      filter: {
+        modeByteOffset: 12,
+        driveByteOffset: 28,
+        qByteOffset: 48,
+        cutoffByteOffset: 64,
+      },
       eq: {
         lowFreq: 20,
         lowGain: 52,
@@ -87,6 +92,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         _powf: Math.pow,
         _sinf: Math.sin,
         _tanf: Math.tan,
+        _tanhf: Math.tanh,
       },
     };
     WebAssembly.instantiate(buffer, importObject)
@@ -173,11 +179,11 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         entry.depth = Number(params.depth) ?? 0.5;
         entry.wave = (params.wave || "sine").toLowerCase();
       } else if (device.type === "filter") {
-        entry.filterType = params.filterType || "lowpass";
-        entry.mode = entry.filterType === "highpass" ? 1 : 0;
+        entry.mode = Number(params.mode) || 0;
         entry.cutoff = Number(params.cutoff) || 1000;
         entry.baseCutoff = entry.cutoff;
         entry.q = Number(params.q) || 1.0;
+        entry.drive = params.drive != null ? Number(params.drive) : 1.0;
       } else if (device.type === "envelope") {
         entry.attack = Number(params.attack) || 0.01;
         entry.decay = Number(params.decay) || 0.1;
@@ -371,28 +377,16 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
       }
 
       // Render each osc once per sample to avoid phase double-advance.
-      // Uses Faust WASM (band-limited) when the instance is loaded; falls back
-      // to the JS oscillator during the async initialisation window.
       this.oscOutputs.clear();
       for (const [id, device] of this.devices) {
         if (device.type !== "osc") continue;
         const fi = this.faustInstancesById.get(id);
-        if (fi) {
-          fi.f32[fi.freqByteOffset / 4] = device.frequency;
-          fi.f32[fi.gainByteOffset / 4] = device.gain;
-          fi.f32[fi.waveByteOffset / 4] = device.waveIndex ?? 0;
-          fi.exp.compute(0, 1, 0, fi.outputsPtr);
-          this.oscOutputs.set(id, fi.f32[fi.outBuf0 / 4]);
-        } else {
-          // Faust instance not yet loaded — fall back to anti-aliased JS oscillator
-          if (!device._warnedFallback) {
-            console.warn(
-              `[DSPWorklet] osc "${id}" using JS fallback — Faust instance not yet loaded`,
-            );
-            device._warnedFallback = true;
-          }
-          this.oscOutputs.set(id, this.renderWaveSample(device, true));
-        }
+        if (!fi) continue;
+        fi.f32[fi.freqByteOffset / 4] = device.frequency;
+        fi.f32[fi.gainByteOffset / 4] = device.gain;
+        fi.f32[fi.waveByteOffset / 4] = device.waveIndex ?? 0;
+        fi.exp.compute(0, 1, 0, fi.outputsPtr);
+        this.oscOutputs.set(id, fi.f32[fi.outBuf0 / 4]);
       }
 
       // Process filters via Faust WASM — compute one sample at a time
@@ -409,6 +403,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         }
         // Set params each sample — LFO may have updated device.cutoff this iteration
         fi.f32[fi.modeByteOffset / 4] = device.mode;
+        fi.f32[fi.driveByteOffset / 4] = device.drive ?? 1.0;
         fi.f32[fi.qByteOffset / 4] = device.q;
         fi.f32[fi.cutoffByteOffset / 4] = device.cutoff;
         // Write input sample, run DSP for count=1, read scalar output

@@ -34,14 +34,13 @@ class LfoParams(BaseModel):
 
 
 class FilterParams(BaseModel):
-    filterType: Optional[Literal["lowpass", "highpass"]] = Field(
-        default=None, description="Filter mode: lowpass or highpass"
-    )
     cutoff: Optional[float] = Field(
         default=None, description="Cutoff frequency in Hz (20–20000)"
     )
-    q: Optional[float] = Field(
-        default=None, description="Resonance/Q factor (0.001–30)"
+    q: Optional[float] = Field(default=None, description="Resonance/Q factor (0.1–20)")
+    mode: Optional[float] = Field(
+        default=None,
+        description="Filter character: 0.0=lowpass, 1.0=highpass, 0.5=blend",
     )
 
 

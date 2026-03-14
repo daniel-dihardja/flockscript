@@ -13,9 +13,9 @@
             "id": "filter1",
             "type": "filter",
             "params": {
-                "filterType": "highpass",
                 "cutoff": 1200,
-                "q": 2
+                "q": 2,
+                "mode": 1
             }
         },
         {

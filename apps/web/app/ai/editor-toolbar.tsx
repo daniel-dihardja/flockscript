@@ -55,28 +55,6 @@ export function EditorToolbar() {
         <span className={`h-2 w-2 rounded-full ${statusDot[engineStatus]}`} />
         <span>{statusLabel[engineStatus]}</span>
       </div>
-
-      {engineStatus === "ready" && (
-        <>
-          <span className="text-border">|</span>
-          <span>
-            Context:{" "}
-            <span className="font-mono text-foreground">{contextState}</span>
-          </span>
-          <span>
-            Sample rate:{" "}
-            <span className="font-mono text-foreground">
-              {sampleRate.toFixed(0)} Hz
-            </span>
-          </span>
-          <span>
-            Worklet:{" "}
-            <span className="font-mono text-foreground">
-              {workletReady ? "ready" : "loading"}
-            </span>
-          </span>
-        </>
-      )}
     </div>
   );
 }

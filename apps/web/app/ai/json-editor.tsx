@@ -33,6 +33,9 @@ const editorTheme = EditorView.theme({
     borderRight: "1px solid hsl(var(--border))",
     color: "hsl(var(--muted-foreground))",
   },
+  ".cm-lineNumbers .cm-gutterElement": {
+    color: "#6b7280",
+  },
   ".cm-activeLineGutter": { backgroundColor: "transparent" },
   ".cm-activeLine": { backgroundColor: "hsl(var(--muted) / 0.3)" },
 });
@@ -98,9 +101,6 @@ export function JsonEditor() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="border-b px-4 py-2 text-xs font-medium text-muted-foreground">
-        JSON
-      </div>
       <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden" />
     </div>
   );

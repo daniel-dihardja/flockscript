@@ -21,6 +21,7 @@ interface PatchContextValue {
   contextState: string;
   sampleRate: number;
   workletReady: boolean;
+  analyserNode: AnalyserNode | null;
   initEngine: () => Promise<void>;
   sendPatch: () => Promise<void>;
   silence: () => void;
@@ -35,9 +36,11 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
   const [contextState, setContextState] = useState("suspended");
   const [sampleRate, setSampleRate] = useState(0);
   const [workletReady, setWorkletReady] = useState(false);
+  const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const engineRef = useRef<{
     resume: () => Promise<void>;
     silence: () => void;
+    analyserNode: AnalyserNode | null;
     getDebugStatus: () => {
       contextState: string;
       sampleRate: number;
@@ -57,6 +60,7 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
       await audioEngine.init();
       engineRef.current = audioEngine;
       builderRef.current = new PatchBuilder();
+      setAnalyserNode(audioEngine.analyserNode);
       setEngineStatus("ready");
       setEngineReady(true);
     } catch (err) {
@@ -107,6 +111,7 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
         contextState,
         sampleRate,
         workletReady,
+        analyserNode,
         initEngine,
         sendPatch,
         silence,

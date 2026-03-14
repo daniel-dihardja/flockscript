@@ -75,15 +75,6 @@
                 "maximum": 1,
                 "default": 0.5
               },
-              "filterType": {
-                "type": "string",
-                "description": "Filter mode",
-                "enum": [
-                  "lowpass",
-                  "highpass"
-                ],
-                "default": "lowpass"
-              },
               "cutoff": {
                 "type": "number",
                 "description": "Filter cutoff frequency in Hz",
@@ -94,8 +85,22 @@
               "q": {
                 "type": "number",
                 "description": "Filter resonance (Q factor)",
-                "minimum": 0.001,
-                "maximum": 30,
+                "minimum": 0.1,
+                "maximum": 20,
+                "default": 1
+              },
+              "mode": {
+                "type": "number",
+                "description": "Filter mode: 0=lowpass, 1=bandpass, 2=highpass (continuous crossfade)",
+                "minimum": 0,
+                "maximum": 2,
+                "default": 0
+              },
+              "drive": {
+                "type": "number",
+                "description": "Input drive/saturation amount — higher values add analog warmth and harmonic distortion",
+                "minimum": 1,
+                "maximum": 8,
                 "default": 1
               },
               "attack": {
@@ -138,54 +143,61 @@
                 "minimum": 0.01,
                 "default": 4
               },
+              "hpFreq": {
+                "type": "number",
+                "description": "EQ high-pass filter frequency in Hz — removes sub-rumble and DC offset below this point",
+                "minimum": 20,
+                "maximum": 400,
+                "default": 30
+              },
               "lowFreq": {
                 "type": "number",
                 "description": "EQ low shelf frequency in Hz",
                 "minimum": 20,
-                "maximum": 500,
-                "default": 200
+                "maximum": 20000,
+                "default": 100
               },
               "lowGain": {
                 "type": "number",
                 "description": "EQ low shelf gain in dB (-20 to +20)",
                 "minimum": -20,
                 "maximum": 20,
-                "default": 0
+                "default": 4.0
               },
               "midFreq": {
                 "type": "number",
                 "description": "EQ mid peaking frequency in Hz",
-                "minimum": 200,
-                "maximum": 8000,
-                "default": 1000
+                "minimum": 20,
+                "maximum": 20000,
+                "default": 350
               },
               "midGain": {
                 "type": "number",
                 "description": "EQ mid peaking gain in dB (-20 to +20)",
                 "minimum": -20,
                 "maximum": 20,
-                "default": 0
+                "default": -3.0
               },
               "midQ": {
                 "type": "number",
                 "description": "EQ mid band Q (bandwidth). Higher Q = narrower band.",
                 "minimum": 0.1,
                 "maximum": 10,
-                "default": 1.0
+                "default": 0.7
               },
               "highFreq": {
                 "type": "number",
                 "description": "EQ high shelf frequency in Hz",
                 "minimum": 2000,
                 "maximum": 20000,
-                "default": 4000
+                "default": 5000
               },
               "highGain": {
                 "type": "number",
                 "description": "EQ high shelf gain in dB (-20 to +20)",
                 "minimum": -20,
                 "maximum": 20,
-                "default": 0
+                "default": -6.0
               },
               "pan": {
                 "type": "number",
@@ -263,9 +275,10 @@
               "properties": {
                 "params": {
                   "properties": {
-                    "filterType": {},
                     "cutoff": {},
-                    "q": {}
+                    "q": {},
+                    "mode": {},
+                    "drive": {}
                   },
                   "additionalProperties": false
                 }
@@ -287,6 +300,7 @@
               "properties": {
                 "params": {
                   "properties": {
+                    "hpFreq": {},
                     "lowFreq": {},
                     "lowGain": {},
                     "midFreq": {},

@@ -71,6 +71,9 @@ importers:
       '@workspace/visuals':
         specifier: workspace:*
         version: link:../../packages/visuals
+      '@xyflow/react':
+        specifier: ^12.10.1
+        version: 12.10.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       ai:
         specifier: ^6.0.116
         version: 6.0.116(zod@3.25.76)
@@ -187,6 +190,8 @@ importers:
       typescript-eslint:
         specifier: ^8.54.0
         version: 8.56.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
+
+  packages/faust: {}
 
   packages/typescript-config: {}
 
