@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Live coding environment for experimental noise/glitch music with Web Audio API",
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean",
+    "copy:faust": "mkdir -p public/faust && cp ../faust/public/filter.wasm ../faust/public/filter.json public/faust/",
+    "build": "pnpm copy:faust && tsup src/index.ts --format esm --dts --out-dir dist --clean",
     "prepare": "pnpm build"
   },
   "devDependencies": {
@@ -16,6 +17,7 @@
   "files": [
     "dist",
     "patches",
+    "public/faust",
     "worklet"
   ],
   "exports": {

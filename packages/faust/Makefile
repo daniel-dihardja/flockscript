@@ -3,7 +3,7 @@ DSP_DIR   = devices
 OUT_DIR   = public
 
 # Add a new device name here to include it in the build
-DEVICES   = bitcrusher gain lowpass reverb ringmod
+DEVICES   = bitcrusher gain filter reverb ringmod
 
 .PHONY: all clean compile $(DEVICES)
 

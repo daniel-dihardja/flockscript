@@ -6,6 +6,9 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
     this.sampleRate = sampleRate;
     this.devices = new Map();
     this.routes = [];
+    // Keyed by device name (e.g. "filter"). Each entry holds the WASM exports
+    // and pre-allocated buffer pointers for block-oriented compute() calls.
+    this.faustInstances = new Map();
     this.port.onmessage = (event) => {
       const payload = event.data;
       if (!payload) return;
@@ -30,48 +33,55 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
           device.state = "release";
         }
       }
+      if (payload.type === "loadFaustDevice") {
+        this._instantiateFaustDevice(payload.name, payload.buffer);
+      }
     };
   }
 
-  computeBiquadCoeffs(filterType, cutoff, q) {
-    const w0 = (TWO_PI * cutoff) / this.sampleRate;
-    const cosw0 = Math.cos(w0);
-    const sinw0 = Math.sin(w0);
-    const alpha = sinw0 / (2 * q);
-    const a0 = 1 + alpha;
-    let b0, b1, b2;
-    if (filterType === "highpass") {
-      b0 = (1 + cosw0) / 2;
-      b1 = -(1 + cosw0);
-      b2 = (1 + cosw0) / 2;
-    } else {
-      // lowpass (default)
-      b0 = (1 - cosw0) / 2;
-      b1 = 1 - cosw0;
-      b2 = (1 - cosw0) / 2;
-    }
-    return {
-      b0: b0 / a0,
-      b1: b1 / a0,
-      b2: b2 / a0,
-      a1: (-2 * cosw0) / a0,
-      a2: (1 - alpha) / a0,
+  _instantiateFaustDevice(name, buffer) {
+    // wasm-ib format imports: linear memory + single-precision math host functions
+    const memory = new WebAssembly.Memory({ initial: 32 });
+    const importObject = {
+      env: {
+        memory,
+        _powf: Math.pow,
+        _tanf: Math.tan,
+      },
     };
-  }
+    WebAssembly.instantiate(buffer, importObject).then(({ instance }) => {
+      const exp = instance.exports;
+      exp.init(0, this.sampleRate);
 
-  applyBiquad(device, x) {
-    const { b0, b1, b2, a1, a2 } = device.coeffs;
-    const y =
-      b0 * x +
-      b1 * device.x1 +
-      b2 * device.x2 -
-      a1 * device.y1 -
-      a2 * device.y2;
-    device.x2 = device.x1;
-    device.x1 = x;
-    device.y2 = device.y1;
-    device.y1 = y;
-    return y;
+      // wasm-ib has no malloc export — lay out buffers manually in the imported
+      // linear memory at a fixed offset safely past the DSP struct (which sits
+      // at offset 0 and is at most a few hundred bytes for a biquad filter).
+      //
+      // Layout (byte offsets from 1024):
+      //   1024: inputsPtr  — int32[1] pointing to inputBuf
+      //   1028: outputsPtr — int32[2] pointing to outBuf0, outBuf1
+      //   1040: inputBuf   — float32 input sample slot
+      //   1044: outBuf0    — float32 output channel 0
+      //   1048: outBuf1    — float32 output channel 1
+      const inputsPtr  = 1024;
+      const outputsPtr = 1028;
+      const inputBuf   = 1040;
+      const outBuf0    = 1044;
+      const outBuf1    = 1048;
+
+      const i32 = new Int32Array(memory.buffer);
+      i32[inputsPtr  / 4]     = inputBuf;
+      i32[outputsPtr / 4]     = outBuf0;
+      i32[outputsPtr / 4 + 1] = outBuf1;
+
+      // Param byte offsets from filter.json: mode=0, q=4, cutoff=16
+      this.faustInstances.set(name, {
+        exp, memory, inputBuf, outBuf0, inputsPtr, outputsPtr,
+        modeByteOffset: 0, qByteOffset: 4, cutoffByteOffset: 16,
+      });
+    }).catch((err) => {
+      console.error(`[DSPWorklet] Failed to instantiate Faust device "${name}":`, err);
+    });
   }
 
   // Separate state object version used by multi-stage EQ
@@ -160,18 +170,10 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         entry.wave = (params.wave || "sine").toLowerCase();
       } else if (device.type === "filter") {
         entry.filterType = params.filterType || "lowpass";
+        entry.mode = entry.filterType === "highpass" ? 1 : 0;
         entry.cutoff = Number(params.cutoff) || 1000;
         entry.baseCutoff = entry.cutoff;
         entry.q = Number(params.q) || 1.0;
-        entry.x1 = 0;
-        entry.x2 = 0;
-        entry.y1 = 0;
-        entry.y2 = 0;
-        entry.coeffs = this.computeBiquadCoeffs(
-          entry.filterType,
-          entry.cutoff,
-          entry.q,
-        );
       } else if (device.type === "envelope") {
         entry.attack = Number(params.attack) || 0.01;
         entry.decay = Number(params.decay) || 0.1;
@@ -346,11 +348,6 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         } else if (route.toParam === "cutoff" && target.baseCutoff != null) {
           target.cutoff =
             target.baseCutoff * (1 + lfoValue * (lfo.depth ?? 0.5));
-          target.coeffs = this.computeBiquadCoeffs(
-            target.filterType,
-            target.cutoff,
-            target.q,
-          );
         }
       }
 
@@ -362,17 +359,27 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         }
       }
 
-      // Process filters: accumulate osc inputs then apply biquad
+      // Process filters via Faust WASM — compute one sample at a time
       const filterOutputs = new Map();
       for (const [id, device] of this.devices) {
         if (device.type !== "filter") continue;
+        const fi = this.faustInstances.get("filter");
+        if (!fi) continue;
         let filterIn = 0;
         for (const route of this.routes) {
           if (route.signal !== "audio" || route.to !== id) continue;
           const src = oscOutputs.get(route.from);
           if (src !== undefined) filterIn += src;
         }
-        filterOutputs.set(id, this.applyBiquad(device, filterIn));
+        const f32 = new Float32Array(fi.memory.buffer);
+        // Set params each sample — LFO may have updated device.cutoff this iteration
+        f32[fi.modeByteOffset   / 4] = device.mode;
+        f32[fi.qByteOffset      / 4] = device.q;
+        f32[fi.cutoffByteOffset / 4] = device.cutoff;
+        // Write input sample, run DSP for count=1, read scalar output
+        f32[fi.inputBuf / 4] = filterIn;
+        fi.exp.compute(0, 1, fi.inputsPtr, fi.outputsPtr);
+        filterOutputs.set(id, f32[fi.outBuf0 / 4]);
       }
 
       // Process channels: sum osc/filter inputs and apply channel gain.

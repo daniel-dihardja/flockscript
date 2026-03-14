@@ -11,9 +11,9 @@
             "json": "public/gain.json"
         },
         {
-            "name": "lowpass",
-            "wasm": "public/lowpass.wasm",
-            "json": "public/lowpass.json"
+            "name": "filter",
+            "wasm": "public/filter.wasm",
+            "json": "public/filter.json"
         },
         {
             "name": "reverb",

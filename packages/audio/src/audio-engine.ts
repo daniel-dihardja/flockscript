@@ -56,7 +56,26 @@ class AudioEngine {
     if (payload?.type === "status") {
       if (payload.message === "worklet-ready") {
         this.workletReady = true;
+        void this.loadFaustDevice(
+          "filter",
+          new URL("../public/faust/filter.wasm", import.meta.url),
+        );
       }
+    }
+  }
+
+  async loadFaustDevice(name: string, wasmUrl: URL) {
+    if (!this.workletNode) return;
+    try {
+      const resp = await fetch(wasmUrl);
+      const buffer = await resp.arrayBuffer();
+      // Transfer the ArrayBuffer (zero-copy) — it becomes detached on this side
+      this.workletNode.port.postMessage(
+        { type: "loadFaustDevice", name, buffer },
+        [buffer],
+      );
+    } catch (err) {
+      console.warn(`[AudioEngine] Failed to load Faust device "${name}":`, err);
     }
   }
 
