@@ -56,13 +56,18 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
 
   _instantiateFaustDevice(name, buffer, instanceId) {
     // Param byte offsets derived from the compiled WASM for each device.
-    // filter: mode=0, cutoff=20, q=36  (verified by memory probe)
+    // filter.json: mode=12, drive=28, q=48, cutoff=64  (from compiled filter.json UI index fields)
     // eq.json:     highFreq=12, highGain=128, lowFreq=20, lowGain=52,
     //              midFreq=16, midGain=76, midQ=80
     // osc.json:    gain=262144, wave=262148, freq=262172
     //   (Faust 2.83.1 places the DSP struct at 0x40000 in linear memory)
     const PARAM_OFFSETS = {
-      filter: { modeByteOffset: 0, cutoffByteOffset: 20, qByteOffset: 36 },
+      filter: {
+        modeByteOffset: 12,
+        driveByteOffset: 28,
+        qByteOffset: 48,
+        cutoffByteOffset: 64,
+      },
       eq: {
         lowFreq: 20,
         lowGain: 52,
@@ -178,6 +183,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         entry.cutoff = Number(params.cutoff) || 1000;
         entry.baseCutoff = entry.cutoff;
         entry.q = Number(params.q) || 1.0;
+        entry.drive = params.drive != null ? Number(params.drive) : 1.0;
       } else if (device.type === "envelope") {
         entry.attack = Number(params.attack) || 0.01;
         entry.decay = Number(params.decay) || 0.1;
@@ -397,6 +403,7 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         }
         // Set params each sample — LFO may have updated device.cutoff this iteration
         fi.f32[fi.modeByteOffset / 4] = device.mode;
+        fi.f32[fi.driveByteOffset / 4] = device.drive ?? 1.0;
         fi.f32[fi.qByteOffset / 4] = device.q;
         fi.f32[fi.cutoffByteOffset / 4] = device.cutoff;
         // Write input sample, run DSP for count=1, read scalar output
