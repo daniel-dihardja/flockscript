@@ -120,8 +120,10 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         };
         if (instanceId) {
           this.faustInstancesById.set(instanceId, entry);
+          console.log(`[DSPWorklet] Faust osc ready: ${instanceId}`);
         } else {
           this.faustInstances.set(name, entry);
+          console.log(`[DSPWorklet] Faust ${name} ready (shared)`);
         }
       })
       .catch((err) => {
@@ -339,6 +341,12 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
           oscOutputs.set(id, f32[fi.outBuf0 / 4]);
         } else {
           // Faust instance not yet loaded — fall back to aliasing JS oscillator
+          if (!device._warnedFallback) {
+            console.warn(
+              `[DSPWorklet] osc "${id}" using JS fallback — Faust instance not yet loaded`,
+            );
+            device._warnedFallback = true;
+          }
           oscOutputs.set(id, this.renderWaveSample(device, true));
         }
       }
