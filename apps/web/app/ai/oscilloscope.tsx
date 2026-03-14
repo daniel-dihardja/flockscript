@@ -74,7 +74,7 @@ export function Oscilloscope() {
   }, []); // intentionally empty — loop runs for the full component lifetime
 
   return (
-    <div className="flex h-full flex-col border-l">
+    <div className="flex h-[25vh] flex-col border-l">
       <div className="relative flex-1 bg-black">
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
       </div>
