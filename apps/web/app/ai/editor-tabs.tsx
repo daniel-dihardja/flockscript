@@ -8,22 +8,11 @@ import { PatchFlow } from "./patch-flow";
 type Tab = "json" | "flow";
 
 export function EditorTabs() {
-  const [tab, setTab] = useState<Tab>("json");
+  const [tab, setTab] = useState<Tab>("flow");
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 border-b">
-        <button
-          type="button"
-          onClick={() => setTab("json")}
-          className={`px-4 py-1.5 text-xs transition ${
-            tab === "json"
-              ? "border-b-2 border-foreground text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          JSON
-        </button>
         <button
           type="button"
           onClick={() => setTab("flow")}
@@ -34,6 +23,17 @@ export function EditorTabs() {
           }`}
         >
           Flow
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("json")}
+          className={`px-4 py-1.5 text-xs transition ${
+            tab === "json"
+              ? "border-b-2 border-foreground text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          JSON
         </button>
       </div>
 

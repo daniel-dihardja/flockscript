@@ -101,9 +101,6 @@ export function JsonEditor() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="border-b px-4 py-2 text-xs font-medium text-muted-foreground">
-        JSON
-      </div>
       <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden" />
     </div>
   );

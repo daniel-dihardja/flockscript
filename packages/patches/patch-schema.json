@@ -154,7 +154,7 @@
                 "type": "number",
                 "description": "EQ low shelf frequency in Hz",
                 "minimum": 20,
-                "maximum": 500,
+                "maximum": 20000,
                 "default": 100
               },
               "lowGain": {
@@ -167,8 +167,8 @@
               "midFreq": {
                 "type": "number",
                 "description": "EQ mid peaking frequency in Hz",
-                "minimum": 200,
-                "maximum": 8000,
+                "minimum": 20,
+                "maximum": 20000,
                 "default": 350
               },
               "midGain": {

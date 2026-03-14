@@ -61,8 +61,8 @@ EQ rules:
 - EQ is a 4-band processor: 2nd-order high-pass filter, low shelf, mid peaking band, high shelf — all bands always present, set unused shelf/peak bands to 0 dB gain.
 - EQ params:
     hpFreq (20–400 Hz): 2nd-order high-pass filter frequency — removes sub-rumble and DC offset. Default 30 Hz.
-    lowFreq (20–500 Hz): low shelf frequency. lowGain (-20 to +20 dB): boost/cut below lowFreq. Default: 100 Hz, +4 dB.
-    midFreq (200–8000 Hz): mid peak center frequency. midGain (-20 to +20 dB): boost/cut at midFreq. midQ (0.1–10): bandwidth — higher Q = narrower/more surgical cut or boost. Default: 350 Hz, -3 dB, Q=0.7.
+    lowFreq (20–20000 Hz): low shelf frequency. lowGain (-20 to +20 dB): boost/cut below lowFreq. Default: 100 Hz, +4 dB.
+    midFreq (20–20000 Hz): mid peak center frequency. midGain (-20 to +20 dB): boost/cut at midFreq. midQ (0.1–10): bandwidth — higher Q = narrower/more surgical cut or boost. Default: 350 Hz, -3 dB, Q=0.7.
     highFreq (2000–20000 Hz): high shelf frequency. highGain (-20 to +20 dB): boost/cut above highFreq. Default: 5000 Hz, -6 dB.
 - Connect EQ in-line exactly like a filter: audio route into "<eqId>.in", then from "<eqId>.out" to the next device.
 - EQ vs filter: use "filter" for dramatic tone-shaping (fully cutting a frequency range); use "eq" for musical, proportional corrections and character adjustments.
