@@ -99,6 +99,13 @@ class OutputParams(BaseModel):
     gain: Optional[float] = Field(default=None, description="Linear gain (0–1)")
 
 
+class ChannelParams(BaseModel):
+    gain: Optional[float] = Field(default=None, description="Channel bus gain (0–1)")
+    pan: Optional[float] = Field(
+        default=None, description="Pan position (-1 left to 1 right, default 0)"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Per-type device models (discriminated union on 'type')
 # ---------------------------------------------------------------------------
@@ -146,6 +153,12 @@ class OutputDevice(BaseModel):
     params: Optional[OutputParams] = None
 
 
+class ChannelDevice(BaseModel):
+    id: Optional[str] = None
+    type: Literal["channel"]
+    params: Optional[ChannelParams] = None
+
+
 Device = Annotated[
     Union[
         OscDevice,
@@ -155,6 +168,7 @@ Device = Annotated[
         EnvelopeDevice,
         SequencerDevice,
         OutputDevice,
+        ChannelDevice,
     ],
     Field(discriminator="type"),
 ]

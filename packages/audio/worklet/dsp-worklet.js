@@ -375,6 +375,21 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         filterOutputs.set(id, this.applyBiquad(device, filterIn));
       }
 
+      // Process channels: sum osc/filter inputs and apply channel gain.
+      // Channels are resolved before EQ and envelope so they can feed downstream stages.
+      const channelOutputs = new Map();
+      for (const [id, device] of this.devices) {
+        if (device.type !== "channel") continue;
+        let sum = 0;
+        for (const route of this.routes) {
+          if (route.signal !== "audio" || route.to !== id) continue;
+          const src =
+            oscOutputs.get(route.from) ?? filterOutputs.get(route.from);
+          if (src !== undefined) sum += src;
+        }
+        channelOutputs.set(id, sum * (device.gain ?? 1));
+      }
+
       // Process EQ: accumulate inputs, apply 3-stage biquad (low shelf, peak, high shelf)
       const eqOutputs = new Map();
       for (const [id, device] of this.devices) {
@@ -383,7 +398,9 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
         for (const route of this.routes) {
           if (route.signal !== "audio" || route.to !== id) continue;
           const src =
-            oscOutputs.get(route.from) ?? filterOutputs.get(route.from);
+            oscOutputs.get(route.from) ??
+            filterOutputs.get(route.from) ??
+            channelOutputs.get(route.from);
           if (src !== undefined) eqIn += src;
         }
         let s = this.applyBiquadState(device.lowState, device.lowCoeffs, eqIn);
@@ -403,27 +420,11 @@ class DSPWorkletProcessor extends AudioWorkletProcessor {
           const src =
             oscOutputs.get(route.from) ??
             filterOutputs.get(route.from) ??
+            channelOutputs.get(route.from) ??
             eqOutputs.get(route.from);
           if (src !== undefined) envIn += src;
         }
         envelopeOutputs.set(id, envIn * envValue);
-      }
-
-      // Process channels: sum incoming audio sources and apply channel gain
-      const channelOutputs = new Map();
-      for (const [id, device] of this.devices) {
-        if (device.type !== "channel") continue;
-        let sum = 0;
-        for (const route of this.routes) {
-          if (route.signal !== "audio" || route.to !== id) continue;
-          const src =
-            oscOutputs.get(route.from) ??
-            filterOutputs.get(route.from) ??
-            eqOutputs.get(route.from) ??
-            envelopeOutputs.get(route.from);
-          if (src !== undefined) sum += src;
-        }
-        channelOutputs.set(id, sum * (device.gain ?? 1));
       }
 
       // Accumulate output: direct osc→output and filter→output routes

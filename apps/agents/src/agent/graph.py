@@ -93,6 +93,19 @@ Sequencer rules:
 - Rate guide: 1–4 = slow/melodic; 4–8 = rhythmic; 8–16 = fast/driving.
 - Use repeated pitches (all steps the same Hz) for a rhythmic pulse without melody.
 
+Channel rules:
+- Use type: "channel" to group multiple audio sources into a single named bus before routing to output or further processing.
+- Channel params: gain (0–1, default 1.0), pan (reserved for future use, default 0).
+- Route any number of sources into a channel: {from: "<sourceId>.out", to: "<channelId>.in", signal: "audio"}.
+- Route the channel to its destination: {from: "<channelId>.out", to: "<destinationId>.in", signal: "audio"}.
+- The channel sums all incoming audio and applies its gain — use this to control the level of an entire group independently.
+- Use channels when:
+    - Multiple oscillators or processed signals belong to the same "voice" or timbral group and should share a common gain level.
+    - You want to mix two or more distinct patch groups (e.g. a bass group and a texture group) into a single output at different relative levels.
+    - Gain staging across many sources would be hard to manage individually — one channel gain controls the whole group.
+- Channels are not required for simple patches. Only add a channel when grouping genuinely improves mix control or clarity.
+- Gain staging with channels: if two channels feed one output, each channel gain 0.5–0.7 prevents clipping. Per-source gains feeding a channel still follow the normal rules (0.3–0.4 each for 2–3 sources).
+
 For all other questions, respond conversationally without calling any tool.
 
 After calling `create_patch`, always follow up with a brief, poetic description of the patch — what it does, what it evokes, and how the devices work together.
@@ -326,6 +339,30 @@ Patch:
     - {from: "osc1.out",    to: "env1.in",         signal: "audio"}
     - {from: "env1.out",    to: "filter1.in",       signal: "audio"}
     - {from: "filter1.out", to: "out.in",           signal: "audio"}
+"""
+
+_FEW_SHOT_EXAMPLES += """
+--- Example 7: Two-Group Mix via Channels ---
+Concept: A bass group (two detuned sawtooth oscillators) and a texture group (sine + triangle)
+are each collected into their own channel before the output. The channels control the relative
+level of each group independently — bass at 0.6, texture at 0.45 — without touching individual
+oscillator gains.
+Patch:
+  devices:
+    - {id: "osc1",  type: "osc",     params: {wave: "sawtooth", frequency: 55,   gain: 0.4}}
+    - {id: "osc2",  type: "osc",     params: {wave: "sawtooth", frequency: 55.5, gain: 0.4}}
+    - {id: "osc3",  type: "osc",     params: {wave: "sine",     frequency: 220,  gain: 0.35}}
+    - {id: "osc4",  type: "osc",     params: {wave: "triangle", frequency: 330,  gain: 0.3}}
+    - {id: "bass",  type: "channel", params: {gain: 0.6}}
+    - {id: "tex",   type: "channel", params: {gain: 0.45}}
+    - {id: "out",   type: "output"}
+  routes:
+    - {from: "osc1.out", to: "bass.in", signal: "audio"}
+    - {from: "osc2.out", to: "bass.in", signal: "audio"}
+    - {from: "osc3.out", to: "tex.in",  signal: "audio"}
+    - {from: "osc4.out", to: "tex.in",  signal: "audio"}
+    - {from: "bass.out", to: "out.in",  signal: "audio"}
+    - {from: "tex.out",  to: "out.in",  signal: "audio"}
 """
 
 SYSTEM_PROMPT = _TECHNICAL_RULES + _ARTISTIC_CONTEXT + _FEW_SHOT_EXAMPLES
