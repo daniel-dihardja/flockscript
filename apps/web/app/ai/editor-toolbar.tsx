@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { usePatch, type EngineStatus } from "./patch-provider";
 
 const statusDot: Record<EngineStatus, string> = {
@@ -19,13 +21,34 @@ const statusLabel: Record<EngineStatus, string> = {
 export function EditorToolbar() {
   const {
     engineStatus,
-    contextState,
-    sampleRate,
-    workletReady,
     initEngine,
     sendPatch,
     silence,
+    startRecording,
+    stopRecording,
   } = usePatch();
+
+  const [isRecording, setIsRecording] = useState(false);
+
+  const handleRec = async () => {
+    if (!isRecording) {
+      startRecording();
+      setIsRecording(true);
+    } else {
+      try {
+        const blob = await stopRecording();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `recording-${Date.now()}.wav`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Recording failed", err);
+      }
+      setIsRecording(false);
+    }
+  };
 
   return (
     <div className="flex items-center gap-4 border-b bg-background px-4 py-2 text-xs text-muted-foreground">
@@ -49,6 +72,17 @@ export function EditorToolbar() {
         onClick={silence}
       >
         Silence
+      </button>
+      <button
+        type="button"
+        className={`rounded border px-3 py-1 text-xs transition ${
+          isRecording
+            ? "animate-pulse border-red-500 bg-red-500/10 text-red-500 hover:bg-red-500/20"
+            : "border-border hover:bg-muted"
+        }`}
+        onClick={handleRec}
+      >
+        {isRecording ? "● Stop" : "Rec"}
       </button>
 
       <div className="flex items-center gap-1.5">

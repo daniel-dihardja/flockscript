@@ -25,6 +25,8 @@ interface PatchContextValue {
   initEngine: () => Promise<void>;
   sendPatch: () => Promise<void>;
   silence: () => void;
+  startRecording: () => void;
+  stopRecording: () => Promise<Blob>;
 }
 
 const PatchContext = createContext<PatchContextValue | null>(null);
@@ -46,6 +48,8 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
       sampleRate: number;
       workletReady: boolean;
     };
+    startRecording: () => void;
+    stopRecording: () => Promise<Blob>;
   } | null>(null);
   const builderRef = useRef<InstanceType<typeof PatchBuilderType> | null>(null);
 
@@ -87,6 +91,16 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
     engineRef.current?.silence();
   }, []);
 
+  const startRecording = useCallback(() => {
+    engineRef.current?.startRecording();
+  }, []);
+
+  const stopRecording = useCallback((): Promise<Blob> => {
+    if (!engineRef.current)
+      return Promise.reject(new Error("Engine not ready"));
+    return engineRef.current.stopRecording();
+  }, []);
+
   useEffect(() => {
     const tick = () => {
       const s = engineRef.current?.getDebugStatus?.();
@@ -115,6 +129,8 @@ export function PatchProvider({ children }: { children: React.ReactNode }) {
         initEngine,
         sendPatch,
         silence,
+        startRecording,
+        stopRecording,
       }}
     >
       {children}

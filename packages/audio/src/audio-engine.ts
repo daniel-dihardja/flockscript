@@ -210,6 +210,95 @@ class AudioEngine {
       workletReady: this.workletReady,
     };
   }
+
+  private mediaRecorder: MediaRecorder | null = null;
+  private recordedChunks: BlobPart[] = [];
+  private mediaStreamDest: MediaStreamAudioDestinationNode | null = null;
+
+  startRecording() {
+    if (!this.audioContext || !this.analyserNode) return;
+    this.mediaStreamDest = this.audioContext.createMediaStreamDestination();
+    this.analyserNode.connect(this.mediaStreamDest);
+    this.recordedChunks = [];
+    this.mediaRecorder = new MediaRecorder(this.mediaStreamDest.stream);
+    this.mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) this.recordedChunks.push(e.data);
+    };
+    this.mediaRecorder.start();
+  }
+
+  stopRecording(): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      if (!this.mediaRecorder || !this.audioContext) {
+        reject(new Error("Not recording"));
+        return;
+      }
+      this.mediaRecorder.onstop = async () => {
+        try {
+          if (this.mediaStreamDest) {
+            this.analyserNode?.disconnect(this.mediaStreamDest);
+            this.mediaStreamDest = null;
+          }
+          const webmBlob = new Blob(this.recordedChunks, {
+            type: "audio/webm",
+          });
+          const arrayBuffer = await webmBlob.arrayBuffer();
+          const audioBuffer =
+            await this.audioContext!.decodeAudioData(arrayBuffer);
+          const wavBuffer = encodeWav(audioBuffer);
+          resolve(new Blob([wavBuffer], { type: "audio/wav" }));
+        } catch (err) {
+          reject(err);
+        }
+      };
+      this.mediaRecorder.stop();
+    });
+  }
+}
+
+function encodeWav(audioBuffer: AudioBuffer): ArrayBuffer {
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const numSamples = audioBuffer.length;
+  const bitsPerSample = 16;
+  const bytesPerSample = bitsPerSample / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = numSamples * blockAlign;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  const writeStr = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++)
+      view.setUint8(offset + i, str.charCodeAt(i));
+  };
+
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeStr(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  const channels = Array.from({ length: numChannels }, (_, i) =>
+    audioBuffer.getChannelData(i),
+  );
+  let offset = 44;
+  for (let i = 0; i < numSamples; i++) {
+    for (let c = 0; c < numChannels; c++) {
+      const s = Math.max(-1, Math.min(1, channels[c]![i]!));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      offset += 2;
+    }
+  }
+  return buffer;
 }
 
 const audioEngine = new AudioEngine();
