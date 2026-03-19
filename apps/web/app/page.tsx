@@ -1,40 +1,15 @@
-"use client";
-
-import * as React from "react";
-import { LiveEditor } from "@/components/editor/live-editor";
-import { ShaderViewer } from "@/components/shader-viewer";
+import Link from "next/link";
 
 export default function Page() {
-  const [engineStatus, setEngineStatus] = React.useState<
-    "idle" | "initializing" | "running" | "error"
-  >("idle");
-  const [statusLabel, setStatusLabel] = React.useState("Audio engine idle");
-
-  const initAudioEngine = async () => {
-    if (engineStatus === "initializing") {
-      return;
-    }
-    setEngineStatus("initializing");
-    setStatusLabel("Initializing audio engine…");
-    try {
-      const { audioEngine } = await import("@workspace/audio");
-      await audioEngine.init();
-      const state = audioEngine.audioContext?.state ?? "unknown";
-      setEngineStatus("running");
-      setStatusLabel(`Audio engine ${state}`);
-    } catch (error) {
-      console.error("Failed to init audio engine", error);
-      setEngineStatus("error");
-      setStatusLabel("Audio engine failed");
-    }
-  };
-
   return (
-    <main className="flex min-h-screen w-full bg-neutral-900 text-slate-100">
-      <div className="h-screen w-1/2">
-        <LiveEditor />
-      </div>
-      <div className="h-screen w-1/2 bg-black">{/* <ShaderViewer /> */}</div>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-neutral-900 text-slate-100">
+      <h1 className="text-5xl font-bold">Drone Dude</h1>
+      <Link
+        href="/ai"
+        className="rounded-lg bg-indigo-600 px-6 py-3 text-lg font-semibold transition-colors hover:bg-indigo-500"
+      >
+        Start
+      </Link>
     </main>
   );
 }
