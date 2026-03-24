@@ -1,4 +1,4 @@
-## 🎛️ AI Modular Synth Patch Generator
+## AI Modular Synth Patch Generator
 
 ![AI Modular Synth](./screenshot.png)
 
